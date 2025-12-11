@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cyber Glitch Tunnel - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        import { noise2D, noise3D, mouse, hexToRgb, smoothstep } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+        let glitchIntensity = 0;
+
+        const neonColors = ['#ff0055', '#00f5ff', '#39ff14', '#ff2aff', '#ffd700'];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        class TunnelRing {
+            constructor(z) {
+                this.z = z;
+                this.sides = 8;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.colorIndex = Math.floor(Math.random() * neonColors.length);
+                this.glitchOffset = { x: 0, y: 0 };
+                this.corrupted = false;
+            }
+
+            update(dt, speed) {
+                this.z -= speed * dt;
+                this.rotation += dt * 0.2;
+
+                // Glitch effects
+                if (Math.random() < 0.02 * glitchIntensity) {
+                    this.corrupted = true;
+                    this.glitchOffset.x = (Math.random() - 0.5) * 50 * glitchIntensity;
+                    this.glitchOffset.y = (Math.random() - 0.5) * 30 * glitchIntensity;
+                } else if (Math.random() < 0.1) {
+                    this.corrupted = false;
+                    this.glitchOffset.x *= 0.9;
+                    this.glitchOffset.y *= 0.9;
+                }
+
+                if (this.z < 0.1) {
+                    this.z = 15;
+                    this.colorIndex = Math.floor(Math.random() * neonColors.length);
+                    this.corrupted = false;
+                }
+            }
+
+            draw() {
+                const scale = 1 / this.z;
+                const baseSize = Math.min(W, H) * 0.6;
+                const size = baseSize * scale;
+
+                if (size > Math.max(W, H) * 2) return;
+
+                const alpha = smoothstep(0.1, 0.5, this.z) * smoothstep(15, 10, this.z);
+                if (alpha < 0.01) return;
+
+                const offsetX = this.glitchOffset.x + mouse.centeredX * 50 * (1 / this.z);
+                const offsetY = this.glitchOffset.y + mouse.centeredY * 50 * (1 / this.z);
+
+                ctx.save();
+                ctx.translate(cx + offsetX, cy + offsetY);
+                ctx.rotate(this.rotation);
+
+                const color = neonColors[this.colorIndex];
+                const rgb = hexToRgb(color);
+
+                // Draw polygon
+                ctx.beginPath();
+                for (let i = 0; i <= this.sides; i++) {
+                    const angle = (i / this.sides) * Math.PI * 2;
+                    const px = Math.cos(angle) * size;
+                    const py = Math.sin(angle) * size;
+
+                    // Glitch vertex displacement
+                    const glitchX = this.corrupted ? (Math.random() - 0.5) * 20 : 0;
+                    const glitchY = this.corrupted ? (Math.random() - 0.5) * 20 : 0;
+
+                    if (i === 0) ctx.moveTo(px + glitchX, py + glitchY);
+                    else ctx.lineTo(px + glitchX, py + glitchY);
+                }
+                ctx.closePath();
+
+                // Glow
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 20;
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.5})`;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // Core line
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // RGB split for glitch effect
+                if (this.corrupted) {
+                    ctx.strokeStyle = `rgba(255, 0, 0, ${alpha * 0.5})`;
+                    ctx.translate(-3, 0);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = `rgba(0, 255, 255, ${alpha * 0.5})`;
+                    ctx.translate(6, 0);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        class DataStream {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * W;
+                this.y = -20;
+                this.speed = 5 + Math.random() * 15;
+                this.chars = '01'.split('');
+                this.length = 5 + Math.floor(Math.random() * 15);
+                this.color = neonColors[Math.floor(Math.random() * neonColors.length)];
+            }
+
+            update(dt) {
+                this.y += this.speed;
+                if (this.y > H + 100) this.reset();
+            }
+
+            draw() {
+                const rgb = hexToRgb(this.color);
+                ctx.font = '14px monospace';
+
+                for (let i = 0; i < this.length; i++) {
+                    const charY = this.y - i * 16;
+                    if (charY < 0 || charY > H) continue;
+
+                    const alpha = (1 - i / this.length) * 0.8;
+                    const char = Math.random() < 0.1 ? this.chars[Math.floor(Math.random() * this.chars.length)] : this.chars[i % 2];
+
+                    ctx.fillStyle = i === 0
+                        ? `rgba(255, 255, 255, ${alpha})`
+                        : `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    ctx.fillText(char, this.x, charY);
+                }
+            }
+        }
+
+        const ringCount = 40;
+        const rings = Array.from({ length: ringCount }, (_, i) => new TunnelRing(i * 0.4 + 0.5));
+        const streams = Array.from({ length: 50 }, () => new DataStream());
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            // Dynamic glitch intensity
+            glitchIntensity = 0.3 + Math.sin(time * 0.5) * 0.2;
+            if (Math.random() < 0.01) glitchIntensity = 2; // Random spike
+
+            // Background
+            ctx.fillStyle = '#050008';
+            ctx.fillRect(0, 0, W, H);
+
+            // Motion trail
+            ctx.fillStyle = 'rgba(5, 0, 8, 0.3)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Data streams in background
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            streams.forEach(s => { s.update(1 / 60); s.draw(); });
+            ctx.restore();
+
+            // Tunnel rings
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+
+            const speed = 3 + Math.sin(time) * 0.5;
+            rings.sort((a, b) => b.z - a.z);
+            rings.forEach(r => { r.update(1 / 60, speed); r.draw(); });
+
+            ctx.restore();
+
+            // Random glitch blocks
+            if (Math.random() < 0.05 * glitchIntensity) {
+                const blockCount = Math.floor(Math.random() * 5) + 1;
+                for (let i = 0; i < blockCount; i++) {
+                    const bx = Math.random() * W;
+                    const by = Math.random() * H;
+                    const bw = 20 + Math.random() * 100;
+                    const bh = 5 + Math.random() * 20;
+
+                    ctx.fillStyle = neonColors[Math.floor(Math.random() * neonColors.length)];
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillRect(bx, by, bw, bh);
+                    ctx.globalAlpha = 1;
+                }
+            }
+
+            // Horizontal scan line glitch
+            if (Math.random() < 0.03 * glitchIntensity) {
+                const sliceY = Math.random() * H;
+                const sliceH = 2 + Math.random() * 20;
+                const offset = (Math.random() - 0.5) * 30;
+
+                const imgData = ctx.getImageData(0, sliceY, W, sliceH);
+                ctx.putImageData(imgData, offset, sliceY);
+            }
+
+            // JaZeR glitch text
+            ctx.save();
+            ctx.font = 'bold 80px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const textAlpha = 0.03 + noise2D(time, 0) * 0.02;
+
+            // RGB split text
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = `rgba(255, 0, 0, ${textAlpha})`;
+            ctx.fillText('JaZeR', cx - 2, cy);
+            ctx.fillStyle = `rgba(0, 255, 255, ${textAlpha})`;
+            ctx.fillText('JaZeR', cx + 2, cy);
+            ctx.fillStyle = `rgba(0, 255, 0, ${textAlpha})`;
+            ctx.fillText('JaZeR', cx, cy);
+            ctx.restore();
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

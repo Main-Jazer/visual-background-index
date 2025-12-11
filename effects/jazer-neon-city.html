@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neon City Flythrough - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script src="../Three.js"></script>
+    <script type="module">
+        import { noise2D, noise3D, mouse, hexToRgb, smoothstep } from '../jazer-background-engine.js';
+
+        const THREE = window.THREE;
+        const canvas = document.getElementById('c');
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000510, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
+        camera.position.set(0, 5, 0);
+        camera.lookAt(0, 5, -100);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const neonColors = [0xff0055, 0x00f5ff, 0xff2aff, 0x39ff14, 0xffd700];
+
+        // Ground with grid
+        const groundGeometry = new THREE.PlaneGeometry(200, 400, 100, 200);
+        const groundMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 },
+                color: { value: new THREE.Color(0xff00ff) }
+            },
+            vertexShader: `
+        uniform float time;
+        varying vec2 vUv;
+        varying float vY;
+        void main() {
+          vUv = uv;
+          vec3 pos = position;
+          vY = pos.y;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+            fragmentShader: `
+        uniform float time;
+        uniform vec3 color;
+        varying vec2 vUv;
+        varying float vY;
+        
+        void main() {
+          vec2 grid = abs(fract(vUv * vec2(50.0, 100.0) - vec2(0.0, time * 3.0)) - 0.5);
+          float line = min(grid.x, grid.y);
+          float intensity = 1.0 - smoothstep(0.0, 0.03, line);
+          intensity *= (1.0 - vUv.y) * 0.8;
+          gl_FragColor = vec4(color * intensity, intensity * 0.8);
+        }
+      `,
+            transparent: true,
+            blending: THREE.AdditiveBlending
+        });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = 0;
+        ground.position.z = -100;
+        scene.add(ground);
+
+        // Buildings
+        const buildings = [];
+        const buildingCount = 100;
+
+        for (let i = 0; i < buildingCount; i++) {
+            const side = i % 2 === 0 ? -1 : 1;
+            const width = 5 + Math.random() * 15;
+            const height = 20 + Math.random() * 80;
+            const depth = 5 + Math.random() * 15;
+
+            const geometry = new THREE.BoxGeometry(width, height, depth);
+            const edges = new THREE.EdgesGeometry(geometry);
+            const color = neonColors[Math.floor(Math.random() * neonColors.length)];
+            const material = new THREE.LineBasicMaterial({
+                color,
+                transparent: true,
+                opacity: 0.7
+            });
+
+            const building = new THREE.LineSegments(edges, material);
+            building.position.x = side * (20 + Math.random() * 30);
+            building.position.y = height / 2;
+            building.position.z = -i * 8 - 20;
+            building.userData = {
+                originalZ: building.position.z,
+                color: new THREE.Color(color),
+                height
+            };
+
+            scene.add(building);
+            buildings.push(building);
+
+            // Windows (glowing rectangles)
+            const windowCount = Math.floor(height / 5);
+            for (let w = 0; w < windowCount; w++) {
+                if (Math.random() > 0.6) continue;
+
+                const windowGeo = new THREE.PlaneGeometry(2, 1.5);
+                const windowMat = new THREE.MeshBasicMaterial({
+                    color: neonColors[Math.floor(Math.random() * neonColors.length)],
+                    transparent: true,
+                    opacity: 0.3 + Math.random() * 0.3,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.DoubleSide
+                });
+                const win = new THREE.Mesh(windowGeo, windowMat);
+                win.position.x = side > 0 ? -width / 2 - 0.1 : width / 2 + 0.1;
+                win.position.y = w * 5 - height / 2 + 3;
+                win.position.z = (Math.random() - 0.5) * depth * 0.8;
+                win.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
+                building.add(win);
+            }
+        }
+
+        // Floating holographic ads
+        const adTexts = ['JaZeR', 'NEON', 'CYBER', '2099', 'FUTURE'];
+        const ads = [];
+
+        for (let i = 0; i < 10; i++) {
+            const adCanvas = document.createElement('canvas');
+            adCanvas.width = 256;
+            adCanvas.height = 64;
+            const adCtx = adCanvas.getContext('2d');
+            adCtx.fillStyle = '#000';
+            adCtx.fillRect(0, 0, 256, 64);
+            adCtx.font = 'bold 40px Arial';
+            adCtx.textAlign = 'center';
+            adCtx.textBaseline = 'middle';
+            adCtx.fillStyle = `hsl(${Math.random() * 360}, 100%, 60%)`;
+            adCtx.fillText(adTexts[i % adTexts.length], 128, 32);
+
+            const texture = new THREE.CanvasTexture(adCanvas);
+            const adGeo = new THREE.PlaneGeometry(15, 4);
+            const adMat = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide
+            });
+
+            const ad = new THREE.Mesh(adGeo, adMat);
+            ad.position.x = (Math.random() - 0.5) * 60;
+            ad.position.y = 30 + Math.random() * 40;
+            ad.position.z = -i * 25 - 30;
+            ad.rotation.y = Math.random() * 0.5 - 0.25;
+            ad.userData = {
+                originalZ: ad.position.z,
+                bobOffset: Math.random() * Math.PI * 2
+            };
+
+            scene.add(ad);
+            ads.push(ad);
+        }
+
+        // Flying vehicles (light trails)
+        const vehicles = [];
+        for (let i = 0; i < 20; i++) {
+            const geo = new THREE.BoxGeometry(0.5, 0.2, 2);
+            const mat = new THREE.MeshBasicMaterial({
+                color: neonColors[Math.floor(Math.random() * neonColors.length)],
+                transparent: true,
+                opacity: 0.8
+            });
+            const vehicle = new THREE.Mesh(geo, mat);
+            vehicle.position.x = (Math.random() - 0.5) * 80;
+            vehicle.position.y = 10 + Math.random() * 50;
+            vehicle.position.z = -Math.random() * 200;
+            vehicle.userData = {
+                speed: 0.5 + Math.random(),
+                originalZ: vehicle.position.z
+            };
+            scene.add(vehicle);
+            vehicles.push(vehicle);
+        }
+
+        let time = 0;
+        const flySpeed = 0.3;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.016;
+            mouse.update();
+
+            // Update ground shader
+            groundMaterial.uniforms.time.value = time;
+
+            // Camera movement
+            camera.position.x = mouse.centeredX * 10;
+            camera.position.y = 5 + mouse.centeredY * 3;
+            camera.rotation.z = mouse.centeredX * 0.05;
+            camera.lookAt(camera.position.x * 0.5, 5, -50);
+
+            // Move buildings toward camera
+            buildings.forEach(b => {
+                b.position.z += flySpeed;
+                if (b.position.z > 20) {
+                    b.position.z = -buildingCount * 4;
+                    b.material.color = new THREE.Color(neonColors[Math.floor(Math.random() * neonColors.length)]);
+                }
+                // Pulse effect
+                const pulse = Math.sin(time * 3 + b.position.x) * 0.1 + 0.9;
+                b.material.opacity = 0.5 + pulse * 0.3;
+            });
+
+            // Move ads
+            ads.forEach(ad => {
+                ad.position.z += flySpeed;
+                ad.position.y += Math.sin(time * 2 + ad.userData.bobOffset) * 0.02;
+                if (ad.position.z > 20) {
+                    ad.position.z = -200;
+                }
+            });
+
+            // Move vehicles
+            vehicles.forEach(v => {
+                v.position.z += v.userData.speed;
+                if (v.position.z > 20) {
+                    v.position.z = -200;
+                    v.position.x = (Math.random() - 0.5) * 80;
+                    v.position.y = 10 + Math.random() * 50;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>

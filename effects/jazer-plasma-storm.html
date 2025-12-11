@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plasma Storm - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        import { noise2D, noise3D, mouse, hexToRgb, smoothstep } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H;
+        let time = 0;
+
+        const plasmaColors = [
+            '#ff0055', '#ff2aff', '#00f5ff', '#39ff14', '#ffd700', '#ff6b00'
+        ];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Electric arc between two points
+        function drawLightning(x1, y1, x2, y2, segments, displacement, color, alpha) {
+            const points = [{ x: x1, y: y1 }];
+            let midX = (x1 + x2) / 2;
+            let midY = (y1 + y2) / 2;
+
+            function subdivide(start, end, disp) {
+                if (disp < 2) return;
+                const mid = {
+                    x: (start.x + end.x) / 2 + (Math.random() - 0.5) * disp,
+                    y: (start.y + end.y) / 2 + (Math.random() - 0.5) * disp
+                };
+                const startIdx = points.indexOf(start);
+                const endIdx = points.indexOf(end);
+                points.splice(endIdx, 0, mid);
+                subdivide(start, mid, disp * 0.6);
+                subdivide(mid, end, disp * 0.6);
+            }
+
+            points.push({ x: x2, y: y2 });
+            subdivide(points[0], points[1], displacement);
+
+            const rgb = hexToRgb(color);
+
+            // Glow
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.3})`;
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.stroke();
+
+            // Core
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.stroke();
+
+            // White core
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Plasma orbs
+        class PlasmaOrb {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * W;
+                this.y = Math.random() * H;
+                this.size = 20 + Math.random() * 60;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.colorIndex = Math.floor(Math.random() * plasmaColors.length);
+                this.pulseSpeed = 1 + Math.random() * 2;
+                this.noiseOffset = Math.random() * 1000;
+            }
+
+            update(dt) {
+                // Mouse attraction
+                const dx = mouse.x - this.x;
+                const dy = mouse.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 300 && dist > 10) {
+                    this.vx += (dx / dist) * 0.5;
+                    this.vy += (dy / dist) * 0.5;
+                }
+
+                // Noise-based movement
+                this.vx += noise2D(this.x * 0.003, time * 0.5 + this.noiseOffset) * 0.3;
+                this.vy += noise2D(this.y * 0.003, time * 0.5 + this.noiseOffset + 100) * 0.3;
+
+                // Damping
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Wrap around
+                if (this.x < -100) this.x = W + 100;
+                if (this.x > W + 100) this.x = -100;
+                if (this.y < -100) this.y = H + 100;
+                if (this.y > H + 100) this.y = -100;
+            }
+
+            draw() {
+                const pulse = Math.sin(time * this.pulseSpeed) * 0.3 + 1;
+                const size = this.size * pulse;
+                const color = plasmaColors[this.colorIndex];
+                const rgb = hexToRgb(color);
+
+                // Multiple glow layers
+                for (let i = 4; i >= 0; i--) {
+                    const layerSize = size * (1 + i * 0.5);
+                    const alpha = 0.15 / (i + 1);
+
+                    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, layerSize);
+                    grad.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`);
+                    grad.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.5})`);
+                    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, layerSize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Plasma tendrils
+                const tendrilCount = 6;
+                for (let i = 0; i < tendrilCount; i++) {
+                    const angle = (i / tendrilCount) * Math.PI * 2 + time * 0.5;
+                    const len = size * (0.8 + noise2D(i + time, this.noiseOffset) * 0.5);
+                    const endX = this.x + Math.cos(angle) * len;
+                    const endY = this.y + Math.sin(angle) * len;
+
+                    ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.quadraticCurveTo(
+                        this.x + Math.cos(angle + 0.3) * len * 0.5,
+                        this.y + Math.sin(angle + 0.3) * len * 0.5,
+                        endX, endY
+                    );
+                    ctx.stroke();
+                }
+            }
+        }
+
+        const orbs = Array.from({ length: 8 }, () => new PlasmaOrb());
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            // Dark background with color tint
+            const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H));
+            bgGrad.addColorStop(0, '#100010');
+            bgGrad.addColorStop(1, '#000005');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Motion blur effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+
+            // Update and draw orbs
+            const dt = 1 / 60;
+            orbs.forEach(orb => {
+                orb.update(dt);
+                orb.draw();
+            });
+
+            // Draw lightning between nearby orbs
+            for (let i = 0; i < orbs.length; i++) {
+                for (let j = i + 1; j < orbs.length; j++) {
+                    const dx = orbs[j].x - orbs[i].x;
+                    const dy = orbs[j].y - orbs[i].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 400 && Math.random() < 0.1) {
+                        const alpha = smoothstep(400, 100, dist);
+                        const color = plasmaColors[Math.floor(time * 2) % plasmaColors.length];
+                        drawLightning(orbs[i].x, orbs[i].y, orbs[j].x, orbs[j].y, 5, 50, color, alpha * 0.6);
+                    }
+                }
+            }
+
+            // Lightning to mouse
+            if (mouse.x > 0 && Math.random() < 0.15) {
+                const nearestOrb = orbs.reduce((nearest, orb) => {
+                    const d = Math.hypot(orb.x - mouse.x, orb.y - mouse.y);
+                    return d < nearest.d ? { orb, d } : nearest;
+                }, { orb: orbs[0], d: Infinity });
+
+                if (nearestOrb.d < 400) {
+                    const color = '#00f5ff';
+                    drawLightning(nearestOrb.orb.x, nearestOrb.orb.y, mouse.x, mouse.y, 5, 60, color, 0.7);
+                }
+            }
+
+            ctx.restore();
+
+            // Subtle scan lines
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+            for (let y = 0; y < H; y += 3) {
+                ctx.fillRect(0, y, W, 1);
+            }
+
+            // JaZeR text in plasma
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.font = 'bold 120px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const textGrad = ctx.createLinearGradient(W / 2 - 200, 0, W / 2 + 200, 0);
+            const t = time * 0.5;
+            textGrad.addColorStop(0, plasmaColors[Math.floor(t) % plasmaColors.length]);
+            textGrad.addColorStop(0.5, plasmaColors[Math.floor(t + 1) % plasmaColors.length]);
+            textGrad.addColorStop(1, plasmaColors[Math.floor(t + 2) % plasmaColors.length]);
+
+            ctx.fillStyle = textGrad;
+            ctx.globalAlpha = 0.04 + Math.sin(time * 2) * 0.02;
+            ctx.fillText('JaZeR', W / 2, H / 2);
+            ctx.restore();
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

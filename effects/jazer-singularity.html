@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Singularity Vortex - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script src="../Three.js"></script>
+    <script type="module">
+        import { noise3D, mouse, hexToRgb, ColorPalettes, smoothstep } from '../jazer-background-engine.js';
+
+        const THREE = window.THREE;
+        const canvas = document.getElementById('c');
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 3;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Particle system for singularity
+        const particleCount = 15000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+        const velocities = new Float32Array(particleCount * 3);
+        const originalPositions = new Float32Array(particleCount * 3);
+
+        const palette = ['#ff0055', '#00f5ff', '#ff2aff', '#ffd700', '#39ff14'];
+
+        for (let i = 0; i < particleCount; i++) {
+            // Spiral distribution
+            const theta = Math.random() * Math.PI * 20;
+            const r = 0.5 + Math.random() * 4;
+            const y = (Math.random() - 0.5) * 3;
+
+            positions[i * 3] = Math.cos(theta) * r;
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = Math.sin(theta) * r;
+
+            originalPositions[i * 3] = positions[i * 3];
+            originalPositions[i * 3 + 1] = positions[i * 3 + 1];
+            originalPositions[i * 3 + 2] = positions[i * 3 + 2];
+
+            const color = new THREE.Color(palette[Math.floor(Math.random() * palette.length)]);
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
+
+            sizes[i] = 0.02 + Math.random() * 0.04;
+
+            velocities[i * 3] = (Math.random() - 0.5) * 0.02;
+            velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.02;
+            velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const material = new THREE.PointsMaterial({
+            size: 0.05,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+
+        // Event horizon (black hole center)
+        const holeGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+        const holeMaterial = new THREE.MeshBasicMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: 0.95
+        });
+        const blackHole = new THREE.Mesh(holeGeometry, holeMaterial);
+        scene.add(blackHole);
+
+        // Accretion disk
+        const diskGeometry = new THREE.RingGeometry(0.4, 1.5, 64);
+        const diskMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 },
+                color1: { value: new THREE.Color(0xff0055) },
+                color2: { value: new THREE.Color(0x00f5ff) }
+            },
+            vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+            fragmentShader: `
+        uniform float time;
+        uniform vec3 color1;
+        uniform vec3 color2;
+        varying vec2 vUv;
+        
+        void main() {
+          float r = length(vUv - 0.5) * 2.0;
+          float angle = atan(vUv.y - 0.5, vUv.x - 0.5);
+          float spiral = sin(angle * 8.0 + r * 20.0 - time * 5.0);
+          float intensity = (1.0 - r) * (0.5 + spiral * 0.5);
+          vec3 color = mix(color1, color2, sin(angle * 4.0 + time) * 0.5 + 0.5);
+          gl_FragColor = vec4(color * intensity, intensity * 0.6);
+        }
+      `,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide
+        });
+        const disk = new THREE.Mesh(diskGeometry, diskMaterial);
+        disk.rotation.x = Math.PI * 0.4;
+        scene.add(disk);
+
+        // Light jets
+        const jetGeometry = new THREE.ConeGeometry(0.1, 3, 16, 1, true);
+        const jetMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00f5ff,
+            transparent: true,
+            opacity: 0.3,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide
+        });
+
+        const jetTop = new THREE.Mesh(jetGeometry, jetMaterial);
+        jetTop.position.y = 1.5;
+        scene.add(jetTop);
+
+        const jetBottom = new THREE.Mesh(jetGeometry, jetMaterial.clone());
+        jetBottom.material.color = new THREE.Color(0xff2aff);
+        jetBottom.position.y = -1.5;
+        jetBottom.rotation.z = Math.PI;
+        scene.add(jetBottom);
+
+        let time = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.016;
+            mouse.update();
+
+            // Rotate entire scene slowly
+            particles.rotation.y += 0.002;
+            disk.rotation.z += 0.01;
+
+            // Gravitational effect on particles
+            const pos = particles.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                const ix = i * 3;
+                const iy = ix + 1;
+                const iz = ix + 2;
+
+                // Distance from center
+                const dx = pos[ix];
+                const dy = pos[iy];
+                const dz = pos[iz];
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                // Gravitational pull toward center
+                const pull = 0.02 / (dist * dist + 0.1);
+                velocities[ix] -= dx * pull;
+                velocities[iy] -= dy * pull * 0.1; // Less vertical pull
+                velocities[iz] -= dz * pull;
+
+                // Orbital velocity (tangent)
+                const tangentX = -dz;
+                const tangentZ = dx;
+                const tangentLen = Math.sqrt(tangentX * tangentX + tangentZ * tangentZ) + 0.001;
+                velocities[ix] += (tangentX / tangentLen) * 0.001;
+                velocities[iz] += (tangentZ / tangentLen) * 0.001;
+
+                // Apply velocity
+                pos[ix] += velocities[ix];
+                pos[iy] += velocities[iy];
+                pos[iz] += velocities[iz];
+
+                // Damping
+                velocities[ix] *= 0.999;
+                velocities[iy] *= 0.999;
+                velocities[iz] *= 0.999;
+
+                // Reset if too close or too far
+                if (dist < 0.3 || dist > 5) {
+                    pos[ix] = originalPositions[ix];
+                    pos[iy] = originalPositions[iy];
+                    pos[iz] = originalPositions[iz];
+                    velocities[ix] = (Math.random() - 0.5) * 0.02;
+                    velocities[iy] = (Math.random() - 0.5) * 0.02;
+                    velocities[iz] = (Math.random() - 0.5) * 0.02;
+                }
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+
+            // Animate jets
+            jetTop.scale.y = 1 + Math.sin(time * 5) * 0.2;
+            jetBottom.scale.y = 1 + Math.sin(time * 5 + Math.PI) * 0.2;
+
+            // Update disk shader
+            diskMaterial.uniforms.time.value = time;
+
+            // Camera follows mouse slightly
+            camera.position.x = mouse.centeredX * 0.5;
+            camera.position.y = mouse.centeredY * 0.3;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>
