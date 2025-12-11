@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Hyperspace Tunnel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+  <canvas id="effectCanvas"></canvas>
+
+  <script type="module">
+    import { mouse, ColorPalettes } from '../jazer-background-engine.js';
+
+    const canvas = document.getElementById('effectCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+
+    const palette = ColorPalettes.cyberpunk;
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function render() {
+      time += 0.016;
+      mouse.update();
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.globalCompositeOperation = 'lighter';
+
+      const centerX = width / 2 + (mouse.centeredX * 50);
+      const centerY = height / 2 + (mouse.centeredY * 50);
+      const speed = 1 + (mouse.isInside ? mouse.velocityX * mouse.velocityX + mouse.velocityY * mouse.velocityY : 0) * 100;
+      
+      const rings = 30;
+
+      // Wireframe tunnel
+      for (let i = 0; i < rings; i++) {
+        const z = (time * 200 * speed + i * 80) % 2400;
+        const scale = 10000 / (z + 1);
+        const radius = scale * 100;
+        const alpha = Math.max(0, 1 - z / 2400);
+
+        if (alpha < 0.01) continue;
+
+        const colorIndex = Math.floor((z / 2400) * palette.length);
+        const color = palette[colorIndex % palette.length];
+        
+        ctx.strokeStyle = color + Math.floor(alpha * 200).toString(16).padStart(2, '0');
+        ctx.lineWidth = 2 * scale;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15 * scale;
+        
+        // Draw ring
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Speed lines
+        if (i % 3 === 0) {
+          const lineCount = 8;
+          for (let j = 0; j < lineCount; j++) {
+            const angle = (j / lineCount) * Math.PI * 2 + time;
+            const x1 = centerX + Math.cos(angle) * radius;
+            const y1 = centerY + Math.sin(angle) * radius;
+            const prevZ = (time * 200 * speed + (i - 3) * 80) % 2400;
+            const prevScale = 10000 / (prevZ + 1);
+            const prevRadius = prevScale * 100;
+            const x2 = centerX + Math.cos(angle) * prevRadius;
+            const y2 = centerY + Math.sin(angle) * prevRadius;
+            
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+          }
+        }
+      }
+
+      ctx.shadowBlur = 0;
+      requestAnimationFrame(render);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

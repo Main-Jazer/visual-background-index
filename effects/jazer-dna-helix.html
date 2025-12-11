@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - DNA Helix Infinity</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+  <canvas id="effectCanvas"></canvas>
+
+  <script type="module">
+    import { mouse, ColorPalettes } from '../jazer-background-engine.js';
+
+    const canvas = document.getElementById('effectCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+
+    const palette = ColorPalettes.cyberpunk;
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function render() {
+      time += 0.016;
+      mouse.update();
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.globalCompositeOperation = 'lighter';
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const helixRadius = 100 + mouse.centeredX * 30;
+      const segments = 100;
+      const spread = 300;
+
+      // Draw double helix
+      for (let strand = 0; strand < 2; strand++) {
+        const color = palette[strand * 2];
+        ctx.strokeStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.lineWidth = 3;
+
+        const offset = strand * Math.PI;
+        
+        ctx.beginPath();
+        for (let i = 0; i < segments; i++) {
+          const t = (i / segments) * Math.PI * 4 + time;
+          const x = centerX + Math.cos(t + offset) * helixRadius;
+          const y = centerY + (i / segments - 0.5) * spread;
+          
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Glowing nodes
+        ctx.fillStyle = color;
+        for (let i = 0; i < segments; i += 5) {
+          const t = (i / segments) * Math.PI * 4 + time;
+          const x = centerX + Math.cos(t + offset) * helixRadius;
+          const y = centerY + (i / segments - 0.5) * spread;
+          const size = 4 + Math.sin(time * 2 + i) * 2;
+          
+          ctx.beginPath();
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Molecular connections
+      ctx.strokeStyle = palette[1];
+      ctx.shadowColor = palette[1];
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 2;
+
+      for (let i = 0; i < segments; i += 10) {
+        const t = (i / segments) * Math.PI * 4 + time;
+        const x1 = centerX + Math.cos(t) * helixRadius;
+        const y = centerY + (i / segments - 0.5) * spread;
+        const x2 = centerX + Math.cos(t + Math.PI) * helixRadius;
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2, y);
+        ctx.stroke();
+      }
+
+      ctx.shadowBlur = 0;
+      requestAnimationFrame(render);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

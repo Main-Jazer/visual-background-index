@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Crystal Cave</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+
+  <script src="../Three.js"></script>
+  <script type="module">
+    import { mouse, ColorPalettes } from '../jazer-background-engine.js';
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x001a33, 10, 100);
+    
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+    
+    camera.position.z = 0;
+
+    const palette = ColorPalettes.ice;
+    let time = 0;
+
+    // Create ice crystals
+    const crystals = [];
+    const crystalCount = 40;
+    
+    for (let i = 0; i < crystalCount; i++) {
+      const size = 2 + Math.random() * 5;
+      const geometry = new THREE.OctahedronGeometry(size, 0);
+      const material = new THREE.MeshBasicMaterial({
+        color: palette[i % palette.length],
+        wireframe: true,
+        transparent: true,
+        opacity: 0.6
+      });
+      
+      const crystal = new THREE.Mesh(geometry, material);
+      
+      // Arrange in tunnel formation
+      const angle = (i / crystalCount) * Math.PI * 4;
+      const radius = 10 + Math.random() * 5;
+      crystal.position.x = Math.cos(angle) * radius;
+      crystal.position.y = Math.sin(angle) * radius;
+      crystal.position.z = -i * 5 - 20;
+      
+      crystal.rotation.x = Math.random() * Math.PI;
+      crystal.rotation.y = Math.random() * Math.PI;
+      
+      crystals.push({
+        mesh: crystal,
+        rotSpeed: (Math.random() - 0.5) * 0.02
+      });
+      
+      scene.add(crystal);
+      
+      // Add point light to each crystal
+      const light = new THREE.PointLight(palette[i % palette.length], 0.5, 20);
+      light.position.copy(crystal.position);
+      scene.add(light);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.01;
+      mouse.update();
+
+      // Move camera forward
+      camera.position.z -= 0.15;
+      camera.position.x += mouse.centeredX * 0.1;
+      camera.position.y += mouse.centeredY * 0.1;
+      
+      // Update crystals
+      crystals.forEach(crystal => {
+        crystal.mesh.position.z += 0.15;
+        crystal.mesh.rotation.x += crystal.rotSpeed;
+        crystal.mesh.rotation.y += crystal.rotSpeed * 1.5;
+        
+        // Loop crystals
+        if (crystal.mesh.position.z > 20) {
+          crystal.mesh.position.z = -200;
+        }
+        
+        // Pulse opacity
+        crystal.mesh.material.opacity = 0.5 + Math.sin(time * 2 + crystal.mesh.position.z * 0.1) * 0.2;
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Aurora Borealis</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+  <canvas id="effectCanvas"></canvas>
+
+  <script type="module">
+    import { SimplexNoise, noise2D, mouse, ColorPalettes } from '../jazer-background-engine.js';
+
+    const canvas = document.getElementById('effectCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+
+    const palette = ColorPalettes.aurora;
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function render() {
+      time += 0.016;
+      mouse.update();
+
+      // Night sky gradient
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, '#000814');
+      gradient.addColorStop(1, '#001d3d');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Stars
+      ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 100; i++) {
+        const x = (i * 37 + time * 5) % width;
+        const y = (i * 73) % (height * 0.7);
+        const size = (noise2D(i, 0) + 1) * 1.5;
+        const twinkle = Math.abs(noise2D(i, time));
+        
+        ctx.globalAlpha = twinkle;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Mountain silhouettes
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      for (let x = 0; x <= width; x += 20) {
+        const noiseVal = noise2D(x * 0.003, 0);
+        const y = height - (height * 0.2) - noiseVal * 100;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(width, height);
+      ctx.fill();
+
+      // Aurora ribbons
+      ctx.globalCompositeOperation = 'lighter';
+      
+      const ribbonCount = 5;
+      for (let r = 0; r < ribbonCount; r++) {
+        const color = palette[r % palette.length];
+        const ribbonY = height * 0.3 + r * 40;
+        
+        ctx.strokeStyle = color + '44';
+        ctx.fillStyle = color + '22';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 30;
+        
+        ctx.beginPath();
+        ctx.moveTo(0, ribbonY);
+        
+        const segments = 100;
+        for (let i = 0; i <= segments; i++) {
+          const x = (i / segments) * width;
+          const noiseVal1 = noise2D(x * 0.003, time * 0.5 + r);
+          const noiseVal2 = noise2D(x * 0.005, time * 0.3 + r + 10);
+          const y = ribbonY + noiseVal1 * 80 + noiseVal2 * 40;
+          
+          ctx.lineTo(x, y);
+        }
+        
+        // Fill below curve
+        ctx.lineTo(width, height * 0.8);
+        ctx.lineTo(0, height * 0.8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.shadowBlur = 0;
+      ctx.globalCompositeOperation = 'source-over';
+      requestAnimationFrame(render);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
