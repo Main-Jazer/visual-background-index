@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Effects Gallery</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --primary: #00f5ff;
+      --secondary: #ff2aff;
+      --accent: #b37cff;
+      --bg-dark: #0a0515;
+      --bg-darker: #050008;
+      --text: #ffffff;
+      --text-dim: rgba(255, 255, 255, 0.7);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(180deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Gallery Container */
+    #gallery-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+      transition: opacity 0.3s ease;
+    }
+
+    #gallery-container.hidden {
+      display: none;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* Search Bar */
+    #search-bar {
+      margin: 2rem 0;
+      position: relative;
+    }
+
+    #search-input {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50px;
+      color: var(--text);
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    #search-input:focus {
+      border-color: var(--primary);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+    }
+
+    #search-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    /* Category Filter */
+    #category-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin: 2rem 0;
+      justify-content: center;
+    }
+
+    .category-btn {
+      padding: 0.75rem 1.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 25px;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .category-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .category-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #000;
+      box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+    }
+
+    /* Effects Grid */
+    #effects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .effect-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .effect-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+
+    .effect-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 245, 255, 0.3);
+    }
+
+    .effect-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .effect-card h3 {
+      font-size: 1.4rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    .effect-card .category {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      font-size: 0.75rem;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+    }
+
+    .effect-card .description {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+
+    .effect-card .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .effect-card .tag {
+      padding: 0.25rem 0.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    /* Effect Viewer */
+    #effect-viewer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      z-index: 1000;
+      transition: opacity 0.3s ease;
+    }
+
+    #effect-viewer.hidden {
+      display: none;
+    }
+
+    #back-btn {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      padding: 1rem 2rem;
+      background: rgba(0, 245, 255, 0.2);
+      border: 2px solid var(--primary);
+      border-radius: 50px;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      z-index: 1001;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    #back-btn:hover {
+      background: var(--primary);
+      color: #000;
+      transform: translateX(-5px);
+      box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+    }
+
+    #effect-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #effect-info {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: rgba(10, 5, 21, 0.8);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 15px;
+      padding: 1.5rem;
+      max-width: 400px;
+      backdrop-filter: blur(10px);
+      z-index: 1001;
+    }
+
+    #effect-info h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+    }
+
+    #effect-info .info-description {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1002;
+    }
+
+    #loading.hidden {
+      display: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2rem;
+      }
+
+      #effects-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      #effect-info {
+        bottom: 1rem;
+        right: 1rem;
+        left: 1rem;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="gallery-container">
+    <header>
+      <h1>JaZeR Effects Gallery</h1>
+      <p class="subtitle">Visual Background Effects Library</p>
+    </header>
+    
+    <div id="search-bar">
+      <input 
+        type="text" 
+        id="search-input" 
+        placeholder="Search effects by name, category, or tags..." 
+      />
+    </div>
+    
+    <div id="category-filter">
+      <button class="category-btn active" data-category="all">All</button>
+    </div>
+    
+    <div id="effects-grid"></div>
+  </div>
+
+  <div id="effect-viewer" class="hidden">
+    <button id="back-btn">← Back to Gallery</button>
+    <canvas id="effect-canvas"></canvas>
+    <div id="effect-info">
+      <h2 id="effect-name">Effect Name</h2>
+      <p class="info-description" id="effect-description">Effect description</p>
+    </div>
+  </div>
+
+  <div id="loading" class="hidden">
+    <div class="spinner"></div>
+  </div>
+
+  <script type="module">
+    import { registry } from './lib/EffectRegistry.js';
+    import { EffectLoader } from './lib/EffectLoader.js';
+    
+    // Import all effects to register them
+    import { FlowerOfLife } from './sacred-geometry/FlowerOfLife.js';
+    import { SeedOfLife } from './sacred-geometry/SeedOfLife.js';
+    import { SriYantra } from './sacred-geometry/SriYantra.js';
+    import { MetatronsCube } from './sacred-geometry/MetatronsCube.js';
+    import { PlasmaStorm } from './canvas-effects/PlasmaStorm.js';
+    import { QuantumFoam } from './three-effects/QuantumFoam.js';
+    import { NeonOcean } from './three-effects/NeonOcean.js';
+
+    // Register all effects
+    registry.register(FlowerOfLife);
+    registry.register(SeedOfLife);
+    registry.register(SriYantra);
+    registry.register(MetatronsCube);
+    registry.register(PlasmaStorm);
+    registry.register(QuantumFoam);
+    registry.register(NeonOcean);
+
+    // Initialize effect loader
+    const loader = new EffectLoader(registry);
+
+    // DOM elements
+    const galleryContainer = document.getElementById('gallery-container');
+    const effectViewer = document.getElementById('effect-viewer');
+    const effectsGrid = document.getElementById('effects-grid');
+    const searchInput = document.getElementById('search-input');
+    const categoryFilter = document.getElementById('category-filter');
+    const backBtn = document.getElementById('back-btn');
+    const effectCanvas = document.getElementById('effect-canvas');
+    const effectInfo = document.getElementById('effect-info');
+    const effectName = document.getElementById('effect-name');
+    const effectDescription = document.getElementById('effect-description');
+    const loading = document.getElementById('loading');
+
+    let currentCategory = 'all';
+    let currentSearch = '';
+
+    // Initialize gallery
+    function init() {
+      renderCategoryButtons();
+      renderEffects();
+      attachEventListeners();
+    }
+
+    // Render category buttons
+    function renderCategoryButtons() {
+      const categories = registry.getCategories();
+      categories.forEach(category => {
+        const btn = document.createElement('button');
+        btn.className = 'category-btn';
+        btn.dataset.category = category;
+        btn.textContent = category.replace('-', ' ');
+        categoryFilter.appendChild(btn);
+      });
+    }
+
+    // Render effect cards
+    function renderEffects() {
+      let effects;
+      
+      if (currentSearch) {
+        effects = registry.search(currentSearch);
+      } else if (currentCategory === 'all') {
+        effects = registry.getAllEffectsWithMetadata();
+      } else {
+        const effectNames = registry.getByCategory(currentCategory);
+        effects = effectNames.map(name => registry.getMetadata(name));
+      }
+
+      effectsGrid.innerHTML = '';
+      
+      if (effects.length === 0) {
+        effectsGrid.innerHTML = '<p style="text-align: center; color: var(--text-dim); grid-column: 1 / -1;">No effects found</p>';
+        return;
+      }
+
+      effects.forEach(effect => {
+        const card = createEffectCard(effect);
+        effectsGrid.appendChild(card);
+      });
+    }
+
+    // Create effect card
+    function createEffectCard(effect) {
+      const card = document.createElement('div');
+      card.className = 'effect-card';
+      card.innerHTML = `
+        <h3>${effect.name}</h3>
+        <span class="category">${effect.category}</span>
+        <p class="description">${effect.description}</p>
+        <div class="tags">
+          ${effect.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+        </div>
+      `;
+      
+      card.addEventListener('click', () => loadEffect(effect.name));
+      
+      return card;
+    }
+
+    // Load and display effect
+    async function loadEffect(effectName) {
+      try {
+        loading.classList.remove('hidden');
+        galleryContainer.classList.add('hidden');
+        effectViewer.classList.remove('hidden');
+
+        const metadata = registry.getMetadata(effectName);
+        effectName.textContent = metadata.name;
+        effectDescription.textContent = metadata.description;
+
+        await loader.loadEffect(effectName, effectCanvas);
+        loading.classList.add('hidden');
+      } catch (error) {
+        console.error('Failed to load effect:', error);
+        alert(`Failed to load effect: ${error.message}`);
+        backToGallery();
+      }
+    }
+
+    // Back to gallery
+    function backToGallery() {
+      loader.unload();
+      effectViewer.classList.add('hidden');
+      galleryContainer.classList.remove('hidden');
+      loading.classList.add('hidden');
+    }
+
+    // Attach event listeners
+    function attachEventListeners() {
+      // Search
+      searchInput.addEventListener('input', (e) => {
+        currentSearch = e.target.value.trim();
+        renderEffects();
+      });
+
+      // Category filter
+      categoryFilter.addEventListener('click', (e) => {
+        if (e.target.classList.contains('category-btn')) {
+          document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.classList.remove('active');
+          });
+          e.target.classList.add('active');
+          currentCategory = e.target.dataset.category;
+          currentSearch = '';
+          searchInput.value = '';
+          renderEffects();
+        }
+      });
+
+      // Back button
+      backBtn.addEventListener('click', backToGallery);
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !effectViewer.classList.contains('hidden')) {
+          backToGallery();
+        }
+      });
+    }
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>
