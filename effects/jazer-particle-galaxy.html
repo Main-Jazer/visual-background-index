@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Particle Galaxy</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+
+  <script src="../Three.js"></script>
+  <script type="module">
+    import { SimplexNoise, noise3D, ColorPalettes } from '../jazer-background-engine.js';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: false });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    document.body.appendChild(renderer.domElement);
+    
+    camera.position.set(0, 80, 150);
+    camera.lookAt(0, 0, 0);
+
+    const palette = ColorPalettes.galaxy;
+    const simplex = new SimplexNoise();
+    let time = 0;
+
+    // Create 50,000 star particles
+    const particleCount = 50000;
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const velocities = [];
+
+    // Initialize galaxy structure
+    for (let i = 0; i < particleCount; i++) {
+      const i3 = i * 3;
+      
+      // Spiral galaxy distribution
+      const arm = Math.floor(Math.random() * 4); // 4 spiral arms
+      const armAngle = (arm / 4) * Math.PI * 2;
+      const distanceFromCenter = Math.random() * 60;
+      const armOffset = (distanceFromCenter / 60) * Math.PI * 2;
+      const angle = armAngle + armOffset + (Math.random() - 0.5) * 0.5;
+      
+      const radius = distanceFromCenter;
+      const height = (Math.random() - 0.5) * (10 - distanceFromCenter / 10);
+      
+      positions[i3] = Math.cos(angle) * radius;
+      positions[i3 + 1] = height;
+      positions[i3 + 2] = Math.sin(angle) * radius;
+      
+      velocities.push({
+        angle: angle,
+        radius: radius,
+        height: height,
+        orbitalSpeed: 0.5 / (radius + 5)
+      });
+      
+      // Color gradient from core to edge
+      const colorT = distanceFromCenter / 60;
+      const colorIndex = Math.floor(colorT * (palette.length - 1));
+      const color = new THREE.Color(palette[colorIndex]);
+      colors[i3] = color.r;
+      colors[i3 + 1] = color.g;
+      colors[i3 + 2] = color.b;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+      size: 0.5,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      sizeAttenuation: true
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+
+    // Glowing core
+    const coreGeometry = new THREE.SphereGeometry(5, 32, 32);
+    const coreMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.8
+    });
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+    scene.add(core);
+
+    // Core glow
+    const glowGeometry = new THREE.SphereGeometry(8, 32, 32);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+      color: 0x7c3aed,
+      transparent: true,
+      opacity: 0.3,
+      side: THREE.BackSide
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    scene.add(glow);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.005;
+
+      // Rotate particles in orbital motion
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        const vel = velocities[i];
+        
+        vel.angle += vel.orbitalSpeed * 0.01;
+        
+        positions[i3] = Math.cos(vel.angle) * vel.radius;
+        positions[i3 + 1] = vel.height + Math.sin(time + i * 0.001) * 0.5;
+        positions[i3 + 2] = Math.sin(vel.angle) * vel.radius;
+      }
+
+      geometry.attributes.position.needsUpdate = true;
+      
+      // Rotate view
+      camera.position.x = Math.sin(time * 0.1) * 150;
+      camera.position.z = Math.cos(time * 0.1) * 150;
+      camera.position.y = 80 + Math.sin(time * 0.05) * 20;
+      camera.lookAt(0, 0, 0);
+      
+      // Pulse core
+      core.scale.setScalar(1 + Math.sin(time * 2) * 0.1);
+      glow.scale.setScalar(1 + Math.sin(time * 2 + 0.5) * 0.15);
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>

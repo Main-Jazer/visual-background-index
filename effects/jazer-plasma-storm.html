@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Plasma Storm</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    .back-link {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      font-size: 14px;
+      z-index: 1000;
+      padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s;
+    }
+
+    .back-link:hover {
+      background: rgba(0, 245, 255, 0.2);
+      border-color: #00f5ff;
+      color: #00f5ff;
+    }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+  <canvas id="effectCanvas"></canvas>
+
+  <script type="module">
+    import {
+      SimplexNoise,
+      noise2D,
+      mouse,
+      ColorPalettes,
+      distance
+    } from '../jazer-background-engine.js';
+
+    const canvas = document.getElementById('effectCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+
+    const palette = ColorPalettes.cyberpunk;
+    const simplex = new SimplexNoise();
+
+    // Plasma orbs
+    const orbs = [];
+    const orbCount = 8;
+    
+    for (let i = 0; i < orbCount; i++) {
+      orbs.push({
+        x: Math.random() * 1,
+        y: Math.random() * 1,
+        speedX: (Math.random() - 0.5) * 0.002,
+        speedY: (Math.random() - 0.5) * 0.002,
+        size: 40 + Math.random() * 60,
+        colorIndex: i % palette.length,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function render() {
+      time += 0.016;
+      mouse.update();
+
+      // Dark fade trail
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.fillRect(0, 0, width, height);
+
+      // Update orb positions
+      orbs.forEach((orb, i) => {
+        orb.x += orb.speedX + noise2D(i, time * 0.5) * 0.001;
+        orb.y += orb.speedY + noise2D(i + 100, time * 0.5) * 0.001;
+        
+        // Wrap around screen
+        orb.x = (orb.x + 1) % 1;
+        orb.y = (orb.y + 1) % 1;
+
+        // Attract to mouse if close
+        const orbScreenX = orb.x * width;
+        const orbScreenY = orb.y * height;
+        const mouseX = mouse.smoothX * width;
+        const mouseY = mouse.smoothY * height;
+        const dist = distance(orbScreenX, orbScreenY, mouseX, mouseY);
+        
+        if (dist < 200) {
+          const force = (200 - dist) / 200 * 0.002;
+          orb.speedX += (mouseX - orbScreenX) / dist * force;
+          orb.speedY += (mouseY - orbScreenY) / dist * force;
+        }
+
+        // Damping
+        orb.speedX *= 0.98;
+        orb.speedY *= 0.98;
+      });
+
+      // Draw electric arcs between orbs
+      ctx.globalCompositeOperation = 'lighter';
+      orbs.forEach((orb1, i) => {
+        orbs.forEach((orb2, j) => {
+          if (i >= j) return;
+          
+          const x1 = orb1.x * width;
+          const y1 = orb1.y * height;
+          const x2 = orb2.x * width;
+          const y2 = orb2.y * height;
+          const dist = distance(x1, y1, x2, y2);
+          
+          if (dist < 400) {
+            const alpha = 1 - dist / 400;
+            const color = palette[orb1.colorIndex];
+            
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2 + alpha * 3;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 15;
+            
+            // Lightning effect with noise
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            
+            const steps = 8;
+            for (let s = 1; s < steps; s++) {
+              const t = s / steps;
+              const x = x1 + (x2 - x1) * t;
+              const y = y1 + (y2 - y1) * t;
+              const offset = noise2D(x * 0.01 + time * 2, y * 0.01) * 20 * alpha;
+              const perpX = -(y2 - y1) / dist;
+              const perpY = (x2 - x1) / dist;
+              ctx.lineTo(x + perpX * offset, y + perpY * offset);
+            }
+            
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+          }
+        });
+      });
+
+      // Draw lightning to mouse
+      const mouseX = mouse.smoothX * width;
+      const mouseY = mouse.smoothY * height;
+      orbs.forEach(orb => {
+        const x1 = orb.x * width;
+        const y1 = orb.y * height;
+        const dist = distance(x1, y1, mouseX, mouseY);
+        
+        if (dist < 250 && mouse.isInside) {
+          const alpha = 1 - dist / 250;
+          const color = palette[orb.colorIndex];
+          
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1 + alpha * 2;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 10;
+          
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          
+          const steps = 6;
+          for (let s = 1; s < steps; s++) {
+            const t = s / steps;
+            const x = x1 + (mouseX - x1) * t;
+            const y = y1 + (mouseY - y1) * t;
+            const offset = noise2D(x * 0.02 + time * 3, y * 0.02) * 15 * alpha;
+            const perpX = -(mouseY - y1) / dist;
+            const perpY = (mouseX - x1) / dist;
+            ctx.lineTo(x + perpX * offset, y + perpY * offset);
+          }
+          
+          ctx.lineTo(mouseX, mouseY);
+          ctx.stroke();
+        }
+      });
+
+      // Draw plasma orbs
+      orbs.forEach(orb => {
+        const x = orb.x * width;
+        const y = orb.y * height;
+        const size = orb.size * (1 + Math.sin(time * 2 + orb.phase) * 0.2);
+        const color = palette[orb.colorIndex];
+        
+        // Outer glow
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, size);
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(0.5, color + '88');
+        gradient.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Core
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.shadowBlur = 0;
+      requestAnimationFrame(render);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Singularity Vortex</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+
+  <script src="../Three.js"></script>
+  <script type="module">
+    import { SimplexNoise, noise3D, ColorPalettes } from '../jazer-background-engine.js';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: false });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    document.body.appendChild(renderer.domElement);
+    
+    camera.position.z = 50;
+
+    const palette = ['#ff0055', '#ff5500', '#ffaa00', '#ffffff'];
+    const simplex = new SimplexNoise();
+    let time = 0;
+
+    // Create 15,000 particles for black hole
+    const particleCount = 15000;
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const velocities = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.random() * 60 + 20;
+      const height = (Math.random() - 0.5) * 40;
+      
+      positions[i * 3] = Math.cos(angle) * radius;
+      positions[i * 3 + 1] = height;
+      positions[i * 3 + 2] = Math.sin(angle) * radius;
+
+      velocities.push({
+        angle: angle,
+        radius: radius,
+        height: height,
+        speed: 0.5 + Math.random() * 1.5
+      });
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+      size: 0.3,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      transparent: true
+    });
+
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+
+    // Accretion disk
+    const diskGeometry = new THREE.RingGeometry(5, 15, 64);
+    const diskMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff5500,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.3,
+      blending: THREE.AdditiveBlending
+    });
+    const disk = new THREE.Mesh(diskGeometry, diskMaterial);
+    disk.rotation.x = Math.PI / 2;
+    scene.add(disk);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.01;
+
+      // Update particles - spiral into singularity
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        const vel = velocities[i];
+        
+        // Spiral motion
+        vel.angle += (0.02 * vel.speed) / (vel.radius * 0.1);
+        vel.radius -= 0.05 * vel.speed;
+        
+        // Add noise
+        const noiseVal = noise3D(
+          Math.cos(vel.angle) * 0.1,
+          vel.height * 0.1,
+          time * 0.5
+        );
+        
+        positions[i3] = Math.cos(vel.angle) * vel.radius;
+        positions[i3 + 1] = vel.height + noiseVal * 2;
+        positions[i3 + 2] = Math.sin(vel.angle) * vel.radius;
+        
+        // Reset if too close to center
+        if (vel.radius < 3) {
+          vel.angle = Math.random() * Math.PI * 2;
+          vel.radius = 60 + Math.random() * 20;
+          vel.height = (Math.random() - 0.5) * 40;
+        }
+        
+        // Color based on distance from center
+        const distFromCenter = vel.radius / 80;
+        const colorIndex = Math.floor((1 - distFromCenter) * (palette.length - 1));
+        const color = new THREE.Color(palette[Math.min(colorIndex, palette.length - 1)]);
+        
+        colors[i3] = color.r;
+        colors[i3 + 1] = color.g;
+        colors[i3 + 2] = color.b;
+      }
+
+      geometry.attributes.position.needsUpdate = true;
+      geometry.attributes.color.needsUpdate = true;
+      
+      disk.rotation.z += 0.005;
+      
+      // Camera rotation
+      camera.position.x = Math.sin(time * 0.1) * 50;
+      camera.position.y = Math.sin(time * 0.05) * 20;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>

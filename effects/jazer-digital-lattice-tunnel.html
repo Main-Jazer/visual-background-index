@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Digital Lattice Tunnel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+  <canvas id="effectCanvas"></canvas>
+
+  <script type="module">
+    import { SimplexNoise, noise2D, mouse, ColorPalettes } from '../jazer-background-engine.js';
+
+    const canvas = document.getElementById('effectCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+
+    const palette = ColorPalettes.cyberpunk;
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function drawHexagon(cx, cy, radius) {
+      ctx.beginPath();
+      for (let i = 0; i <= 6; i++) {
+        const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+        const x = cx + Math.cos(angle) * radius;
+        const y = cy + Math.sin(angle) * radius;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+    }
+
+    function render() {
+      time += 0.016;
+      mouse.update();
+
+      // Fade trail
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.globalCompositeOperation = 'lighter';
+
+      const centerX = width / 2 + Math.sin(time * 0.5) * 20;
+      const centerY = height / 2 + Math.cos(time * 0.5) * 20;
+      const layers = 25;
+
+      // Draw hexagonal tunnel layers
+      for (let i = 0; i < layers; i++) {
+        const z = (time * 150 + i * 80) % 2000;
+        const scale = 8000 / (z + 1);
+        const radius = scale * 50;
+        const alpha = Math.max(0, 1 - z / 2000);
+
+        if (alpha < 0.01) continue;
+
+        const colorIndex = Math.floor((z / 2000) * palette.length);
+        const color = palette[colorIndex % palette.length];
+        
+        // Main hexagon
+        ctx.strokeStyle = color + Math.floor(alpha * 180).toString(16).padStart(2, '0');
+        ctx.lineWidth = 2 * scale;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15 * scale;
+        
+        drawHexagon(centerX, centerY, radius);
+        ctx.stroke();
+
+        // Lattice connections
+        if (i % 2 === 0 && i > 0) {
+          const prevZ = (time * 150 + (i - 2) * 80) % 2000;
+          const prevScale = 8000 / (prevZ + 1);
+          const prevRadius = prevScale * 50;
+          
+          ctx.lineWidth = 1 * scale;
+          ctx.strokeStyle = color + Math.floor(alpha * 100).toString(16).padStart(2, '0');
+          ctx.shadowBlur = 5 * scale;
+          
+          for (let j = 0; j < 6; j++) {
+            const angle = (j / 6) * Math.PI * 2 - Math.PI / 2;
+            const x1 = centerX + Math.cos(angle) * radius;
+            const y1 = centerY + Math.sin(angle) * radius;
+            const x2 = centerX + Math.cos(angle) * prevRadius;
+            const y2 = centerY + Math.sin(angle) * prevRadius;
+            
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+          }
+        }
+
+        // Speed particles at vertices
+        if (Math.random() > 0.7) {
+          for (let j = 0; j < 6; j++) {
+            const angle = (j / 6) * Math.PI * 2 - Math.PI / 2;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 20 * scale;
+            ctx.beginPath();
+            ctx.arc(x, y, 3 * scale, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      ctx.shadowBlur = 0;
+      requestAnimationFrame(render);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
