@@ -78,12 +78,12 @@
         // with multi-pass bloom, chromatic aberration, vignette, and grain.
         // ============================================================================
 
-        import { noise3D, mouse } from '../jazer-background-engine.js';
-        import * as THREE from '../Three.js';
+        import { noise3D, mouse } from '../lib/jazer-background-engine.js';
+        import * as THREE from '../lib/Three.js';
         
         // NEW: Import JaZeR post-processing
-        import { createJazerComposer } from '../jazer-three-fx.js';
-        import { FX_PRESETS } from '../jazer-post-fx.js';
+        import { createJazerComposer } from '../lib/jazer-three-fx.js';
+        import { FX_PRESETS } from '../lib/jazer-post-fx.js';
 
         window.THREE = THREE;
         const canvas = document.getElementById('c');
