@@ -87,7 +87,7 @@
   <div class="overlay">
     <div class="card">
       <h1>JaZeR Celestial Logo Haloes</h1>
-      <p>Each letter of JaZeR has its own orbit of smaller glowing particles that circle it like planetary rings.</p>
+      <p>Each letter of JaZeR has its own orbit of smaller glowing particles, forming planetary rings around each character.</p>
     </div>
   </div>
 
@@ -177,16 +177,16 @@
     let frameCount = 0;
     let lastFpsUpdate = 0;
 
-    // Celestial logo halos properties
+    // Celestial logo haloes properties
     const center = { x: width / 2, y: height / 2 };
-    const text = "JaZeR";
-    const fontSize = 120;
-    const letterSpacing = 0.15;
+    const logoText = "JaZeR";
+    const logoParticles = [];
     const particlesPerLetter = 50;
-    const particles = [];
-    const logos = [];
-    const particleSpeed = 0.02;
-    const orbitRadii = [60, 80, 100]; // Multiple orbit radii for each letter
+    const orbitSpeed = 0.5;
+    const ringCount = 3;
+    const haloRadiusBase = 80;
+    const particleSize = 2;
+    const fontSize = 120;
 
     // Simplex noise instance
     const simplex = new SimplexNoise();
@@ -204,59 +204,49 @@
       center.x = width / 2;
       center.y = height / 2;
       
-      // Initialize celestial halos
-      initializeCelestialHalos();
+      // Initialize logo haloes
+      initializeLogoHaloes();
     }
 
-    function initializeCelestialHalos() {
-      logos.length = 0;
-      particles.length = 0;
+    function initializeLogoHaloes() {
+      logoParticles.length = 0;
       
-      // Create positions for each letter in "JaZeR"
-      for (let i = 0; i < text.length; i++) {
-        const letter = text[i];
-        const x = center.x - (text.length - 1) * (fontSize * letterSpacing) / 2 + i * fontSize * letterSpacing;
-        const y = center.y;
+      // Calculate text positions
+      const textWidth = ctx.measureText(logoText).width;
+      const startX = center.x - textWidth / 2 + fontSize / 2;
+      const textY = center.y;
+      
+      // Create orbiting particles for each letter in "JaZeR"
+      for (let i = 0; i < logoText.length; i++) {
+        const char = logoText[i];
+        const charX = startX + ctx.measureText(logoText.substring(0, i)).width + ctx.measureText(char).width / 2;
+        const charColor = palette[i % palette.length];
         
-        logos.push({
-          id: i,
-          letter: letter,
-          x: x,
-          y: y,
-          color: palette[i % palette.length],
-          size: fontSize,
-          rotation: 0,
-          rotationSpeed: (Math.random() - 0.5) * 0.01,
-          orbitRadius: 80 + i * 10,
-          pulsePhase: Math.random() * Math.PI * 2
-        });
-        
-        // Create orbiting particles for this letter
-        for (let j = 0; j < particlesPerLetter; j++) {
-          const orbitRadius = orbitRadii[j % orbitRadii.length];
-          const angle = (j / particlesPerLetter) * Math.PI * 2;
-          const speed = particleSpeed + Math.random() * 0.01;
-          const size = 1 + Math.random() * 3;
-          const color = palette[(i + j) % palette.length];
-          const orbitLevel = j % 3; // 0, 1, or 2 for different orbit levels
-          
-          particles.push({
-            id: i * particlesPerLetter + j,
-            letterIndex: i,
-            x: x + Math.cos(angle) * orbitRadius,
-            y: y + Math.sin(angle) * orbitRadius,
-            angle: angle,
-            orbitRadius: orbitRadius,
-            speed: speed,
-            size: size,
-            color: color,
-            originalRadius: orbitRadius,
-            orbitLevel: orbitLevel,
-            trail: [],
-            trailLength: 10,
-            life: 1.0,
-            opacity: 0.8 + Math.random() * 0.2
-          });
+        // Create multiple rings for each letter
+        for (let r = 0; r < ringCount; r++) {
+          for (let p = 0; p < particlesPerLetter; p++) {
+            const angle = (p / particlesPerLetter) * Math.PI * 2;
+            const radius = haloRadiusBase + r * 25;
+            
+            logoParticles.push({
+              id: i * particlesPerLetter * ringCount + r * particlesPerLetter + p,
+              x: charX + Math.cos(angle) * radius,
+              y: textY + Math.sin(angle) * radius,
+              charX: charX,
+              charY: textY,
+              angle: angle,
+              radius: radius,
+              color: charColor,
+              size: particleSize * (0.8 + Math.random() * 0.4),
+              originalAngle: angle,
+              orbitSpeed: orbitSpeed * (0.8 + Math.random() * 0.4),
+              noiseOffset: Math.random() * 1000,
+              orbitRing: r,
+              belongsTo: i, // Which character this particle orbits
+              pulsePhase: Math.random() * Math.PI * 2,
+              opacity: 0.7 + Math.random() * 0.3
+            });
+          }
         }
       }
     }
@@ -279,8 +269,8 @@
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, width, height);
 
-      // Update and draw celestial logo halos
-      updateAndDrawCelestialHalos();
+      // Update and draw celestial logo haloes
+      updateAndDrawLogoHaloes();
 
       // FPS counter
       if (now - lastFpsUpdate > 1000) {
@@ -292,129 +282,102 @@
       requestAnimationFrame(render);
     }
 
-    function updateAndDrawCelestialHalos() {
+    function updateAndDrawLogoHaloes() {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       
-      // Update and draw particles
-      for (const particle of particles) {
-        const letter = logos[particle.letterIndex];
-        
-        // Update particle orbit angle
-        particle.angle += particle.speed;
+      // Calculate text positions again to update if needed
+      const textWidth = ctx.measureText(logoText).width;
+      const startX = center.x - textWidth / 2 + fontSize / 2;
+      const textY = center.y;
+      
+      // Update and draw particles for each character halo
+      for (const particle of logoParticles) {
+        // Update particle position
+        particle.angle += particle.orbitSpeed * 0.01;
         
         // Apply noise for organic movement
-        const noiseOffset = noise2D(particle.x * 0.01, particle.y * 0.01 + time) * 0.5;
-        const noiseRadius = particle.originalRadius + noiseOffset * 5;
+        const noiseX = noise2D(particle.x * 0.01, time * 0.5 + particle.noiseOffset) * 5;
+        const noiseY = noise2D(particle.y * 0.01, time * 0.5 + particle.noiseOffset + 1000) * 5;
         
-        // Calculate new position with slight variation
-        const radiusVariation = particle.originalRadius * (0.95 + Math.sin(time * 0.7 + particle.id) * 0.05);
-        const currentRadius = noiseRadius + (Math.sin(time * 2 + particle.id) * 2);
+        // Apply pulsing effect
+        const pulse = Math.sin(time * 3 + particle.pulsePhase) * 0.2 + 0.8;
+        const currentSize = particle.size * pulse;
         
-        particle.x = letter.x + Math.cos(particle.angle) * currentRadius;
-        particle.y = letter.y + Math.sin(particle.angle) * currentRadius;
-        
-        // Add to trail
-        particle.trail.push({x: particle.x, y: particle.y});
-        if (particle.trail.length > particle.trailLength) {
-          particle.trail.shift();
-        }
-        
-        // Draw particle trail
-        for (let i = 1; i < particle.trail.length; i++) {
-          const point = particle.trail[i];
-          const prevPoint = particle.trail[i-1];
-          const trailAlpha = i / particle.trail.length * particle.opacity;
+        // Apply mouse interaction
+        if (mouse.isInside) {
+          const mouseX = mouse.x * width;
+          const mouseY = mouse.y * height;
+          const dx = particle.x - mouseX;
+          const dy = particle.y - mouseY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
           
-          ctx.beginPath();
-          ctx.moveTo(prevPoint.x, prevPoint.y);
-          ctx.lineTo(point.x, point.y);
-          ctx.strokeStyle = particle.color + Math.floor(trailAlpha * 100).toString(16).padStart(2, '0');
-          ctx.lineWidth = particle.size * 0.5 * trailAlpha;
-          ctx.stroke();
+          if (dist < 100) {
+            const force = (100 - dist) / 100 * 5;
+            const angle = Math.atan2(dy, dx);
+            particle.x += Math.cos(angle) * force;
+            particle.y += Math.sin(angle) * force;
+          }
         }
+        
+        // Calculate position with updated text positions
+        particle.x = particle.charX + Math.cos(particle.angle) * particle.radius + noiseX;
+        particle.y = particle.charY + Math.sin(particle.angle) * particle.radius + noiseY;
         
         // Draw particle with glow
         ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fillStyle = particle.color;
+        ctx.arc(particle.x, particle.y, currentSize, 0, Math.PI * 2);
+        ctx.fillStyle = particle.color + Math.floor(particle.opacity * 255).toString(16).padStart(2, '0');
         ctx.shadowColor = particle.color;
         ctx.shadowBlur = 15;
-        ctx.globalAlpha = particle.opacity;
         ctx.fill();
+        
+        // Draw connection lines between nearby particles of the same character
+        for (const other of logoParticles) {
+          if (particle.belongsTo === other.belongsTo) {
+            const dist = distance(particle.x, particle.y, other.x, other.y);
+            if (dist < 40 && dist > 5) {
+              const alpha = (40 - dist) / 40;
+              ctx.beginPath();
+              ctx.moveTo(particle.x, particle.y);
+              ctx.lineTo(other.x, other.y);
+              ctx.strokeStyle = particle.color + Math.floor(alpha * 100).toString(16).padStart(2, '0');
+              ctx.lineWidth = 1;
+              ctx.stroke();
+              
+              // Add glow effect
+              ctx.shadowColor = particle.color;
+              ctx.shadowBlur = 10;
+              ctx.stroke();
+            }
+          }
+        }
       }
       
-      // Draw the main letters
-      for (const logo of logos) {
-        // Update rotation
-        logo.rotation += logo.rotationSpeed;
+      // Draw the main letters in the center
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      for (let i = 0; i < logoText.length; i++) {
+        const char = logoText[i];
+        const charX = startX + ctx.measureText(logoText.substring(0, i)).width + ctx.measureText(char).width / 2;
+        const charColor = palette[i % palette.length];
         
-        // Draw the letter with glow effect
-        ctx.save();
-        ctx.translate(logo.x, logo.y);
-        ctx.rotate(logo.rotation);
-        
-        // Calculate pulsing effect
-        const pulse = Math.sin(time * 1.5 + logo.pulsePhase) * 0.1 + 1;
-        const scaledSize = logo.size * pulse;
-        
-        ctx.font = `bold ${scaledSize}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = logo.color;
-        ctx.shadowColor = logo.color;
+        // Draw the main character with glow
+        ctx.fillStyle = charColor;
+        ctx.shadowColor = charColor;
         ctx.shadowBlur = 30;
-        ctx.fillText(logo.letter, 0, 0);
+        ctx.fillText(char, charX, textY);
         
-        // Draw outline
-        ctx.strokeStyle = logo.color;
-        ctx.lineWidth = 2;
-        ctx.strokeText(logo.letter, 0, 0);
-        
-        ctx.restore();
-        
-        // Draw orbit rings
-        for (let i = 0; i < orbitRadii.length; i++) {
-          const radius = orbitRadii[i];
-          ctx.beginPath();
-          ctx.arc(logo.x, logo.y, radius, 0, Math.PI * 2);
-          ctx.strokeStyle = logo.color + '44';
-          ctx.lineWidth = 1;
-          ctx.stroke();
-          
-          // Add glow to rings
-          ctx.shadowColor = logo.color;
-          ctx.shadowBlur = 10;
-          ctx.stroke();
+        // Draw multiple glows for enhanced effect
+        for (let j = 1; j <= 3; j++) {
+          ctx.shadowBlur = 50 * j;
+          ctx.globalAlpha = 0.3 / j;
+          ctx.fillText(char, charX, textY);
         }
-      }
-      
-      // Draw connecting elements between letters occasionally
-      if (Math.sin(time * 0.5) > 0.9) {
-        for (let i = 0; i < logos.length - 1; i++) {
-          const fromLetter = logos[i];
-          const toLetter = logos[i + 1];
-          
-          // Draw energy connection
-          const gradient = ctx.createLinearGradient(
-            fromLetter.x, fromLetter.y,
-            toLetter.x, toLetter.y
-          );
-          gradient.addColorStop(0, fromLetter.color);
-          gradient.addColorStop(1, toLetter.color);
-          
-          ctx.beginPath();
-          ctx.moveTo(fromLetter.x, fromLetter.y);
-          ctx.lineTo(toLetter.x, toLetter.y);
-          ctx.strokeStyle = gradient;
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          
-          // Add glow
-          ctx.shadowColor = fromLetter.color;
-          ctx.shadowBlur = 20;
-          ctx.stroke();
-        }
+        
+        ctx.globalAlpha = 1.0;
       }
       
       ctx.restore();

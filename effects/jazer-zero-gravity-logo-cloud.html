@@ -87,7 +87,7 @@
   <div class="overlay">
     <div class="card">
       <h1>JaZeR Zero-Gravity Logo Cloud</h1>
-      <p>Hundreds of JaZeR logos floating in zero gravity like confetti or debris, with physics-based rotation and movement.</p>
+      <p>Hundreds of JaZeR logos floating in zero gravity like confetti with physics-based rotation and movement.</p>
     </div>
   </div>
 
@@ -180,10 +180,13 @@
     // Zero-gravity logo cloud properties
     const center = { x: width / 2, y: height / 2 };
     const logos = [];
-    const logoCount = 200;
-    const gravity = 0; // Zero gravity means no gravity
-    const repulsionRadius = 50; // Radius for collision avoidance
-    const rotationSpeed = 0.02;
+    const logoCount = 200; // Number of JaZeR logos in the cloud
+    const gravity = 0; // Zero gravity
+    const logoSize = 40;
+    const rotationDamping = 0.98; // How much rotation slows down
+    const velocityDamping = 0.99; // How much velocity slows down
+    const mouseInfluenceRadius = 150;
+    const mouseRepulsionForce = 200;
 
     // Simplex noise instance
     const simplex = new SimplexNoise();
@@ -201,32 +204,34 @@
       center.x = width / 2;
       center.y = height / 2;
       
-      // Initialize logos
-      initializeLogos();
+      // Initialize logo cloud
+      initializeLogoCloud();
     }
 
-    function initializeLogos() {
+    function initializeLogoCloud() {
       logos.length = 0;
       for (let i = 0; i < logoCount; i++) {
         logos.push({
           id: i,
-          x: center.x + (Math.random() - 0.5) * width * 0.8,
-          y: center.y + (Math.random() - 0.5) * height * 0.8,
-          z: (Math.random() - 0.5) * 100, // Simulated z-depth
-          vx: (Math.random() - 0.5) * 2, // Initial velocity
-          vy: (Math.random() - 0.5) * 2,
-          vz: (Math.random() - 0.5) * 0.5,
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 4,
           rotation: Math.random() * Math.PI * 2,
-          rotationSpeed: (Math.random() - 0.5) * rotationSpeed,
-          size: 15 + Math.random() * 25,
+          rotationSpeed: (Math.random() - 0.5) * 0.2,
           color: palette[Math.floor(Math.random() * palette.length)],
+          size: logoSize * (0.7 + Math.random() * 0.6), // Random size variation
+          originalSize: logoSize * (0.7 + Math.random() * 0.6),
+          pulsePhase: Math.random() * Math.PI * 2,
+          pulseSpeed: 2 + Math.random() * 2,
           opacity: 0.7 + Math.random() * 0.3,
-          originalSize: 15 + Math.random() * 25,
-          life: 1000,
-          maxLife: 1000,
-          text: "JaZeR",
-          connectedTo: [], // Logos this logo is connected to (for group formations)
-          repulsion: false
+          scale: 1,
+          originalX: Math.random() * width,
+          originalY: Math.random() * height,
+          noiseOffsetX: Math.random() * 1000,
+          noiseOffsetY: Math.random() * 1000,
+          trail: [],
+          trailLength: 5
         });
       }
     }
@@ -245,12 +250,12 @@
       // Clear with dark background
       const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
       bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#100020');
+      bgGradient.addColorStop(1, '#000020');
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, width, height);
 
       // Update and draw zero-gravity logo cloud
-      updateAndDrawLogos();
+      updateAndDrawLogoCloud();
 
       // FPS counter
       if (now - lastFpsUpdate > 1000) {
@@ -262,109 +267,135 @@
       requestAnimationFrame(render);
     }
 
-    function updateAndDrawLogos() {
+    function updateAndDrawLogoCloud() {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       
       for (const logo of logos) {
-        // Apply physics (with minimal gravity for subtle drift)
-        logo.vx += (Math.random() - 0.5) * 0.01; // Small random forces
-        logo.vy += (Math.random() - 0.5) * 0.01;
-        
-        // Apply velocity
-        logo.x += logo.vx;
-        logo.y += logo.vy;
+        // Add physics: apply forces
+        // Apply random forces for organic movement
+        logo.vx += (Math.random() - 0.5) * 0.1;
+        logo.vy += (Math.random() - 0.5) * 0.1;
         
         // Apply rotation
         logo.rotation += logo.rotationSpeed;
         
-        // Apply friction to slowly dampen motion
-        logo.vx *= 0.995;
-        logo.vy *= 0.995;
+        // Apply noise for organic movement
+        const noiseForceX = noise2D(
+          logo.x * 0.005 + time * 0.1,
+          logo.noiseOffsetX
+        ) * 0.3;
+        const noiseForceY = noise2D(
+          logo.y * 0.005 + time * 0.1,
+          logo.noiseOffsetY
+        ) * 0.3;
         
-        // Handle boundaries with soft wrap-around
-        if (logo.x > width + 50) logo.x = -50;
-        if (logo.x < -50) logo.x = width + 50;
-        if (logo.y > height + 50) logo.y = -50;
-        if (logo.y < -50) logo.y = height + 50;
+        logo.vx += noiseForceX;
+        logo.vy += noiseForceY;
         
-        // Mouse interaction - repel logos from mouse cursor
+        // Apply mouse repulsion if mouse is inside
         if (mouse.isInside) {
           const mouseX = mouse.x * width;
           const mouseY = mouse.y * height;
           const dx = logo.x - mouseX;
           const dy = logo.y - mouseY;
-          const distance = Math.sqrt(dx * dx + dy * dy);
+          const dist = Math.sqrt(dx * dx + dy * dy);
           
-          if (distance < 150) {
-            const force = (150 - distance) / 150 * 2.0;
-            logo.vx += (dx / distance) * force;
-            logo.vy += (dy / distance) * force;
+          if (dist < mouseInfluenceRadius) {
+            const force = (mouseInfluenceRadius - dist) / mouseInfluenceRadius * mouseRepulsionForce;
+            const angle = Math.atan2(dy, dx);
             
-            // Increase size when near mouse
-            logo.size = logo.originalSize * (1.5 - distance / 150);
-          } else {
-            // Return to original size when away from mouse
-            logo.size = logo.originalSize;
+            logo.vx += Math.cos(angle) * force * dt;
+            logo.vy += Math.sin(angle) * force * dt;
+            
+            // Also apply rotational force
+            logo.rotationSpeed += Math.sin(angle) * force * 0.001;
           }
-        } else {
-          // Return to original size when mouse is not active
-          logo.size = logo.originalSize;
         }
         
-        // Draw the JaZeR logo
+        // Apply damping to velocity and rotation
+        logo.vx *= velocityDamping;
+        logo.vy *= velocityDamping;
+        logo.rotationSpeed *= rotationDamping;
+        
+        // Update position
+        logo.x += logo.vx;
+        logo.y += logo.vy;
+        
+        // Boundary wrapping - if a logo goes off-screen, wrap it to the opposite side
+        if (logo.x < -logo.size) logo.x = width + logo.size;
+        if (logo.x > width + logo.size) logo.x = -logo.size;
+        if (logo.y < -logo.size) logo.y = height + logo.size;
+        if (logo.y > height + logo.size) logo.y = -logo.size;
+        
+        // Add current position to trail
+        logo.trail.push({ x: logo.x, y: logo.y });
+        if (logo.trail.length > logo.trailLength) {
+          logo.trail.shift();
+        }
+        
+        // Calculate pulsing effect
+        const pulse = Math.sin(time * logo.pulseSpeed + logo.pulsePhase) * 0.2 + 0.8;
+        logo.scale = pulse;
+        
+        // Draw logo with trail
         ctx.save();
         ctx.translate(logo.x, logo.y);
         ctx.rotate(logo.rotation);
+        ctx.scale(logo.scale, logo.scale);
         
-        // Draw the main outline of the logo
+        // Draw the JaZeR text
         ctx.font = `bold ${logo.size}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
-        // Create glow effect
+        ctx.fillStyle = logo.color;
         ctx.shadowColor = logo.color;
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 15;
+        ctx.fillText('JaZeR', 0, 0);
         
-        // Draw main "J" in the center
-        ctx.fillStyle = logo.color + Math.floor(logo.opacity * 255).toString(16).padStart(2, '0');
-        ctx.fillText('J', 0, 0);
+        // Add outline for more definition
+        ctx.strokeStyle = logo.color + '88';
+        ctx.lineWidth = 1;
+        ctx.strokeText('JaZeR', 0, 0);
         
-        // Draw other characters scattered around
-        for (let i = 1; i < 5; i++) {
-          const char = logo.text[i % 5] || ' '; // Use a space if no character
-          if (char.trim() === '') continue; // Skip spaces
+        // Draw trail
+        for (let i = 1; i < logo.trail.length; i++) {
+          const point = logo.trail[i];
+          const prevPoint = logo.trail[i-1];
+          const trailAlpha = i / logo.trail.length * logo.opacity * 0.5;
           
-          const angle = (i / 5) * Math.PI * 2 + time * 0.1;
-          const charRadius = logo.size * 0.8;
-          const charX = Math.cos(angle) * charRadius;
-          const charY = Math.sin(angle) * charRadius;
-          
-          // Add some random offset to make it look more scattered
-          const offsetX = noise2D(logo.id * 100 + time * 2, i) * 10;
-          const offsetY = noise2D(logo.id * 100 + time * 2 + 1000, i) * 10;
-          
-          ctx.fillText(char, charX + offsetX, charY + offsetY);
+          ctx.beginPath();
+          ctx.moveTo(prevPoint.x, prevPoint.y);
+          ctx.lineTo(point.x, point.y);
+          ctx.strokeStyle = logo.color + Math.floor(trailAlpha * 100).toString(16).padStart(2, '0');
+          ctx.lineWidth = logo.size * 0.1;
+          ctx.stroke();
         }
         
         ctx.restore();
       }
       
-      // Draw connections between nearby logos
-      for (let i = 0; i < logos.length; i++) {
-        for (let j = i + 1; j < logos.length; j++) {
-          const logo1 = logos[i];
-          const logo2 = logos[j];
-          const dist = distance(logo1.x, logo1.y, logo2.x, logo2.y);
+      // Occasionally form group patterns
+      if (Math.floor(time) % 10 === 0 && time % 1 < 0.1) { // Every 10 seconds, for 0.1 seconds
+        // Briefly form a larger JaZeR pattern with logos
+        for (const logo of logos) {
+          // Apply forces to create a pattern
+          const centerX = width * (0.5 + Math.sin(time * 0.1) * 0.1);
+          const centerY = height * (0.5 + Math.cos(time * 0.1) * 0.1);
+          const angleToCenter = Math.atan2(logo.y - centerY, logo.x - centerX);
+          const distanceToCenter = distance(logo.x, logo.y, centerX, centerY);
           
-          if (dist < 80) {
-            const alpha = 1 - dist / 80;
-            ctx.beginPath();
-            ctx.moveTo(logo1.x, logo1.y);
-            ctx.lineTo(logo2.x, logo2.y);
-            ctx.strokeStyle = logo1.color + Math.floor(alpha * 50).toString(16).padStart(2, '0');
-            ctx.lineWidth = 1;
-            ctx.stroke();
+          // Create circular formation
+          if (distanceToCenter < 300) {
+            const targetAngle = angleToCenter + Math.PI/2;
+            const targetX = centerX + Math.cos(targetAngle) * 200;
+            const targetY = centerY + Math.sin(targetAngle) * 200;
+            
+            logo.vx += (targetX - logo.x) * 0.005;
+            logo.vy += (targetY - logo.y) * 0.005;
+            
+            // Rotate to face center
+            logo.rotation = angleToCenter + Math.PI/2;
           }
         }
       }
