@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fractal Bloom - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Fractal Bloom
+         * 
+         * Fractal flower/mandala pattern that continuously blooms with "JaZeR"
+         * text arranged in fractal symmetry. Features recursive zooming into
+         * the pattern (infinite zoom) with kaleidoscope-like symmetry and
+         * vibrant rainbow/neon color cycling.
+         * 
+         * Technical approach:
+         * - Radial symmetry with multiple arms
+         * - Recursive pattern generation
+         * - Continuous zoom creating infinite effect
+         * - Text placed along fractal branches
+         * - Rainbow color cycling through HSL
+         */
+
+        import {
+            noise2D, mouse, hexToRgb,
+            map, clamp, smoothstep
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const symmetryArms = 8; // 8-fold symmetry
+        const maxDepth = 5; // Recursion depth
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // HSL to RGB conversion for rainbow colors
+        function hslToRgb(h, s, l) {
+            h = h % 1;
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+            const m = l - c / 2;
+            let r, g, b;
+
+            if (h < 1/6) [r, g, b] = [c, x, 0];
+            else if (h < 2/6) [r, g, b] = [x, c, 0];
+            else if (h < 3/6) [r, g, b] = [0, c, x];
+            else if (h < 4/6) [r, g, b] = [0, x, c];
+            else if (h < 5/6) [r, g, b] = [x, 0, c];
+            else [r, g, b] = [c, 0, x];
+
+            return {
+                r: Math.floor((r + m) * 255),
+                g: Math.floor((g + m) * 255),
+                b: Math.floor((b + m) * 255)
+            };
+        }
+
+        // Draw a fractal branch recursively
+        function drawBranch(x, y, length, angle, depth, hueOffset) {
+            if (depth <= 0 || length < 2) return;
+
+            // Calculate endpoint
+            const endX = x + Math.cos(angle) * length;
+            const endY = y + Math.sin(angle) * length;
+
+            // Rainbow color based on depth and time
+            const hue = (time * 0.1 + depth * 0.1 + hueOffset) % 1;
+            const saturation = 0.9;
+            const lightness = 0.5 + depth * 0.05;
+            const rgb = hslToRgb(hue, saturation, lightness);
+            const alpha = depth / maxDepth;
+
+            // Draw branch with glow
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+            ctx.lineWidth = depth;
+            ctx.shadowColor = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw JaZeR text on some branches
+            if (depth > 2 && length > 30) {
+                const midX = (x + endX) / 2;
+                const midY = (y + endY) / 2;
+                const fontSize = 8 + depth * 2;
+
+                ctx.save();
+                ctx.translate(midX, midY);
+                ctx.rotate(angle);
+                ctx.font = `bold ${fontSize}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.shadowColor = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+                ctx.shadowBlur = 15;
+                ctx.fillText('JaZeR', 0, 0);
+                ctx.restore();
+            }
+
+            // Recursively draw child branches
+            const newLength = length * 0.7;
+            const angleSpread = Math.PI / 4;
+
+            drawBranch(endX, endY, newLength, angle - angleSpread, depth - 1, hueOffset);
+            drawBranch(endX, endY, newLength, angle + angleSpread, depth - 1, hueOffset);
+            
+            // Add middle branch for fuller look
+            if (depth > 2) {
+                drawBranch(endX, endY, newLength * 0.8, angle, depth - 1, hueOffset);
+            }
+        }
+
+        // Draw the complete mandala with symmetry
+        function drawMandala() {
+            // Zoom effect - scale oscillates creating infinite zoom feeling
+            const zoomCycle = time * 0.3;
+            const zoom = 0.5 + Math.sin(zoomCycle) * 0.3 + (zoomCycle % 1) * 0.5;
+            const baseLength = 150 * zoom;
+
+            // Rotation for blooming effect
+            const rotation = time * 0.2;
+
+            // Draw with radial symmetry
+            for (let i = 0; i < symmetryArms; i++) {
+                const angle = (i / symmetryArms) * Math.PI * 2 + rotation;
+                const hueOffset = i / symmetryArms;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                
+                // Draw the fractal branch
+                drawBranch(0, 0, baseLength, angle, maxDepth, hueOffset);
+                
+                ctx.restore();
+            }
+
+            // Draw center bloom
+            const centerPulse = Math.sin(time * 2) * 0.5 + 0.5;
+            const centerRadius = 20 + centerPulse * 15;
+            
+            for (let i = 0; i < symmetryArms * 2; i++) {
+                const angle = (i / (symmetryArms * 2)) * Math.PI * 2 + rotation;
+                const hue = (time * 0.2 + i / (symmetryArms * 2)) % 1;
+                const rgb = hslToRgb(hue, 0.9, 0.6);
+
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
+                ctx.shadowColor = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.arc(
+                    cx + Math.cos(angle) * centerRadius,
+                    cy + Math.sin(angle) * centerRadius,
+                    5,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Clear with fade for trail effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw the fractal mandala
+            drawMandala();
+
+            // Add center glow
+            const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 200);
+            glow.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            // Subtle vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

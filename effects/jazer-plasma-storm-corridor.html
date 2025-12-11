@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plasma Storm Corridor - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Plasma Storm Corridor
+         * 
+         * Corridor walls made of animated plasma effect with lightning/energy
+         * bolts featuring "JaZeR" text. Turbulent energy flow along walls
+         * while flying through electrical storm tunnel. Chaotic but looping
+         * animation with electric purple/blue/cyan plasma.
+         * 
+         * Technical approach:
+         * - Plasma effect using multi-octave sine waves
+         * - Lightning bolts with branching paths
+         * - Perspective corridor walls
+         * - Text integrated into energy flow
+         * - Chaotic movement with predictable loop
+         */
+
+        import {
+            noise2D, noise3D, mouse, ColorPalettes, hexToRgb, cycleColor,
+            map, clamp, smoothstep
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ['#8000ff', '#ff00ff', '#00ccff', '#00ffff'];
+        const lightningBolts = [];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Plasma calculation
+        function plasma(x, y, t) {
+            const v1 = Math.sin(x * 0.01 + t);
+            const v2 = Math.sin(y * 0.01 + t * 1.5);
+            const v3 = Math.sin((x + y) * 0.008 + t * 2);
+            const v4 = Math.sin(Math.sqrt(x * x + y * y) * 0.01 + t * 1.2);
+            return (v1 + v2 + v3 + v4) / 4;
+        }
+
+        // Lightning bolt class
+        class LightningBolt {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.life = 0;
+                this.maxLife = 0.5 + Math.random() * 0.5;
+                this.side = Math.random() < 0.5 ? 'left' : 'right';
+                this.startY = Math.random() * H;
+                this.segments = this.generateSegments();
+                this.colorIdx = Math.floor(Math.random() * palette.length);
+            }
+
+            generateSegments() {
+                const segments = [];
+                const startX = this.side === 'left' ? 0 : W;
+                const targetX = cx + (Math.random() - 0.5) * 200;
+                const targetY = this.startY + (Math.random() - 0.5) * 200;
+
+                let x = startX;
+                let y = this.startY;
+                segments.push({ x, y });
+
+                const steps = 10 + Math.floor(Math.random() * 10);
+                for (let i = 0; i < steps; i++) {
+                    const t = (i + 1) / steps;
+                    x = startX + (targetX - startX) * t + (Math.random() - 0.5) * 50;
+                    y = this.startY + (targetY - this.startY) * t + (Math.random() - 0.5) * 50;
+                    segments.push({ x, y });
+                }
+
+                return segments;
+            }
+
+            update(dt) {
+                this.life += dt;
+                if (this.life > this.maxLife) {
+                    this.reset();
+                }
+            }
+
+            draw() {
+                const alpha = this.life < this.maxLife * 0.3 ? 
+                    this.life / (this.maxLife * 0.3) : 
+                    1 - ((this.life - this.maxLife * 0.3) / (this.maxLife * 0.7));
+
+                if (alpha < 0.01) return;
+
+                const color = palette[this.colorIdx];
+                const rgb = hexToRgb(color);
+
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+
+                // Draw main bolt
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.lineWidth = 3;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 20;
+                ctx.beginPath();
+                ctx.moveTo(this.segments[0].x, this.segments[0].y);
+                this.segments.forEach(seg => ctx.lineTo(seg.x, seg.y));
+                ctx.stroke();
+
+                // Draw glow
+                ctx.lineWidth = 8;
+                ctx.globalAlpha = alpha * 0.3;
+                ctx.beginPath();
+                ctx.moveTo(this.segments[0].x, this.segments[0].y);
+                this.segments.forEach(seg => ctx.lineTo(seg.x, seg.y));
+                ctx.stroke();
+
+                // Draw JaZeR text on bolt
+                const midIdx = Math.floor(this.segments.length / 2);
+                const midSeg = this.segments[midIdx];
+                ctx.globalAlpha = alpha;
+                ctx.font = 'bold 16px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.shadowBlur = 15;
+                ctx.fillText('JaZeR', midSeg.x, midSeg.y);
+
+                ctx.restore();
+            }
+        }
+
+        // Draw corridor walls with plasma
+        function drawPlasmaWalls() {
+            const resolution = 6;
+
+            // Left wall
+            for (let y = 0; y < H; y += resolution) {
+                const depth = y / H;
+                const wallWidth = W * 0.3 * (1 - depth * 0.5);
+
+                for (let x = 0; x < wallWidth; x += resolution) {
+                    const plasmaVal = plasma(x, y, time * 3);
+                    const normalizedVal = (plasmaVal + 1) / 2;
+
+                    const hue = (normalizedVal + time * 0.1) % 1;
+                    const rgb = {
+                        r: Math.floor(Math.sin(hue * Math.PI * 2) * 128 + 128),
+                        g: Math.floor(Math.sin(hue * Math.PI * 2 + 2) * 128 + 128),
+                        b: Math.floor(Math.sin(hue * Math.PI * 2 + 4) * 128 + 128)
+                    };
+
+                    const alpha = 0.3 + normalizedVal * 0.4;
+
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    ctx.fillRect(x, y, resolution, resolution);
+                    ctx.restore();
+                }
+            }
+
+            // Right wall
+            for (let y = 0; y < H; y += resolution) {
+                const depth = y / H;
+                const wallWidth = W * 0.3 * (1 - depth * 0.5);
+
+                for (let x = W - wallWidth; x < W; x += resolution) {
+                    const plasmaVal = plasma(x, y, time * 3);
+                    const normalizedVal = (plasmaVal + 1) / 2;
+
+                    const hue = (normalizedVal + time * 0.1) % 1;
+                    const rgb = {
+                        r: Math.floor(Math.sin(hue * Math.PI * 2) * 128 + 128),
+                        g: Math.floor(Math.sin(hue * Math.PI * 2 + 2) * 128 + 128),
+                        b: Math.floor(Math.sin(hue * Math.PI * 2 + 4) * 128 + 128)
+                    };
+
+                    const alpha = 0.3 + normalizedVal * 0.4;
+
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    ctx.fillRect(x, y, resolution, resolution);
+                    ctx.restore();
+                }
+            }
+
+            // Floor with perspective
+            const floorY = H * 0.7;
+            for (let y = floorY; y < H; y += resolution) {
+                const depth = (y - floorY) / (H - floorY);
+                const floorWidth = W * depth;
+                const floorX = (W - floorWidth) / 2;
+
+                for (let x = floorX; x < floorX + floorWidth; x += resolution) {
+                    const plasmaVal = plasma(x, y, time * 3);
+                    const normalizedVal = (plasmaVal + 1) / 2;
+
+                    const hue = (normalizedVal + time * 0.1) % 1;
+                    const rgb = {
+                        r: Math.floor(Math.sin(hue * Math.PI * 2) * 128 + 128),
+                        g: Math.floor(Math.sin(hue * Math.PI * 2 + 2) * 128 + 128),
+                        b: Math.floor(Math.sin(hue * Math.PI * 2 + 4) * 128 + 128)
+                    };
+
+                    const alpha = (0.2 + normalizedVal * 0.3) * depth;
+
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    ctx.fillRect(x, y, resolution, resolution);
+                    ctx.restore();
+                }
+            }
+        }
+
+        // Initialize lightning
+        function initLightning() {
+            for (let i = 0; i < 6; i++) {
+                const bolt = new LightningBolt();
+                bolt.life = Math.random() * bolt.maxLife;
+                lightningBolts.push(bolt);
+            }
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(0, 0, 5, 0.2)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw plasma walls
+            drawPlasmaWalls();
+
+            // Update and draw lightning
+            lightningBolts.forEach(bolt => {
+                bolt.update(dt);
+                bolt.draw();
+            });
+
+            // Central corridor glow
+            const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * 0.3);
+            glow.addColorStop(0, 'rgba(100, 0, 255, 0.2)');
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        initLightning();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Time Ripple Rings - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Time Ripple Rings
+         * 
+         * Concentric time ripple rings expanding from center with "JaZeR"
+         * text on each ring traveling outward. Features time distortion
+         * effects (slow/fast zones) where rings have different speeds and
+         * sizes. Temporal/time-travel aesthetic with warped space-time.
+         * 
+         * Technical approach:
+         * - Expanding concentric rings
+         * - Variable expansion speeds
+         * - Text follows ring paths
+         * - Time dilation effects
+         * - Color shifts representing temporal distortion
+         */
+
+        import {
+            noise2D, mouse, ColorPalettes, hexToRgb, cycleColor,
+            map, clamp, smoothstep
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ColorPalettes.galaxy;
+        const rings = [];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Time ripple ring class
+        class TimeRing {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.radius = 0;
+                this.maxRadius = Math.max(W, H) * 0.7;
+                this.speed = 50 + Math.random() * 100; // Variable speeds
+                this.colorOffset = Math.random();
+                this.thickness = 2 + Math.random() * 3;
+                this.timeZone = Math.random(); // For time distortion
+                this.textPositions = this.generateTextPositions();
+            }
+
+            generateTextPositions() {
+                const positions = [];
+                const textCount = 8;
+                for (let i = 0; i < textCount; i++) {
+                    positions.push({
+                        angle: (i / textCount) * Math.PI * 2,
+                        char: 'JaZeR'[i % 5],
+                        offset: Math.random() * 20 - 10
+                    });
+                }
+                return positions;
+            }
+
+            update(dt) {
+                // Time dilation effect - speed varies based on time zone
+                const timeDistortion = 0.5 + Math.sin(time * 2 + this.timeZone * 10) * 0.5;
+                this.radius += this.speed * dt * timeDistortion;
+
+                // Reset when ring expands beyond max
+                if (this.radius > this.maxRadius) {
+                    this.reset();
+                }
+            }
+
+            draw() {
+                const progress = this.radius / this.maxRadius;
+                const alpha = smoothstep(0, 0.1, progress) * smoothstep(1, 0.8, progress);
+
+                if (alpha < 0.01) return;
+
+                const color = cycleColor(palette, time * 0.3 + this.colorOffset);
+                const rgb = hexToRgb(color);
+
+                // Time distortion warping
+                const warpAmount = Math.sin(time * 3 + this.timeZone * 5) * 10;
+
+                // Draw ring with time distortion
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.lineWidth = this.thickness;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 15;
+
+                // Draw warped circle
+                ctx.beginPath();
+                for (let angle = 0; angle <= Math.PI * 2; angle += 0.1) {
+                    const warp = Math.sin(angle * 4 + time * 2) * warpAmount;
+                    const r = this.radius + warp;
+                    const x = cx + Math.cos(angle) * r;
+                    const y = cy + Math.sin(angle) * r;
+
+                    if (angle === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                ctx.stroke();
+
+                // Draw additional ripple effect
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = alpha * 0.5;
+                ctx.beginPath();
+                for (let angle = 0; angle <= Math.PI * 2; angle += 0.1) {
+                    const warp = Math.sin(angle * 4 + time * 2) * warpAmount;
+                    const r = this.radius + warp + 5;
+                    const x = cx + Math.cos(angle) * r;
+                    const y = cy + Math.sin(angle) * r;
+
+                    if (angle === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+
+                ctx.restore();
+
+                // Draw text on ring
+                this.textPositions.forEach(pos => {
+                    const warp = Math.sin(pos.angle * 4 + time * 2) * warpAmount;
+                    const r = this.radius + warp + pos.offset;
+                    const x = cx + Math.cos(pos.angle) * r;
+                    const y = cy + Math.sin(pos.angle) * r;
+
+                    const fontSize = 14 + (1 - progress) * 8;
+
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(pos.angle + Math.PI / 2);
+                    ctx.font = `bold ${fontSize}px monospace`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 10;
+                    ctx.fillText(pos.char, 0, 0);
+                    ctx.restore();
+                });
+            }
+        }
+
+        // Initialize rings
+        function initRings() {
+            for (let i = 0; i < 15; i++) {
+                const ring = new TimeRing();
+                ring.radius = (i / 15) * ring.maxRadius;
+                rings.push(ring);
+            }
+        }
+
+        // Draw time distortion field
+        function drawTimeField() {
+            const resolution = 40;
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+
+            for (let y = 0; y < H; y += resolution) {
+                for (let x = 0; x < W; x += resolution) {
+                    const dx = x - cx;
+                    const dy = y - cy;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const angle = Math.atan2(dy, dx);
+
+                    // Time field intensity based on distance and noise
+                    const noiseVal = noise2D(x * 0.003, y * 0.003 + time * 0.2);
+                    const intensity = Math.sin(dist * 0.05 + time * 2 + noiseVal) * 0.5 + 0.5;
+
+                    if (intensity < 0.3) continue;
+
+                    const hue = (time * 0.1 + dist * 0.001 + noiseVal) % 1;
+                    const rgb = {
+                        r: Math.floor(Math.sin(hue * Math.PI * 2) * 128 + 128),
+                        g: Math.floor(Math.sin(hue * Math.PI * 2 + 2) * 128 + 128),
+                        b: Math.floor(Math.sin(hue * Math.PI * 2 + 4) * 128 + 128)
+                    };
+
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${intensity * 0.1})`;
+                    ctx.fillRect(x, y, resolution, resolution);
+                }
+            }
+
+            ctx.restore();
+        }
+
+        // Draw central time vortex
+        function drawCentralVortex() {
+            const spirals = 8;
+            const maxRadius = 100;
+
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+
+            for (let i = 0; i < spirals; i++) {
+                const baseAngle = (i / spirals) * Math.PI * 2 + time * 0.5;
+                const color = cycleColor(palette, time * 0.2 + i / spirals);
+                const rgb = hexToRgb(color);
+
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
+                ctx.lineWidth = 2;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 10;
+
+                ctx.beginPath();
+                for (let r = 0; r < maxRadius; r += 2) {
+                    const angle = baseAngle + r * 0.1;
+                    const x = cx + Math.cos(angle) * r;
+                    const y = cy + Math.sin(angle) * r;
+
+                    if (r === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Clear with fade for trail
+            ctx.fillStyle = 'rgba(0, 0, 10, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw time field background
+            drawTimeField();
+
+            // Update and draw rings
+            rings.forEach(ring => {
+                ring.update(dt);
+                ring.draw();
+            });
+
+            // Draw central vortex
+            drawCentralVortex();
+
+            // Center point glow
+            const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 50);
+            glow.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
+            glow.addColorStop(1, 'rgba(100, 150, 255, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(cx - 50, cy - 50, 100, 100);
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        initRings();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>
