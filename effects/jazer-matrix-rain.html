@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Matrix Rain 3D - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        import {
+            noise2D, mouse, Easing,
+            ColorPalettes, hexToRgb,
+            map, clamp, smoothstep
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ColorPalettes.matrix;
+        const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const streamCount = 80;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function randomChar() {
+            return chars[Math.floor(Math.random() * chars.length)];
+        }
+
+        class MatrixStream {
+            constructor() {
+                this.reset(true);
+            }
+
+            reset(initial = false) {
+                // 3D position
+                this.x = (Math.random() - 0.5) * 2000;
+                this.y = (Math.random() - 0.5) * 1000;
+                this.z = initial ? Math.random() * 2000 : 2000;
+
+                this.speed = 100 + Math.random() * 200;
+                this.length = 10 + Math.floor(Math.random() * 20);
+                this.chars = Array.from({ length: this.length }, () => randomChar());
+                this.charChangeRate = 0.05 + Math.random() * 0.1;
+                this.charTimer = 0;
+            }
+
+            project() {
+                const fov = 500;
+                const viewDist = 200;
+                if (this.z < 1) return null;
+                const scale = fov / (this.z + viewDist);
+                return {
+                    x: cx + this.x * scale + mouse.centeredX * 50 * scale,
+                    y: cy + this.y * scale + mouse.centeredY * 50 * scale,
+                    scale,
+                    z: this.z
+                };
+            }
+
+            update(dt) {
+                this.z -= this.speed * dt;
+
+                // Randomly change characters
+                this.charTimer += dt;
+                if (this.charTimer > this.charChangeRate) {
+                    this.charTimer = 0;
+                    const idx = Math.floor(Math.random() * this.length);
+                    this.chars[idx] = randomChar();
+                }
+
+                if (this.z < -100) this.reset();
+            }
+
+            draw() {
+                const pos = this.project();
+                if (!pos || pos.z < 1) return;
+
+                const alpha = smoothstep(1, 200, pos.z) * smoothstep(2000, 1500, pos.z);
+                if (alpha < 0.01) return;
+
+                const fontSize = Math.max(8, 20 * pos.scale);
+                const charSpacing = fontSize * 1.2;
+
+                ctx.font = `${fontSize}px "MS Gothic", "Hiragino Kaku Gothic Pro", monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                for (let i = 0; i < this.length; i++) {
+                    const charY = pos.y + i * charSpacing;
+                    if (charY < -50 || charY > H + 50) continue;
+
+                    const charAlpha = alpha * (1 - i / this.length);
+
+                    if (i === 0) {
+                        // Head - bright white/green
+                        ctx.fillStyle = `rgba(200, 255, 200, ${charAlpha})`;
+                        ctx.shadowColor = '#00ff00';
+                        ctx.shadowBlur = 20;
+                    } else {
+                        // Trail - fading green
+                        const greenIntensity = Math.floor(255 * (1 - i / this.length * 0.7));
+                        ctx.fillStyle = `rgba(0, ${greenIntensity}, 0, ${charAlpha * 0.8})`;
+                        ctx.shadowBlur = 5;
+                    }
+
+                    ctx.fillText(this.chars[i], pos.x, charY);
+                }
+
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        const streams = Array.from({ length: streamCount }, () => new MatrixStream());
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            // Dark fade with slight green tint
+            ctx.fillStyle = 'rgba(0, 5, 0, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            const dt = 1 / 60;
+
+            // Sort by z for proper depth
+            streams.sort((a, b) => b.z - a.z);
+            streams.forEach(s => { s.update(dt); s.draw(); });
+
+            // Scanlines
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            for (let y = 0; y < H; y += 3) {
+                ctx.fillRect(0, y, W, 1);
+            }
+
+            // Center glow
+            const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.5);
+            glow.addColorStop(0, 'rgba(0, 50, 0, 0.1)');
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            // Flicker effect
+            if (Math.random() < 0.02) {
+                ctx.fillStyle = `rgba(0, 255, 0, ${Math.random() * 0.05})`;
+                ctx.fillRect(0, 0, W, H);
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

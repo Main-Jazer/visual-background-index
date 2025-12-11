@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aurora Borealis - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        import {
+            noise2D, noise3D, fbm2D, SimplexNoise, mouse,
+            ColorPalettes, hexToRgb, lerpColor,
+            map, clamp, smoothstep
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H;
+        let time = 0;
+
+        const simplex = new SimplexNoise(42);
+        const auroraColors = ['#00ff87', '#60efff', '#b967ff', '#ff00ff', '#00ffff'];
+        const ribbonCount = 5;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        class AuroraRibbon {
+            constructor(index) {
+                this.index = index;
+                this.baseY = 0.2 + (index / ribbonCount) * 0.3;
+                this.amplitude = 0.1 + Math.random() * 0.1;
+                this.frequency = 0.002 + Math.random() * 0.002;
+                this.speed = 0.3 + Math.random() * 0.2;
+                this.phase = Math.random() * 1000;
+                this.colorIndex = index % auroraColors.length;
+                this.thickness = 60 + Math.random() * 40;
+                this.waveCount = 2 + Math.random() * 2;
+            }
+
+            draw() {
+                const segments = 100;
+                const mouseInfluence = mouse.centeredX * 0.05;
+
+                // Calculate ribbon path
+                const points = [];
+                for (let i = 0; i <= segments; i++) {
+                    const t = i / segments;
+                    const x = t * W;
+
+                    // Layered noise for organic movement
+                    const noise1 = simplex.noise2D(t * this.frequency * 100 + this.phase, time * this.speed);
+                    const noise2 = simplex.noise2D(t * this.frequency * 200 + this.phase + 100, time * this.speed * 1.5) * 0.5;
+                    const noise3 = simplex.noise2D(t * this.frequency * 400 + this.phase + 200, time * this.speed * 2) * 0.25;
+
+                    const waveOffset = Math.sin(t * Math.PI * this.waveCount + time * 0.5) * 0.03;
+                    const combinedNoise = (noise1 + noise2 + noise3 + waveOffset) * this.amplitude;
+
+                    const y = (this.baseY + combinedNoise + mouseInfluence * (1 - t)) * H;
+
+                    points.push({ x, y, t });
+                }
+
+                // Draw ribbon with gradient
+                const color1 = auroraColors[this.colorIndex];
+                const color2 = auroraColors[(this.colorIndex + 1) % auroraColors.length];
+
+                // Multiple layers for glow effect
+                for (let layer = 3; layer >= 0; layer--) {
+                    const layerThickness = this.thickness * (1 + layer * 0.5);
+                    const layerAlpha = layer === 0 ? 0.6 : 0.15 / layer;
+
+                    ctx.beginPath();
+
+                    // Top edge
+                    for (let i = 0; i < points.length; i++) {
+                        const p = points[i];
+                        const thickness = layerThickness * (0.5 + 0.5 * Math.sin(p.t * Math.PI));
+                        const x = p.x;
+                        const y = p.y - thickness / 2;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+
+                    // Bottom edge (reverse)
+                    for (let i = points.length - 1; i >= 0; i--) {
+                        const p = points[i];
+                        const thickness = layerThickness * (0.5 + 0.5 * Math.sin(p.t * Math.PI));
+                        const x = p.x;
+                        const y = p.y + thickness / 2;
+                        ctx.lineTo(x, y);
+                    }
+
+                    ctx.closePath();
+
+                    // Gradient fill
+                    const gradient = ctx.createLinearGradient(0, 0, W, 0);
+                    const rgb1 = hexToRgb(color1);
+                    const rgb2 = hexToRgb(color2);
+
+                    gradient.addColorStop(0, `rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${layerAlpha * 0.5})`);
+                    gradient.addColorStop(0.3, `rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${layerAlpha})`);
+                    gradient.addColorStop(0.5, `rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, ${layerAlpha})`);
+                    gradient.addColorStop(0.7, `rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${layerAlpha})`);
+                    gradient.addColorStop(1, `rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, ${layerAlpha * 0.5})`);
+
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                }
+
+                // Bright core line
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+
+                const coreGradient = ctx.createLinearGradient(0, 0, W, 0);
+                coreGradient.addColorStop(0, `rgba(255, 255, 255, 0)`);
+                coreGradient.addColorStop(0.3, `rgba(255, 255, 255, 0.3)`);
+                coreGradient.addColorStop(0.5, `rgba(255, 255, 255, 0.5)`);
+                coreGradient.addColorStop(0.7, `rgba(255, 255, 255, 0.3)`);
+                coreGradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
+
+                ctx.strokeStyle = coreGradient;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        const ribbons = Array.from({ length: ribbonCount }, (_, i) => new AuroraRibbon(i));
+
+        // Stars
+        const stars = Array.from({ length: 200 }, () => ({
+            x: Math.random() * W,
+            y: Math.random() * H * 0.7,
+            size: Math.random() * 1.5 + 0.5,
+            twinkleSpeed: Math.random() * 3 + 1,
+            twinkleOffset: Math.random() * Math.PI * 2
+        }));
+
+        function drawStars() {
+            stars.forEach(star => {
+                if (star.x > W) star.x = Math.random() * W;
+                if (star.y > H * 0.7) star.y = Math.random() * H * 0.7;
+
+                const twinkle = Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.3 + 0.7;
+                ctx.fillStyle = `rgba(255, 255, 255, ${twinkle * 0.8})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size * twinkle, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawMountains() {
+            // Distant mountains silhouette
+            ctx.fillStyle = '#0a0a15';
+            ctx.beginPath();
+            ctx.moveTo(0, H);
+
+            for (let x = 0; x <= W; x += 10) {
+                const height = fbm2D(x * 0.001, 0, 4, 0.5) * 150 + 100;
+                ctx.lineTo(x, H - height);
+            }
+
+            ctx.lineTo(W, H);
+            ctx.closePath();
+            ctx.fill();
+
+            // Closer mountains
+            ctx.fillStyle = '#050510';
+            ctx.beginPath();
+            ctx.moveTo(0, H);
+
+            for (let x = 0; x <= W; x += 10) {
+                const height = fbm2D(x * 0.002 + 100, 0, 4, 0.5) * 100 + 50;
+                ctx.lineTo(x, H - height);
+            }
+
+            ctx.lineTo(W, H);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            // Night sky gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+            skyGrad.addColorStop(0, '#000510');
+            skyGrad.addColorStop(0.5, '#001020');
+            skyGrad.addColorStop(1, '#002030');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Stars
+            drawStars();
+
+            // Aurora ribbons (draw from back to front)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ribbons.forEach(ribbon => ribbon.draw());
+            ctx.restore();
+
+            // Mountains
+            drawMountains();
+
+            // Ground snow reflection of aurora
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            const reflectionGrad = ctx.createLinearGradient(0, H - 100, 0, H);
+            reflectionGrad.addColorStop(0, 'rgba(100, 200, 150, 0.1)');
+            reflectionGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = reflectionGrad;
+            ctx.fillRect(0, H - 100, W, 100);
+            ctx.restore();
+
+            // Subtle vignette
+            const vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.8);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', () => {
+            resize();
+            stars.forEach(star => {
+                star.x = Math.random() * W;
+                star.y = Math.random() * H * 0.7;
+            });
+        });
+
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

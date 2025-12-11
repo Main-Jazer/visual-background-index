@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JaZeR Visual Effects Gallery</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2a 50%, #0a1a2a 100%);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: #f0f0ff;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #00f5ff, #ff2aff, #ffd86b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #00f5ff;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: rgba(10, 10, 30, 0.8);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 245, 255, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5),
+                0 0 30px rgba(0, 245, 255, 0.2);
+        }
+
+        .card-preview {
+            height: 180px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-preview::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg,
+                    rgba(0, 245, 255, 0.3),
+                    rgba(255, 42, 255, 0.3));
+            opacity: 0.5;
+        }
+
+        .card-preview::after {
+            content: '▶';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover .card-preview::after {
+            opacity: 0.8;
+        }
+
+        .card-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+        }
+
+        .card-content {
+            padding: 1.25rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-description {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.5;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 0.25rem 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .tag.canvas {
+            background: rgba(255, 150, 0, 0.2);
+            color: #ffaa00;
+        }
+
+        .tag.threejs {
+            background: rgba(0, 200, 255, 0.2);
+            color: #00c8ff;
+        }
+
+        .tag.interactive {
+            background: rgba(255, 0, 255, 0.2);
+            color: #ff00ff;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        footer a {
+            color: #00f5ff;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>JaZeR Visuals</h1>
+            <p class="subtitle">Infinite 3D Visual Effects Collection</p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">10</div>
+                    <div class="stat-label">Effects</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">16</div>
+                    <div class="stat-label">Color Palettes</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">∞</div>
+                    <div class="stat-label">Possibilities</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid">
+            <a href="effects/jazer-hyperspace-tunnel.html" class="card">
+                <div class="card-preview" style="background: linear-gradient(45deg, #ff0055, #00ffff);">
+                    <span class="card-icon">🚀</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Hyperspace Tunnel</h3>
+                    <p class="card-description">Infinite wireframe vortex with speed lines racing through a neon void.
+                    </p>
+                    <div class="card-tags">
+                        <span class="tag canvas">Canvas 2D</span>
+                        <span class="tag interactive">Interactive</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="effects/jazer-hexagon-tunnel.html" class="card">
+                <div class="card-preview" style="background: linear-gradient(45deg, #ff71ce, #01cdfe);">
+                    <span class="card-icon">⬡</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Neon Hexagon Tunnel</h3>
+                    <p class="card-description">Pulsating hexagonal rings receding into infinity with vaporwave colors.
+                    </p>
+                    <div class="card-tags">
+                        <span class="tag canvas">Canvas 2D</span>
+                        <span class="tag interactive">Interactive</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="effects/jazer-cosmic-stardust.html" class="card">
+                <div class="card-preview" style="background: linear-gradient(45deg, #4c1d95, #f472b6);">
+                    <span class="card-icon">✨</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Cosmic Stardust</h3>
+                    <p class="card-description">800 particles flowing through 3D space with nebula effects and mouse
+                        attraction.</p>
+                    <div class="card-tags">
+                        <span class="tag canvas">Canvas 2D</span>
+                        <span class="tag interactive">Interactive</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="effects/jazer-synthwave-grid.html" class="card">
+                <div class="card-preview" style="background: linear-gradient(45deg, #ff006e, #1a0033);">
+                    <span class="card-icon">🌅</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Synthwave Grid</h3>
+                    <p class="card-description">Classic outrun aesthetic with infinite grid, procedural mountains, and
+                        neon sunset.</p>
+                    <div class="card-tags">
+                        <span class="tag canvas">Canvas 2D</span>
+                        <span class="tag interactive">Interactive</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="effects/jazer-dna-helix.html" class="card">
+                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
+                    <span class="card-icon">🧬</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">DNA Helix Infinity</h3>
+                    <p class="card-description">Double helix spiral with glowing nodes and molecular connections.</p>
+                    <div class="card-tags">
+                        <span class="tag canvas">Canvas 2D</span>
+                        <span class="tag interactive">Interactive</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="effects/jazer-crystal-cave.html" class="card">
+                <div class="card-preview" style="background: linear-gradient(45deg, #a5f3fc, #06b6d4);">
+                    <span class="card-icon">💎</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Crystal Cave</h3>
+                    <p class="card-description">Flythrough of a glowing ice crystal cavern with dynamic lighting.</p>
+                    <div class="card-tags">
+                        <span class="tag threejs">Three.js</span>
+                        <span class="tag interactive">Interactive</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="effects/jazer-matrix-rain.html" class="card">
+                <div class="card-preview" style="background: linear-gradient(45deg, #00ff00, #003300);">
+                    <span class="card-icon">📟</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Matrix Rain 3D</h3>
+                    <p class="card-description">Classic digital rain with true 3D depth and Japanese characters.</p>
+                    <div class="card-tags">
+                        <span class="tag canvas">Canvas 2D</span>
+                        <span class="tag interactive">Interactive</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="effects/jazer-mobius-infinity.html" class="card">
+                <div class="card-preview" style="background: linear-gradient(45deg, #ff00ff, #00ffff);">
+                    <span class="card-icon">∞</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Möbius Infinity</h3>
+                    <p class="card-description">Non-orientable surface with flowing edge particles and color gradients.
+                    </p>
+                    <div class="card-tags">
+                        <span class="tag threejs">Three.js</span>
+                        <span class="tag interactive">Interactive</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="effects/jazer-aurora-borealis.html" class="card">
+                <div class="card-preview" style="background: linear-gradient(45deg, #00ff87, #b967ff);">
+                    <span class="card-icon">🌌</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Aurora Borealis</h3>
+                    <p class="card-description">Flowing ribbons of northern lights over mountain silhouettes.</p>
+                    <div class="card-tags">
+                        <span class="tag canvas">Canvas 2D</span>
+                        <span class="tag interactive">Interactive</span>
+                    </div>
+                </div>
+            </a>
+
+            <a href="effects/jazer-fractal-cubes.html" class="card">
+                <div class="card-preview" style="background: linear-gradient(45deg, #39ff14, #ff073a);">
+                    <span class="card-icon">🔲</span>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-title">Fractal Cubes</h3>
+                    <p class="card-description">Recursive cubes within cubes with continuous zoom and ambient particles.
+                    </p>
+                    <div class="card-tags">
+                        <span class="tag threejs">Three.js</span>
+                        <span class="tag interactive">Interactive</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <footer>
+            <p>Powered by <a href="#">JaZeR Background Engine</a></p>
+            <p style="margin-top: 0.5rem; font-size: 0.85rem;">
+                Move mouse to interact • Click for additional effects
+            </p>
+        </footer>
+    </div>
+</body>
+
+</html>

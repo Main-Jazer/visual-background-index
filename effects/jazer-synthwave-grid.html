@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Synthwave Grid - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        import {
+            noise2D, fbm2D, mouse, Easing,
+            ColorPalettes, hexToRgb, lerpColor,
+            map, clamp, smoothstep
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H;
+        let time = 0;
+
+        const gridSize = 40;
+        const gridDepth = 60;
+        const mountainScale = 150;
+
+        const skyColors = ['#0f0018', '#1a0033', '#2d004d', '#ff006e', '#ffbe0b'];
+        const gridColor = '#ff00ff';
+        const mountainColors = ['#4a0080', '#7c00b8', '#a855f7'];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function project(x, y, z) {
+            const fov = 300;
+            const viewDist = 400;
+            const scale = fov / (z + viewDist);
+            return {
+                x: W / 2 + x * scale,
+                y: H * 0.7 - y * scale,
+                scale
+            };
+        }
+
+        function getTerrainHeight(x, z, t) {
+            const baseNoise = fbm2D(x * 0.003, z * 0.003 + t * 0.1, 4, 0.5);
+            const ridges = Math.abs(noise2D(x * 0.005, z * 0.005 + t * 0.05));
+            return (baseNoise * 0.6 + ridges * 0.4) * mountainScale;
+        }
+
+        function drawSky() {
+            // Gradient sky
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.7);
+            skyGrad.addColorStop(0, skyColors[0]);
+            skyGrad.addColorStop(0.4, skyColors[1]);
+            skyGrad.addColorStop(0.7, skyColors[2]);
+            skyGrad.addColorStop(0.9, skyColors[3]);
+            skyGrad.addColorStop(1, skyColors[4]);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Sun
+            const sunY = H * 0.35 + Math.sin(time * 0.2) * 20;
+            const sunX = W / 2 + mouse.centeredX * 100;
+
+            // Sun glow
+            for (let i = 5; i >= 0; i--) {
+                const radius = 80 + i * 30;
+                const alpha = 0.15 - i * 0.02;
+                ctx.fillStyle = `rgba(255, 100, 50, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(sunX, sunY, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Sun disc with horizontal lines
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, 80, 0, Math.PI * 2);
+            ctx.clip();
+
+            const sunGrad = ctx.createLinearGradient(sunX, sunY - 80, sunX, sunY + 80);
+            sunGrad.addColorStop(0, '#ffff00');
+            sunGrad.addColorStop(0.5, '#ff8800');
+            sunGrad.addColorStop(1, '#ff0066');
+            ctx.fillStyle = sunGrad;
+            ctx.fillRect(sunX - 80, sunY - 80, 160, 160);
+
+            // Horizontal scan lines on sun
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            for (let y = sunY - 80; y < sunY + 80; y += 8) {
+                ctx.fillRect(sunX - 80, y, 160, 4);
+            }
+            ctx.restore();
+
+            // Stars
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            for (let i = 0; i < 100; i++) {
+                const sx = ((i * 137.5) % W);
+                const sy = ((i * 73.3) % (H * 0.4));
+                const twinkle = Math.sin(time * 3 + i) * 0.3 + 0.7;
+                ctx.globalAlpha = twinkle * 0.5;
+                ctx.beginPath();
+                ctx.arc(sx, sy, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function drawGrid() {
+            const scrollOffset = (time * 100) % gridSize;
+            const startZ = 50;
+            const endZ = 2000;
+
+            ctx.strokeStyle = gridColor;
+            ctx.lineWidth = 1;
+
+            // Floor grid lines - horizontal (receding)
+            for (let z = startZ; z < endZ; z += gridSize) {
+                const adjustedZ = z - scrollOffset;
+                if (adjustedZ < startZ) continue;
+
+                const leftX = -800 + mouse.centeredX * 50;
+                const rightX = 800 + mouse.centeredX * 50;
+
+                const p1 = project(leftX, 0, adjustedZ);
+                const p2 = project(rightX, 0, adjustedZ);
+
+                const alpha = smoothstep(startZ, 100, adjustedZ) * smoothstep(endZ, endZ - 500, adjustedZ);
+                ctx.strokeStyle = `rgba(255, 0, 255, ${alpha * 0.6})`;
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+            }
+
+            // Floor grid lines - vertical (going into distance)
+            for (let x = -800; x <= 800; x += gridSize) {
+                const adjustedX = x + mouse.centeredX * 50;
+                const p1 = project(adjustedX, 0, startZ);
+                const p2 = project(adjustedX, 0, endZ);
+
+                ctx.strokeStyle = 'rgba(255, 0, 255, 0.4)';
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+            }
+
+            // Glow line at horizon
+            const horizonGrad = ctx.createLinearGradient(0, H * 0.7 - 10, 0, H * 0.7 + 20);
+            horizonGrad.addColorStop(0, 'rgba(255, 0, 255, 0)');
+            horizonGrad.addColorStop(0.5, 'rgba(255, 0, 255, 0.5)');
+            horizonGrad.addColorStop(1, 'rgba(255, 0, 255, 0)');
+            ctx.fillStyle = horizonGrad;
+            ctx.fillRect(0, H * 0.7 - 10, W, 30);
+        }
+
+        function drawMountains() {
+            const layers = [
+                { z: 800, color: mountainColors[0], height: 1.2 },
+                { z: 500, color: mountainColors[1], height: 1.0 },
+                { z: 300, color: mountainColors[2], height: 0.8 }
+            ];
+
+            layers.forEach(layer => {
+                ctx.fillStyle = layer.color;
+                ctx.beginPath();
+
+                const p0 = project(-1000, 0, layer.z);
+                ctx.moveTo(p0.x, p0.y);
+
+                for (let x = -1000; x <= 1000; x += 20) {
+                    const height = getTerrainHeight(x, layer.z, time) * layer.height;
+                    const p = project(x + mouse.centeredX * 30, height, layer.z);
+                    ctx.lineTo(p.x, p.y);
+                }
+
+                const pEnd = project(1000, 0, layer.z);
+                ctx.lineTo(pEnd.x, pEnd.y);
+                ctx.closePath();
+                ctx.fill();
+
+                // Wireframe on top
+                ctx.strokeStyle = lerpColor(layer.color, '#ff00ff', 0.3);
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let x = -1000; x <= 1000; x += 20) {
+                    const height = getTerrainHeight(x, layer.z, time) * layer.height;
+                    const p = project(x + mouse.centeredX * 30, height, layer.z);
+                    if (x === -1000) ctx.moveTo(p.x, p.y);
+                    else ctx.lineTo(p.x, p.y);
+                }
+                ctx.stroke();
+            });
+        }
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, W, H);
+
+            drawSky();
+            drawMountains();
+            drawGrid();
+
+            // Scan lines
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            for (let y = 0; y < H; y += 4) {
+                ctx.fillRect(0, y, W, 2);
+            }
+
+            // Chromatic aberration simulation on edges
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.02)';
+            ctx.fillRect(2, 0, W, H);
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.02)';
+            ctx.fillRect(-2, 0, W, H);
+            ctx.restore();
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

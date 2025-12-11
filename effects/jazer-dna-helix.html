@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DNA Helix Infinity - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        import {
+            noise2D, noise3D, mouse, Easing,
+            ColorPalettes, hexToRgb, lerpColor, cycleColor,
+            map, clamp, smoothstep, distance
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette1 = ['#00f5ff', '#00d4ff', '#00b3ff', '#0099ff'];
+        const palette2 = ['#ff2aff', '#ff00d4', '#ff00aa', '#ff0080'];
+
+        const helixRadius = 120;
+        const helixPitch = 100;
+        const nodeCount = 80;
+        const connectionInterval = 4;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function project(x, y, z) {
+            const fov = 600;
+            const viewDist = 500;
+            const scale = fov / (z + viewDist);
+            return {
+                x: cx + x * scale,
+                y: cy + y * scale,
+                scale,
+                z
+            };
+        }
+
+        class HelixNode {
+            constructor(strand, index, total) {
+                this.strand = strand;
+                this.index = index;
+                this.total = total;
+                this.basePhase = (index / total) * Math.PI * 8;
+                this.zBase = (index / total) * 2000 - 1000;
+            }
+
+            getPosition(t) {
+                const scrollZ = (t * 200) % (2000 / this.total);
+                let z = this.zBase - scrollZ;
+                if (z < -1000) z += 2000;
+
+                const phase = this.basePhase + t * 2 + (this.strand === 0 ? 0 : Math.PI);
+                const wobble = noise2D(this.index * 0.1, t) * 10;
+
+                const mouseInfluence = (mouse.centeredX * 0.3);
+                const x = Math.cos(phase + mouseInfluence) * (helixRadius + wobble);
+                const y = Math.sin(phase + mouseInfluence) * (helixRadius + wobble);
+
+                return { x, y, z, phase };
+            }
+        }
+
+        const strand1 = Array.from({ length: nodeCount }, (_, i) => new HelixNode(0, i, nodeCount));
+        const strand2 = Array.from({ length: nodeCount }, (_, i) => new HelixNode(1, i, nodeCount));
+
+        function drawConnection(p1, p2, alpha) {
+            const grad = ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
+            grad.addColorStop(0, `rgba(0, 245, 255, ${alpha})`);
+            grad.addColorStop(0.5, `rgba(255, 255, 255, ${alpha * 0.8})`);
+            grad.addColorStop(1, `rgba(255, 42, 255, ${alpha})`);
+
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 2 * Math.min(p1.scale, p2.scale);
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+        }
+
+        function drawNode(pos, color, size) {
+            const rgb = hexToRgb(color);
+
+            // Glow
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            const glow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, size * 4);
+            glow.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`);
+            glow.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`);
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(pos.x - size * 4, pos.y - size * 4, size * 8, size * 8);
+
+            // Core
+            ctx.fillStyle = `rgba(255, 255, 255, 0.9)`;
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, size * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawStrand(nodes, palette) {
+            const positions = nodes.map(n => {
+                const pos = n.getPosition(time);
+                return { ...project(pos.x, pos.y, pos.z), rawZ: pos.z };
+            });
+
+            // Sort by z
+            const sorted = positions.map((p, i) => ({ ...p, idx: i })).sort((a, b) => b.rawZ - a.rawZ);
+
+            // Draw strand line
+            ctx.beginPath();
+            let started = false;
+            for (const p of sorted) {
+                if (p.rawZ < -800 || p.rawZ > 800) continue;
+                const alpha = smoothstep(-800, -400, p.rawZ) * smoothstep(800, 400, p.rawZ);
+                if (!started) {
+                    ctx.moveTo(p.x, p.y);
+                    started = true;
+                } else {
+                    ctx.lineTo(p.x, p.y);
+                }
+            }
+            ctx.strokeStyle = `rgba(${hexToRgb(palette[0]).r}, ${hexToRgb(palette[0]).g}, ${hexToRgb(palette[0]).b}, 0.3)`;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Draw nodes
+            for (const p of sorted) {
+                if (p.rawZ < -800 || p.rawZ > 800) continue;
+                const alpha = smoothstep(-800, -400, p.rawZ) * smoothstep(800, 400, p.rawZ);
+                const colorIdx = p.idx % palette.length;
+                const size = p.scale * 8 * alpha;
+                if (size > 1) {
+                    drawNode(p, palette[colorIdx], size);
+                }
+            }
+
+            return positions;
+        }
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            // Background fade
+            ctx.fillStyle = 'rgba(0, 2, 10, 0.1)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Central glow
+            const centerGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.4);
+            centerGlow.addColorStop(0, 'rgba(50, 0, 100, 0.05)');
+            centerGlow.addColorStop(0.5, 'rgba(0, 50, 100, 0.03)');
+            centerGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = centerGlow;
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw strands
+            const pos1 = drawStrand(strand1, palette1);
+            const pos2 = drawStrand(strand2, palette2);
+
+            // Draw connections between strands
+            for (let i = 0; i < nodeCount; i += connectionInterval) {
+                const p1 = strand1[i].getPosition(time);
+                const p2 = strand2[i].getPosition(time);
+
+                const proj1 = project(p1.x, p1.y, p1.z);
+                const proj2 = project(p2.x, p2.y, p2.z);
+
+                const avgZ = (p1.z + p2.z) / 2;
+                if (avgZ < -600 || avgZ > 600) continue;
+
+                const alpha = smoothstep(-600, -200, avgZ) * smoothstep(600, 200, avgZ) * 0.6;
+                drawConnection(proj1, proj2, alpha);
+            }
+
+            // Floating particles
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            for (let i = 0; i < 50; i++) {
+                const angle = time * 0.5 + i * 0.5;
+                const radius = helixRadius * 1.5 + Math.sin(time * 2 + i) * 30;
+                const z = ((i * 50 + time * 100) % 1600) - 800;
+
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius * 0.3;
+
+                const p = project(x, y, z);
+                const alpha = smoothstep(-800, -400, z) * smoothstep(800, 400, z) * 0.5;
+
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2 * p.scale, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

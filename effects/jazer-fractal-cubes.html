@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fractal Cube Recursion - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script src="../Three.js"></script>
+    <script type="module">
+        import {
+            noise3D, mouse, Easing,
+            ColorPalettes, hexToRgb,
+            map, smoothstep
+        } from '../jazer-background-engine.js';
+
+        const THREE = window.THREE;
+        const canvas = document.getElementById('c');
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000005);
+
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 5);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const palette = ColorPalettes.neon;
+
+        // Cube wireframe material
+        function createCubeMaterial(colorIndex, alpha = 1) {
+            const color = new THREE.Color(palette[colorIndex % palette.length]);
+            return new THREE.LineBasicMaterial({
+                color,
+                transparent: true,
+                opacity: alpha,
+                linewidth: 2
+            });
+        }
+
+        // Create wireframe cube
+        function createWireframeCube(size, colorIndex) {
+            const geometry = new THREE.BoxGeometry(size, size, size);
+            const edges = new THREE.EdgesGeometry(geometry);
+            const material = createCubeMaterial(colorIndex);
+            return new THREE.LineSegments(edges, material);
+        }
+
+        // Recursive cube structure
+        class FractalCube {
+            constructor(size, depth, colorIndex) {
+                this.group = new THREE.Group();
+                this.size = size;
+                this.depth = depth;
+                this.colorIndex = colorIndex;
+                this.rotationSpeed = {
+                    x: (Math.random() - 0.5) * 0.5,
+                    y: (Math.random() - 0.5) * 0.5,
+                    z: (Math.random() - 0.5) * 0.5
+                };
+
+                // Main cube
+                this.cube = createWireframeCube(size, colorIndex);
+                this.group.add(this.cube);
+
+                // Child cubes at corners
+                if (depth > 0) {
+                    this.children = [];
+                    const childSize = size * 0.4;
+                    const offset = size * 0.3;
+
+                    const positions = [
+                        [-1, -1, -1], [1, -1, -1], [-1, 1, -1], [1, 1, -1],
+                        [-1, -1, 1], [1, -1, 1], [-1, 1, 1], [1, 1, 1]
+                    ];
+
+                    positions.forEach((pos, i) => {
+                        const child = new FractalCube(childSize, depth - 1, (colorIndex + 1) % palette.length);
+                        child.group.position.set(pos[0] * offset, pos[1] * offset, pos[2] * offset);
+                        this.group.add(child.group);
+                        this.children.push(child);
+                    });
+                }
+            }
+
+            update(time, parentRotation = { x: 0, y: 0, z: 0 }) {
+                // Rotate based on depth and time
+                this.group.rotation.x = parentRotation.x + time * this.rotationSpeed.x;
+                this.group.rotation.y = parentRotation.y + time * this.rotationSpeed.y;
+                this.group.rotation.z = parentRotation.z + time * this.rotationSpeed.z;
+
+                // Pulse size
+                const pulse = 1 + Math.sin(time * 2 + this.depth) * 0.05;
+                this.cube.scale.setScalar(pulse);
+
+                // Update material opacity based on depth visibility
+                const alpha = smoothstep(0, 3, this.depth) * 0.8 + 0.2;
+                this.cube.material.opacity = alpha;
+
+                // Update children
+                if (this.children) {
+                    this.children.forEach(child => {
+                        child.update(time * 0.8, this.group.rotation);
+                    });
+                }
+            }
+        }
+
+        // Main fractal
+        const fractal = new FractalCube(2, 3, 0);
+        scene.add(fractal.group);
+
+        // Ambient particles
+        const particleCount = 300;
+        const particleGeometry = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        const particleColors = new Float32Array(particleCount * 3);
+        const particleData = [];
+
+        for (let i = 0; i < particleCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const radius = 3 + Math.random() * 5;
+
+            particlePositions[i * 3] = Math.sin(phi) * Math.cos(theta) * radius;
+            particlePositions[i * 3 + 1] = Math.sin(phi) * Math.sin(theta) * radius;
+            particlePositions[i * 3 + 2] = Math.cos(phi) * radius;
+
+            const color = new THREE.Color(palette[i % palette.length]);
+            particleColors[i * 3] = color.r;
+            particleColors[i * 3 + 1] = color.g;
+            particleColors[i * 3 + 2] = color.b;
+
+            particleData.push({
+                theta,
+                phi,
+                radius,
+                speed: 0.2 + Math.random() * 0.3
+            });
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.05,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particles);
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+        scene.add(ambientLight);
+
+        const pointLights = [];
+        for (let i = 0; i < 4; i++) {
+            const color = new THREE.Color(palette[i]);
+            const light = new THREE.PointLight(color, 1, 15);
+            pointLights.push(light);
+            scene.add(light);
+        }
+
+        // Zoom animation
+        let zoomPhase = 0;
+        const zoomSpeed = 0.3;
+
+        let time = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 1 / 60;
+            mouse.update();
+
+            // Update fractal
+            fractal.update(time);
+
+            // Zoom effect - camera moves in and out
+            zoomPhase += zoomSpeed * (1 / 60);
+            const zoomCycle = (Math.sin(zoomPhase) + 1) / 2; // 0 to 1
+            const cameraZ = map(zoomCycle, 0, 1, 2, 8);
+
+            camera.position.z = cameraZ;
+            camera.position.x = mouse.centeredX * 2;
+            camera.position.y = mouse.centeredY * 2;
+            camera.lookAt(0, 0, 0);
+
+            // Rotate entire fractal based on mouse
+            fractal.group.rotation.x += mouse.centeredY * 0.02;
+            fractal.group.rotation.y += mouse.centeredX * 0.02;
+
+            // Update particles
+            const positions = particles.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                const d = particleData[i];
+                d.theta += d.speed * (1 / 60);
+
+                positions[i * 3] = Math.sin(d.phi) * Math.cos(d.theta) * d.radius;
+                positions[i * 3 + 1] = Math.sin(d.phi) * Math.sin(d.theta) * d.radius;
+                positions[i * 3 + 2] = Math.cos(d.phi) * d.radius;
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+            particles.rotation.y = time * 0.1;
+
+            // Update lights
+            pointLights.forEach((light, i) => {
+                const angle = time * 0.5 + (i / 4) * Math.PI * 2;
+                light.position.set(
+                    Math.cos(angle) * 4,
+                    Math.sin(time + i) * 2,
+                    Math.sin(angle) * 4
+                );
+                light.intensity = 0.5 + Math.sin(time * 2 + i) * 0.3;
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>
