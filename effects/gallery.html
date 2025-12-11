@@ -398,8 +398,8 @@
     const backBtn = document.getElementById('back-btn');
     const effectCanvas = document.getElementById('effect-canvas');
     const effectInfo = document.getElementById('effect-info');
-    const effectName = document.getElementById('effect-name');
-    const effectDescription = document.getElementById('effect-description');
+    const effectNameElement = document.getElementById('effect-name');
+    const effectDescriptionElement = document.getElementById('effect-description');
     const loading = document.getElementById('loading');
 
     let currentCategory = 'all';
@@ -476,8 +476,8 @@
         effectViewer.classList.remove('hidden');
 
         const metadata = registry.getMetadata(effectName);
-        effectName.textContent = metadata.name;
-        effectDescription.textContent = metadata.description;
+        effectNameElement.textContent = metadata.name;
+        effectDescriptionElement.textContent = metadata.description;
 
         await loader.loadEffect(effectName, effectCanvas);
         loading.classList.add('hidden');
