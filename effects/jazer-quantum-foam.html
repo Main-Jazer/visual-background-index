@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantum Foam - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script src="../Three.js"></script>
+    <script type="module">
+        import { noise3D, mouse, ColorPalettes } from '../jazer-background-engine.js';
+
+        const THREE = window.THREE;
+        const canvas = document.getElementById('c');
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.z = 15;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x000000, 0);
+
+        // Quantum foam parameters
+        const particleCount = 8000;
+        const foamRadius = 10;
+        const interactionDistance = 2;
+
+        // Geometry for particles
+        const particleGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+
+        // Initialize particles in a spherical distribution
+        for (let i = 0; i < particleCount; i++) {
+            const i3 = i * 3;
+            
+            // Random position within sphere
+            const u = Math.random();
+            const v = Math.random();
+            const theta = u * Math.PI * 2;
+            const phi = Math.acos(2 * v - 1);
+            const r = Math.cbrt(Math.random()) * foamRadius;
+            
+            positions[i3] = r * Math.sin(phi) * Math.cos(theta);
+            positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            positions[i3 + 2] = r * Math.cos(phi);
+
+            // Color based on position and time
+            const hue = (0.7 + Math.sin(i * 0.1) * 0.1) % 1;
+            const color = new THREE.Color().setHSL(hue, 0.8, 0.6);
+            colors[i3] = color.r;
+            colors[i3 + 1] = color.g;
+            colors[i3 + 2] = color.b;
+
+            sizes[i] = Math.random() * 0.05 + 0.02;
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        // Custom shader material for quantum particles
+        const particleMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 },
+                mouse: { value: new THREE.Vector2(0, 0) },
+                foamRadius: { value: foamRadius }
+            },
+            vertexShader: `
+                uniform float time;
+                uniform vec2 mouse;
+                uniform float foamRadius;
+                attribute float size;
+                attribute vec3 color;
+                varying vec3 vColor;
+                varying float vDistance;
+
+                void main() {
+                    vColor = color;
+                    
+                    vec3 pos = position;
+                    
+                    // Quantum fluctuation using noise
+                    float noiseFreq = 0.5;
+                    float noiseAmp = 0.3;
+                    pos.x += sin(time * 0.5 + position.y * 0.1 + position.z * 0.1) * noiseAmp;
+                    pos.y += cos(time * 0.4 + position.x * 0.1 + position.z * 0.1) * noiseAmp;
+                    pos.z += sin(time * 0.3 + position.x * 0.1 + position.y * 0.1) * noiseAmp;
+                    
+                    // Add additional noise for more chaos
+                    pos.x += noise3D(pos.x * noiseFreq, pos.y * noiseFreq, time * 0.1) * noiseAmp * 0.5;
+                    pos.y += noise3D(pos.y * noiseFreq, pos.z * noiseFreq, time * 0.1 + 100) * noiseAmp * 0.5;
+                    pos.z += noise3D(pos.z * noiseFreq, pos.x * noiseFreq, time * 0.1 + 200) * noiseAmp * 0.5;
+                    
+                    // Mouse influence
+                    vec3 mouseVec = vec3(mouse.x * 10.0, -mouse.y * 10.0, 0.0);
+                    float mouseDist = distance(pos, mouseVec);
+                    if (mouseDist < 5.0) {
+                        pos += normalize(pos - mouseVec) * 0.1 * (5.0 - mouseDist);
+                    }
+                    
+                    // Keep particles within bounds
+                    float distFromCenter = length(pos);
+                    if (distFromCenter > foamRadius) {
+                        pos = normalize(pos) * foamRadius * 0.95;
+                    }
+                    
+                    vDistance = distFromCenter / foamRadius;
+                    
+                    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                    gl_PointSize = size * 300.0 * (30.0 / -mvPosition.z);
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vColor;
+                varying float vDistance;
+
+                void main() {
+                    float dist = length(gl_PointCoord - 0.5);
+                    if (dist > 0.5) discard;
+                    
+                    float alpha = 1.0 - dist * 2.0;
+                    alpha = pow(alpha, 2.0);
+                    
+                    // Adjust brightness based on distance from center
+                    float brightness = 1.0 - vDistance * 0.3;
+                    
+                    gl_FragColor = vec4(vColor * brightness, alpha * brightness * 0.8);
+                }
+            `,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particles);
+
+        // Energy field wireframe
+        const fieldGeometry = new THREE.IcosahedronGeometry(foamRadius * 0.8, 4);
+        const fieldMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 }
+            },
+            vertexShader: `
+                uniform float time;
+                varying float vNoise;
+
+                void main() {
+                    vec3 pos = position;
+                    
+                    // Distort vertices with noise
+                    float noise = noise3D(pos.x * 0.3, pos.y * 0.3, pos.z * 0.3 + time * 0.2);
+                    pos = normalize(pos) * (length(pos) + noise * 0.3);
+                    
+                    vNoise = noise * 0.5 + 0.5;
+                    
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                }
+            `,
+            fragmentShader: `
+                varying float vNoise;
+                
+                void main() {
+                    vec3 color = mix(vec3(0.1, 0.3, 0.8), vec3(0.8, 0.1, 0.9), vNoise);
+                    gl_FragColor = vec4(color, vNoise * 0.1);
+                }
+            `,
+            transparent: true,
+            wireframe: true,
+            blending: THREE.AdditiveBlending
+        });
+        
+        const energyField = new THREE.Mesh(fieldGeometry, fieldMaterial);
+        scene.add(energyField);
+
+        // Ambient lights
+        const ambientLight = new THREE.AmbientLight(0x222255, 0.3);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0x00ffff, 1, 100);
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        const pointLight2 = new THREE.PointLight(0xff00ff, 1, 100);
+        pointLight2.position.set(-5, -5, -5);
+        scene.add(pointLight2);
+
+        let time = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01;
+            mouse.update();
+
+            // Update uniforms
+            particleMaterial.uniforms.time.value = time;
+            particleMaterial.uniforms.mouse.value.set(mouse.centeredX, mouse.centeredY);
+            fieldMaterial.uniforms.time.value = time;
+
+            // Rotate the foam slowly
+            particles.rotation.x = time * 0.05;
+            particles.rotation.y = time * 0.03;
+            energyField.rotation.x = time * 0.02;
+            energyField.rotation.y = time * 0.04;
+
+            // Camera movement with mouse
+            camera.position.x = Math.sin(time * 0.1) * 5 + mouse.centeredX * 2;
+            camera.position.y = Math.cos(time * 0.15) * 2 + mouse.centeredY * 2;
+            camera.position.z = 15 + Math.sin(time * 0.05) * 2;
+            camera.lookAt(scene.position);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>
