@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Sacred Tesseract</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+
+  <script src="../Three.js"></script>
+  <script type="module">
+    import { ColorPalettes } from '../jazer-background-engine.js';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+    
+    camera.position.z = 30;
+
+    const palette = ColorPalettes.gold;
+    let time = 0;
+
+    // 4D hypercube vertices projection
+    function project4Dto3D(x, y, z, w, time) {
+      const distance = 2;
+      const w1 = w + Math.sin(time) * 0.5;
+      const factor = distance / (distance - w1);
+      return {
+        x: x * factor,
+        y: y * factor,
+        z: z * factor
+      };
+    }
+
+    // Generate 4D hypercube vertices
+    const vertices4D = [];
+    for (let i = 0; i < 16; i++) {
+      vertices4D.push({
+        x: (i & 1) ? 5 : -5,
+        y: (i & 2) ? 5 : -5,
+        z: (i & 4) ? 5 : -5,
+        w: (i & 8) ? 5 : -5
+      });
+    }
+
+    // Create vertex spheres
+    const vertexMeshes = [];
+    vertices4D.forEach(() => {
+      const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+      const material = new THREE.MeshBasicMaterial({
+        color: palette[0],
+        transparent: true,
+        opacity: 0.8
+      });
+      const sphere = new THREE.Mesh(geometry, material);
+      vertexMeshes.push(sphere);
+      scene.add(sphere);
+    });
+
+    // Create edges
+    const edges = [];
+    for (let i = 0; i < 16; i++) {
+      for (let j = i + 1; j < 16; j++) {
+        // Count differing bits - hypercube edges differ by 1 bit
+        const diff = i ^ j;
+        const bitCount = diff.toString(2).split('1').length - 1;
+        
+        if (bitCount === 1) {
+          const material = new THREE.LineBasicMaterial({
+            color: 0x00f5ff,
+            transparent: true,
+            opacity: 0.5,
+            blending: THREE.AdditiveBlending
+          });
+          
+          const geometry = new THREE.BufferGeometry();
+          edges.push({
+            line: new THREE.Line(geometry, material),
+            from: i,
+            to: j
+          });
+          
+          scene.add(edges[edges.length - 1].line);
+        }
+      }
+    }
+
+    // Background flower of life particles
+    const particleCount = 500;
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleColors = new Float32Array(particleCount * 3);
+    
+    for (let i = 0; i < particleCount; i++) {
+      particlePositions[i * 3] = (Math.random() - 0.5) * 50;
+      particlePositions[i * 3 + 1] = (Math.random() - 0.5) * 50;
+      particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 50;
+      
+      const color = new THREE.Color(palette[i % palette.length]);
+      particleColors[i * 3] = color.r;
+      particleColors[i * 3 + 1] = color.g;
+      particleColors[i * 3 + 2] = color.b;
+    }
+    
+    const particleGeometry = new THREE.BufferGeometry();
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+    
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 0.2,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      opacity: 0.4
+    });
+    
+    const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particleSystem);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.01;
+
+      // Update 4D rotation and project to 3D
+      const rotationMatrix = time * 0.5;
+      
+      vertices4D.forEach((v4d, i) => {
+        // Rotate in 4D space
+        const rotatedX = v4d.x * Math.cos(rotationMatrix) - v4d.w * Math.sin(rotationMatrix);
+        const rotatedW = v4d.x * Math.sin(rotationMatrix) + v4d.w * Math.cos(rotationMatrix);
+        
+        // Project to 3D
+        const projected = project4Dto3D(rotatedX, v4d.y, v4d.z, rotatedW, time);
+        
+        vertexMeshes[i].position.set(projected.x, projected.y, projected.z);
+        vertexMeshes[i].scale.setScalar(1 + Math.sin(time * 2 + i) * 0.2);
+      });
+      
+      // Update edges
+      edges.forEach(edge => {
+        const points = [
+          vertexMeshes[edge.from].position,
+          vertexMeshes[edge.to].position
+        ];
+        edge.line.geometry.setFromPoints(points);
+        edge.line.material.opacity = 0.3 + Math.sin(time * 2) * 0.2;
+      });
+      
+      // Rotate background particles
+      particleSystem.rotation.y += 0.002;
+      
+      // Camera orbit
+      camera.position.x = Math.sin(time * 0.3) * 30;
+      camera.position.y = Math.sin(time * 0.2) * 15;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>

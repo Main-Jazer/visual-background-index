@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Holographic City Tunnel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+
+  <script src="../Three.js"></script>
+  <script type="module">
+    import { SimplexNoise, noise2D, ColorPalettes } from '../jazer-background-engine.js';
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x000000, 50, 150);
+    
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+    
+    camera.position.z = 0;
+
+    const palette = ColorPalettes.cyberpunk;
+    const simplex = new SimplexNoise();
+    let time = 0;
+
+    // City buildings tunnel
+    const buildings = [];
+    const buildingCount = 60;
+    
+    for (let i = 0; i < buildingCount; i++) {
+      const width = 5 + Math.random() * 10;
+      const height = 20 + Math.random() * 60;
+      const depth = 5 + Math.random() * 8;
+      
+      const geometry = new THREE.BoxGeometry(width, height, depth);
+      const color = palette[Math.floor(Math.random() * palette.length)];
+      const material = new THREE.MeshBasicMaterial({
+        color: color,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.5
+      });
+      
+      const building = new THREE.Mesh(geometry, material);
+      
+      // Arrange in circle around tunnel
+      const angle = (i / buildingCount) * Math.PI * 4;
+      const radius = 30 + Math.random() * 10;
+      building.position.x = Math.cos(angle) * radius;
+      building.position.y = Math.sin(angle) * radius;
+      building.position.z = -i * 5 - 50;
+      
+      building.lookAt(0, 0, building.position.z);
+      
+      buildings.push({
+        mesh: building,
+        initialZ: building.position.z
+      });
+      
+      scene.add(building);
+    }
+
+    // Holographic data planes
+    const dataPlanes = [];
+    for (let i = 0; i < 20; i++) {
+      const geometry = new THREE.PlaneGeometry(15, 15);
+      const material = new THREE.MeshBasicMaterial({
+        color: palette[i % palette.length],
+        transparent: true,
+        opacity: 0.2,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const plane = new THREE.Mesh(geometry, material);
+      const angle = (i / 20) * Math.PI * 2;
+      plane.position.x = Math.cos(angle) * 20;
+      plane.position.y = Math.sin(angle) * 20;
+      plane.position.z = -i * 15 - 30;
+      plane.lookAt(0, 0, plane.position.z);
+      
+      dataPlanes.push(plane);
+      scene.add(plane);
+    }
+
+    // Laser scan lines
+    const scanLines = [];
+    for (let i = 0; i < 10; i++) {
+      const geometry = new THREE.RingGeometry(25, 26, 32);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.5,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const ring = new THREE.Mesh(geometry, material);
+      ring.position.z = -i * 30 - 20;
+      
+      scanLines.push(ring);
+      scene.add(ring);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.01;
+
+      // Move camera forward
+      camera.position.z -= 0.5;
+      
+      // RGB glitch effect on camera
+      if (Math.random() > 0.98) {
+        camera.position.x += (Math.random() - 0.5) * 2;
+        camera.position.y += (Math.random() - 0.5) * 2;
+      } else {
+        camera.position.x *= 0.9;
+        camera.position.y *= 0.9;
+      }
+      
+      // Update buildings
+      buildings.forEach(b => {
+        b.mesh.position.z += 0.5;
+        
+        if (b.mesh.position.z > 20) {
+          b.mesh.position.z -= 300;
+        }
+        
+        // Glitch opacity
+        if (Math.random() > 0.95) {
+          b.mesh.material.opacity = Math.random() * 0.7 + 0.3;
+        }
+      });
+      
+      // Update data planes
+      dataPlanes.forEach((plane, i) => {
+        plane.position.z += 0.5;
+        plane.rotation.z += 0.01;
+        
+        if (plane.position.z > 20) {
+          plane.position.z -= 300;
+        }
+        
+        plane.material.opacity = 0.1 + Math.sin(time * 2 + i) * 0.1;
+      });
+      
+      // Update scan lines
+      scanLines.forEach((ring, i) => {
+        ring.position.z += 1;
+        
+        if (ring.position.z > 20) {
+          ring.position.z = -280;
+        }
+        
+        ring.material.opacity = 0.3 + Math.sin(time * 3 + i) * 0.2;
+      });
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>

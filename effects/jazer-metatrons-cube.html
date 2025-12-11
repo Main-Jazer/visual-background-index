@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Metatron's Cube Unfolding</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+
+  <script src="../Three.js"></script>
+  <script type="module">
+    import { ColorPalettes } from '../jazer-background-engine.js';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+    
+    camera.position.z = 30;
+
+    const palette = ColorPalettes.gold;
+    let time = 0;
+
+    // Metatron's Cube has 13 circles
+    const circles = [];
+    const circlePositions = [
+      [0, 0, 0], // Center
+      // Inner hexagon
+      ...Array.from({length: 6}, (_, i) => {
+        const angle = (i / 6) * Math.PI * 2;
+        return [Math.cos(angle) * 5, Math.sin(angle) * 5, 0];
+      }),
+      // Outer hexagon
+      ...Array.from({length: 6}, (_, i) => {
+        const angle = (i / 6) * Math.PI * 2;
+        return [Math.cos(angle) * 10, Math.sin(angle) * 10, 0];
+      })
+    ];
+
+    circlePositions.forEach((pos, i) => {
+      const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+      const material = new THREE.MeshBasicMaterial({
+        color: palette[i % palette.length],
+        transparent: true,
+        opacity: 0.8
+      });
+      
+      const sphere = new THREE.Mesh(geometry, material);
+      sphere.position.set(...pos);
+      circles.push(sphere);
+      scene.add(sphere);
+    });
+
+    // Connect all circles to all others (Metatron's Cube pattern)
+    const lines = [];
+    for (let i = 0; i < circles.length; i++) {
+      for (let j = i + 1; j < circles.length; j++) {
+        const points = [circles[i].position, circles[j].position];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({
+          color: 0x00f5ff,
+          transparent: true,
+          opacity: 0.3,
+          blending: THREE.AdditiveBlending
+        });
+        
+        const line = new THREE.Line(geometry, material);
+        lines.push(line);
+        scene.add(line);
+      }
+    }
+
+    // Platonic solids wireframes
+    const solids = [];
+    const solidTypes = [
+      new THREE.TetrahedronGeometry(3),
+      new THREE.OctahedronGeometry(3),
+      new THREE.IcosahedronGeometry(3)
+    ];
+
+    solidTypes.forEach((geometry, i) => {
+      const material = new THREE.MeshBasicMaterial({
+        color: palette[(i + 1) % palette.length],
+        wireframe: true,
+        transparent: true,
+        opacity: 0.4
+      });
+      
+      const solid = new THREE.Mesh(geometry, material);
+      solids.push(solid);
+      scene.add(solid);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.01;
+
+      // Rotate entire structure
+      circles.forEach((circle, i) => {
+        circle.position.setFromMatrixPosition(
+          new THREE.Matrix4().makeRotationY(time * 0.5)
+            .multiply(new THREE.Matrix4().makeTranslation(...circlePositions[i]))
+        );
+        
+        circle.scale.setScalar(1 + Math.sin(time * 2 + i) * 0.2);
+      });
+      
+      // Update lines
+      lines.forEach((line, i) => {
+        line.material.opacity = 0.2 + Math.sin(time * 2 + i * 0.1) * 0.1;
+      });
+      
+      // Rotate and scale platonic solids
+      solids.forEach((solid, i) => {
+        solid.rotation.x = time * (0.5 + i * 0.1);
+        solid.rotation.y = time * (0.7 + i * 0.1);
+        solid.scale.setScalar(1 + Math.sin(time * 2 + i * 2) * 0.3);
+        solid.material.opacity = 0.3 + Math.sin(time * 2 + i) * 0.1;
+      });
+      
+      // Camera orbit
+      camera.position.x = Math.sin(time * 0.3) * 30;
+      camera.position.y = Math.sin(time * 0.2) * 15;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>

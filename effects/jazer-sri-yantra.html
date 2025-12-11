@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Sri Yantra</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+  <canvas id="effectCanvas"></canvas>
+
+  <script type="module">
+    import { ColorPalettes } from '../jazer-background-engine.js';
+
+    const canvas = document.getElementById('effectCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+
+    const palette = ['#ff6b00', '#d946ef', '#ffd700', '#ff2aff'];
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function drawTriangle(cx, cy, radius, rotation, inverted) {
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const angle = rotation + (i / 3) * Math.PI * 2 + (inverted ? Math.PI : 0);
+        const x = cx + Math.cos(angle) * radius;
+        const y = cy + Math.sin(angle) * radius;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    function render() {
+      time += 0.016;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.globalCompositeOperation = 'lighter';
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const baseRadius = 150;
+
+      // Outer circles
+      for (let i = 0; i < 3; i++) {
+        const radius = baseRadius + i * 30;
+        const alpha = 0.3 + Math.sin(time + i) * 0.1;
+        ctx.strokeStyle = palette[i % palette.length] + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+        ctx.lineWidth = 2;
+        ctx.shadowColor = palette[i % palette.length];
+        ctx.shadowBlur = 15;
+        
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Sri Yantra triangles (9 interlocking triangles)
+      const triangleSizes = [140, 120, 100, 80, 60];
+      
+      ctx.lineWidth = 2;
+      
+      // Upward triangles (Shiva - masculine)
+      for (let i = 0; i < 5; i++) {
+        ctx.strokeStyle = palette[0] + '88';
+        ctx.shadowColor = palette[0];
+        ctx.shadowBlur = 10;
+        drawTriangle(centerX, centerY, triangleSizes[i], time * 0.2 + i * 0.5, false);
+      }
+      
+      // Downward triangles (Shakti - feminine)
+      for (let i = 0; i < 4; i++) {
+        ctx.strokeStyle = palette[1] + '88';
+        ctx.shadowColor = palette[1];
+        ctx.shadowBlur = 10;
+        drawTriangle(centerX, centerY, triangleSizes[i] - 10, -time * 0.2 + i * 0.5, true);
+      }
+
+      // Central bindu point
+      const binduSize = 5 + Math.sin(time * 3) * 3;
+      ctx.fillStyle = palette[2];
+      ctx.shadowColor = palette[2];
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, binduSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      requestAnimationFrame(render);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

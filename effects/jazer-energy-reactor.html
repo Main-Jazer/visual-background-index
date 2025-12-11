@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Energy Reactor Core</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+
+  <script src="../Three.js"></script>
+  <script type="module">
+    import { ColorPalettes } from '../jazer-background-engine.js';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+    
+    camera.position.z = 40;
+
+    const palette = ['#ffd700', '#ff5500', '#ff0055', '#00f5ff'];
+    let time = 0;
+
+    // Core sphere
+    const coreGeometry = new THREE.SphereGeometry(8, 32, 32);
+    const coreMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending
+    });
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+    scene.add(core);
+
+    // Plasma arcs (particles)
+    const arcCount = 6;
+    const arcs = [];
+    
+    for (let a = 0; a < arcCount; a++) {
+      const particleCount = 100;
+      const positions = new Float32Array(particleCount * 3);
+      
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      
+      const material = new THREE.PointsMaterial({
+        color: palette[a % palette.length],
+        size: 0.5,
+        blending: THREE.AdditiveBlending,
+        transparent: true
+      });
+      
+      const arc = new THREE.Points(geometry, material);
+      arcs.push({
+        particles: arc,
+        angle: (a / arcCount) * Math.PI * 2,
+        phase: Math.random() * Math.PI * 2
+      });
+      
+      scene.add(arc);
+    }
+
+    // Containment rings
+    const rings = [];
+    for (let i = 0; i < 5; i++) {
+      const ringGeometry = new THREE.TorusGeometry(12 + i * 3, 0.3, 16, 100);
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: palette[i % palette.length],
+        transparent: true,
+        opacity: 0.4,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+      ring.rotation.y = (Math.random() - 0.5) * 0.5;
+      
+      rings.push(ring);
+      scene.add(ring);
+    }
+
+    // Electromagnetic field lines
+    const fieldLines = [];
+    for (let i = 0; i < 20; i++) {
+      const curve = new THREE.EllipseCurve(
+        0, 0,
+        15 + i * 2, 15 + i * 2,
+        0, 2 * Math.PI,
+        false,
+        0
+      );
+      
+      const points = curve.getPoints(50);
+      const geometry = new THREE.BufferGeometry().setFromPoints(points.map(p => 
+        new THREE.Vector3(p.x, p.y, 0)
+      ));
+      
+      const material = new THREE.LineBasicMaterial({
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.2,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const line = new THREE.Line(geometry, material);
+      line.rotation.x = (i / 20) * Math.PI;
+      line.rotation.y = (i / 20) * Math.PI * 0.5;
+      
+      fieldLines.push(line);
+      scene.add(line);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.01;
+
+      // Pulse core
+      const coreScale = 1 + Math.sin(time * 3) * 0.2;
+      core.scale.setScalar(coreScale);
+      core.material.opacity = 0.8 + Math.sin(time * 3) * 0.1;
+      
+      // Update plasma arcs
+      arcs.forEach((arc, a) => {
+        const positions = arc.particles.geometry.attributes.position.array;
+        
+        for (let i = 0; i < 100; i++) {
+          const t = i / 100;
+          const angle = arc.angle + time + t * Math.PI * 4;
+          const radius = 8 + t * 15;
+          const height = Math.sin(t * Math.PI * 2 + arc.phase + time * 2) * 10;
+          
+          positions[i * 3] = Math.cos(angle) * radius;
+          positions[i * 3 + 1] = height;
+          positions[i * 3 + 2] = Math.sin(angle) * radius;
+        }
+        
+        arc.particles.geometry.attributes.position.needsUpdate = true;
+        arc.particles.rotation.y += 0.01;
+      });
+      
+      // Rotate containment rings
+      rings.forEach((ring, i) => {
+        ring.rotation.z += 0.005 * (i + 1);
+        ring.material.opacity = 0.3 + Math.sin(time * 2 + i) * 0.1;
+      });
+      
+      // Pulse field lines
+      fieldLines.forEach((line, i) => {
+        line.material.opacity = 0.1 + Math.sin(time * 2 + i * 0.1) * 0.1;
+      });
+      
+      // Camera orbit
+      camera.position.x = Math.sin(time * 0.3) * 40;
+      camera.position.y = Math.sin(time * 0.2) * 20;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>

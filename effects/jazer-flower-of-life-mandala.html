@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Flower of Life Mandala</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+  <canvas id="effectCanvas"></canvas>
+
+  <script type="module">
+    import { ColorPalettes } from '../jazer-background-engine.js';
+
+    const canvas = document.getElementById('effectCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+
+    const palette = ColorPalettes.gold;
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function drawFlowerOfLife(cx, cy, radius, depth) {
+      // Center circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // 6 surrounding circles
+      if (depth > 0) {
+        for (let i = 0; i < 6; i++) {
+          const angle = (i / 6) * Math.PI * 2;
+          const x = cx + Math.cos(angle) * radius;
+          const y = cy + Math.sin(angle) * radius;
+          
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      
+      // 12 outer circles
+      if (depth > 1) {
+        for (let i = 0; i < 12; i++) {
+          const angle = (i / 12) * Math.PI * 2;
+          const x = cx + Math.cos(angle) * radius * 1.732; // sqrt(3)
+          const y = cy + Math.sin(angle) * radius * 1.732;
+          
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function render() {
+      time += 0.016;
+
+      // Fade trail
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.globalCompositeOperation = 'lighter';
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const layers = 15;
+
+      // Tunnel effect with flower of life
+      for (let i = 0; i < layers; i++) {
+        const z = (time * 100 + i * 40) % 600;
+        const scale = 3000 / (z + 1);
+        const radius = scale * 30;
+        const alpha = Math.max(0, 1 - z / 600);
+
+        if (alpha < 0.01) continue;
+
+        const colorIndex = Math.floor((i / layers) * palette.length);
+        const color = palette[colorIndex % palette.length];
+        
+        ctx.strokeStyle = color + Math.floor(alpha * 200).toString(16).padStart(2, '0');
+        ctx.lineWidth = 1.5 * scale;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10 * scale;
+        
+        drawFlowerOfLife(centerX, centerY, radius, 2);
+      }
+
+      // Central pulsing mandala
+      const pulseRadius = 80 + Math.sin(time * 2) * 20;
+      const petals = 12;
+      
+      ctx.strokeStyle = palette[0];
+      ctx.lineWidth = 2;
+      ctx.shadowColor = palette[0];
+      ctx.shadowBlur = 20;
+      
+      for (let i = 0; i < petals; i++) {
+        const angle = (i / petals) * Math.PI * 2 + time;
+        const x = centerX + Math.cos(angle) * pulseRadius;
+        const y = centerY + Math.sin(angle) * pulseRadius;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 20 + Math.sin(time * 3 + i) * 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.shadowBlur = 0;
+      requestAnimationFrame(render);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

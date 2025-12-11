@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR - Torus Knot Tunnel</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    canvas { display: block; }
+    .back-link {
+      position: fixed; top: 20px; left: 20px; color: rgba(255, 255, 255, 0.7);
+      text-decoration: none; font-size: 14px; z-index: 1000; padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.5); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s; font-family: system-ui;
+    }
+    .back-link:hover { background: rgba(0, 245, 255, 0.2); border-color: #00f5ff; color: #00f5ff; }
+  </style>
+</head>
+<body>
+  <a href="../index.html" class="back-link">← Back to Gallery</a>
+
+  <script src="../Three.js"></script>
+  <script type="module">
+    import { ColorPalettes } from '../jazer-background-engine.js';
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x000000, 30, 100);
+    
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+    
+    camera.position.z = 30;
+
+    const palette = ColorPalettes.vapor;
+    let time = 0;
+
+    // Create multiple torus knots
+    const knots = [];
+    const knotCount = 8;
+    
+    for (let i = 0; i < knotCount; i++) {
+      const geometry = new THREE.TorusKnotGeometry(8, 2, 100, 16, 2 + i % 3, 3 + i % 4);
+      const material = new THREE.MeshBasicMaterial({
+        color: palette[i % palette.length],
+        wireframe: true,
+        transparent: true,
+        opacity: 0.5
+      });
+      
+      const knot = new THREE.Mesh(geometry, material);
+      knot.position.z = -i * 25 - 20;
+      
+      knots.push({
+        mesh: knot,
+        rotSpeed: 0.002 + (i % 3) * 0.001
+      });
+      
+      scene.add(knot);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.01;
+
+      // Move camera forward slowly
+      camera.position.z -= 0.1;
+      
+      // Update knots
+      knots.forEach((knot, i) => {
+        knot.mesh.position.z += 0.1;
+        knot.mesh.rotation.x += knot.rotSpeed;
+        knot.mesh.rotation.y += knot.rotSpeed * 1.5;
+        
+        // Loop knots
+        if (knot.mesh.position.z > 30) {
+          knot.mesh.position.z = -200;
+        }
+        
+        // Pulse opacity
+        knot.mesh.material.opacity = 0.4 + Math.sin(time * 2 + i) * 0.2;
+      });
+      
+      // Gentle camera sway
+      camera.position.x = Math.sin(time * 0.5) * 3;
+      camera.position.y = Math.cos(time * 0.3) * 2;
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>
