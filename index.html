@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>JaZeR Visual Effects Gallery</title>
     <style>
+        /* === RESET & BASE === */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -20,18 +20,20 @@
             padding: 2rem;
         }
 
+        /* === LAYOUT === */
         .container {
             max-width: 1400px;
             margin: 0 auto;
         }
 
+        /* === HEADER === */
         header {
             text-align: center;
             margin-bottom: 3rem;
         }
 
         h1 {
-            font-size: 3rem;
+            font-size: clamp(2rem, 5vw, 3rem);
             font-weight: 800;
             letter-spacing: 0.1em;
             text-transform: uppercase;
@@ -47,11 +49,13 @@
             font-size: 1.1rem;
         }
 
+        /* === STATS === */
         .stats {
             display: flex;
             justify-content: center;
             gap: 2rem;
             margin-top: 1.5rem;
+            flex-wrap: wrap;
         }
 
         .stat {
@@ -60,12 +64,14 @@
             background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 120px;
         }
 
         .stat-value {
             font-size: 2rem;
             font-weight: 700;
             color: #00f5ff;
+            font-variant-numeric: tabular-nums;
         }
 
         .stat-label {
@@ -73,14 +79,81 @@
             color: rgba(255, 255, 255, 0.5);
             text-transform: uppercase;
             letter-spacing: 0.1em;
+            margin-top: 0.25rem;
         }
 
+        /* === SEARCH & FILTERS === */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            border-color: #00f5ff;
+            box-shadow: 0 0 20px rgba(0, 245, 255, 0.2);
+        }
+
+        .search-box::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-family: inherit;
+        }
+
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .filter-btn.active {
+            background: rgba(0, 245, 255, 0.2);
+            border-color: #00f5ff;
+            color: #00f5ff;
+        }
+
+        /* === GRID === */
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 1.5rem;
+            margin-bottom: 2rem;
         }
 
+        /* === CARDS === */
         .card {
             background: rgba(10, 10, 30, 0.8);
             border-radius: 16px;
@@ -93,27 +166,21 @@
             display: block;
         }
 
+        .card.hidden {
+            display: none;
+        }
+
         .card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-5px) scale(1.02);
             border-color: rgba(0, 245, 255, 0.5);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5),
-                0 0 30px rgba(0, 245, 255, 0.2);
+                        0 0 30px rgba(0, 245, 255, 0.2);
         }
 
         .card-preview {
             height: 180px;
             position: relative;
             overflow: hidden;
-        }
-
-        .card-preview::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(45deg,
-                    rgba(0, 245, 255, 0.3),
-                    rgba(255, 42, 255, 0.3));
-            opacity: 0.5;
         }
 
         .card-preview::after {
@@ -126,6 +193,7 @@
             color: white;
             opacity: 0;
             transition: opacity 0.3s ease;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
         .card:hover .card-preview::after {
@@ -138,6 +206,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 4rem;
+            filter: drop-shadow(0 0 20px rgba(0, 0, 0, 0.5));
         }
 
         .card-content {
@@ -148,18 +217,19 @@
             font-size: 1.2rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
+            line-height: 1.3;
         }
 
         .card-description {
             font-size: 0.9rem;
             color: rgba(255, 255, 255, 0.6);
             line-height: 1.5;
+            margin-bottom: 1rem;
         }
 
         .card-tags {
             display: flex;
             gap: 0.5rem;
-            margin-top: 1rem;
             flex-wrap: wrap;
         }
 
@@ -171,7 +241,7 @@
             color: rgba(255, 255, 255, 0.7);
         }
 
-        .tag.canvas {
+        .tag.canvas2d {
             background: rgba(255, 150, 0, 0.2);
             color: #ffaa00;
         }
@@ -181,11 +251,7 @@
             color: #00c8ff;
         }
 
-        .tag.interactive {
-            background: rgba(255, 0, 255, 0.2);
-            color: #ff00ff;
-        }
-
+        /* === FOOTER === */
         footer {
             text-align: center;
             margin-top: 4rem;
@@ -197,10 +263,30 @@
         footer a {
             color: #00f5ff;
             text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: #ff2aff;
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .controls {
+                flex-direction: column;
+            }
+            .search-box {
+                max-width: 100%;
+            }
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <header>
@@ -208,12 +294,12 @@
             <p class="subtitle">Infinite 3D Visual Effects Collection</p>
             <div class="stats">
                 <div class="stat">
-                    <div class="stat-value">73</div>
+                    <div class="stat-value" id="total-effects">77</div>
                     <div class="stat-label">Effects</div>
                 </div>
                 <div class="stat">
-                    <div class="stat-value">20</div>
-                    <div class="stat-label">Color Palettes</div>
+                    <div class="stat-value" id="visible-effects">77</div>
+                    <div class="stat-label">Showing</div>
                 </div>
                 <div class="stat">
                     <div class="stat-value">∞</div>
@@ -222,1086 +308,214 @@
             </div>
         </header>
 
-        <h2
-            style="text-align: center; margin-bottom: 1.5rem; color: rgba(255,255,255,0.7); font-weight: 400; font-size: 1.2rem;">
-            🔥 Intense Effects</h2>
-
-        <div class="grid">
-            <a href="effects/jazer-plasma-storm.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff0055, #00f5ff);">
-                    <span class="card-icon">⚡</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Plasma Storm</h3>
-                    <p class="card-description">Electric arcs connect glowing plasma orbs. Lightning follows your
-                        cursor!</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag" style="background: rgba(255,0,0,0.2); color: #ff5555;">Intense</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-plasma-vortex.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff5500, #00aaff);">
-                    <span class="card-icon">🌪️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Plasma Vortex</h3>
-                    <p class="card-description">Swirling plasma formation with dynamic color gradients and morphing shapes.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(255,0,0,0.2); color: #ff5555;">Intense</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-cyber-glitch.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #39ff14, #ff2aff);">
-                    <span class="card-icon">📺</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Cyber Glitch Tunnel</h3>
-                    <p class="card-description">RGB splitting, data corruption, and digital chaos in a neon void.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag" style="background: rgba(255,0,0,0.2); color: #ff5555;">Intense</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-singularity.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #000000, #ff0055);">
-                    <span class="card-icon">🕳️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Singularity Vortex</h3>
-                    <p class="card-description">15,000 particles spiral into a black hole with accretion disk & jets.
-                    </p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(255,0,0,0.2); color: #ff5555;">Intense</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-neon-city.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff00ff, #00f5ff);">
-                    <span class="card-icon">🌆</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Neon City Flythrough</h3>
-                    <p class="card-description">Cyberpunk cityscape with buildings, holographic ads, and flying
-                        vehicles.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(255,0,0,0.2); color: #ff5555;">Intense</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-particle-galaxy.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #0055ff, #ff0055);">
-                    <span class="card-icon">🌌</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Particle Galaxy</h3>
-                    <p class="card-description">50,000 star spiral galaxy with orbital rotation and glowing core.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(255,0,0,0.2); color: #ff5555;">Intense</span>
-                    </div>
-            </a>
-
-            <a href="effects/jazer-digital-lattice-tunnel.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #b37cff);">
-                    <span class="card-icon">🔷</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Digital Lattice Tunnel</h3>
-                    <p class="card-description">Hexagonal wireframe tunnel with interconnected lattice and speed
-                        particles.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag" style="background: rgba(255,0,0,0.2); color: #ff5555;">Intense</span>
-                    </div>
-                </div>
-            </a>
+        <div class="controls">
+            <input 
+                type="text" 
+                class="search-box" 
+                id="search" 
+                placeholder="🔍 Search effects..."
+                autocomplete="off"
+            />
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="intense">🔥 Intense</button>
+                <button class="filter-btn" data-filter="cosmic">🌌 Cosmic</button>
+                <button class="filter-btn" data-filter="tech">⚡ Tech</button>
+                <button class="filter-btn" data-filter="sacred">🔮 Sacred</button>
+                <button class="filter-btn" data-filter="jazer">✨ JaZeR</button>
+                <button class="filter-btn" data-filter="canvas2d">Canvas 2D</button>
+                <button class="filter-btn" data-filter="threejs">Three.js</button>
+            </div>
         </div>
 
-        <h2
-            style="text-align: center; margin: 2rem 0 1.5rem; color: rgba(255,255,255,0.7); font-weight: 400; font-size: 1.2rem;">
-            🌌 Cosmic & Portals</h2>
-
-        <div class="grid">
-            <a href="effects/jazer-quantum-wormhole.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff0055, #00f5ff);">
-                    <span class="card-icon">🌀</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Quantum Wormhole Portal</h3>
-                    <p class="card-description">Spiral into a gravitational vortex with event horizon, accretion disk, and energy jets.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(138,43,226,0.2); color: #ba7cff;">Cosmic</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-cosmic-nebula.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #b37cff, #ff0055);">
-                    <span class="card-icon">☁️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Cosmic Nebula Voyage</h3>
-                    <p class="card-description">Fly through volumetric nebula clouds with plasma spheres, cosmic rays, and glowing ribbons.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(138,43,226,0.2); color: #ba7cff;">Cosmic</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <h2
-            style="text-align: center; margin: 2rem 0 1.5rem; color: rgba(255,255,255,0.7); font-weight: 400; font-size: 1.2rem;">
-            ⚡ Advanced 3D Tech</h2>
-
-        <div class="grid">
-            <a href="effects/jazer-laser-grid-sphere.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #39ff14);">
-                    <span class="card-icon">🔵</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Laser Grid Sphere</h3>
-                    <p class="card-description">Geodesic sphere with pulsing laser beams, rotating rings, and glowing vertex nodes.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(57,255,20,0.2); color: #39ff14;">Tech</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-neural-network.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff2aff, #00f5ff);">
-                    <span class="card-icon">🧠</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Neural Network Universe</h3>
-                    <p class="card-description">150 interconnected nodes with energy pulses traveling through synaptic connections.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(57,255,20,0.2); color: #39ff14;">Tech</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-holographic-city-tunnel.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff00ff, #00f5ff);">
-                    <span class="card-icon">🏙️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Holographic City Tunnel</h3>
-                    <p class="card-description">Futuristic cityscape with RGB glitch effects, holographic data planes, and laser scan lines.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(57,255,20,0.2); color: #39ff14;">Tech</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-energy-reactor.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ffd700, #ff0055);">
-                    <span class="card-icon">⚛️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Energy Reactor Core</h3>
-                    <p class="card-description">Pulsing fusion reactor with plasma arcs, electromagnetic fields, and containment rings.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(57,255,20,0.2); color: #39ff14;">Tech</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-quantum-foam.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff00ff, #00ffff);">
-                    <span class="card-icon">⚛️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Quantum Foam</h3>
-                    <p class="card-description">Visualization of quantum fluctuations in space-time with dynamic particles.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(57,255,20,0.2); color: #39ff14;">Tech</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-neon-ocean.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌊</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Neon Wireframe Ocean</h3>
-                    <p class="card-description">Undulating wave mesh with energy orbs, light beams, and particle crests.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(57,255,20,0.2); color: #39ff14;">Tech</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <h2
-            style="text-align: center; margin: 2rem 0 1.5rem; color: rgba(255,255,255,0.7); font-weight: 400; font-size: 1.2rem;">
-            🔮 Sacred Geometry Collection</h2>
-
-        <div class="grid">
-            <a href="effects/jazer-flower-of-life-mandala.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ffd700, #ff2aff);">
-                    <span class="card-icon">🌸</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Flower of Life Mandala</h3>
-                    <p class="card-description">Hypnotic tunnel of overlapping circles forming the ancient Flower of
-                        Life pattern, intertwined with a pulsing central mandala.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag" style="background: rgba(255,215,0,0.2); color: #ffd700;">Sacred</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-metatrons-cube.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #b37cff, #00f5ff);">
-                    <span class="card-icon">🔮</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Metatron's Cube Unfolding</h3>
-                    <p class="card-description">Dynamic 3D unfolding of Metatron's Cube with emerging Platonic Solids
-                        and glowing lines.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(255,215,0,0.2); color: #ffd700;">Sacred</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-sri-yantra.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff6b00, #d946ef);">
-                    <span class="card-icon">🕉️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Sri Yantra</h3>
-                    <p class="card-description">Interlocking triangles with warm sacred tones and the central bindu
-                        point.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag" style="background: rgba(255,215,0,0.2); color: #ffd700;">Sacred</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-torus-knot-tunnel.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌀</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Torus Knot Tunnel</h3>
-                    <p class="card-description">Slow 3D wireframe torus knots floating through an infinite tunnel.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(255,215,0,0.2); color: #ffd700;">Sacred</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-seed-of-life.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00d4ff, #7c3aed);">
-                    <span class="card-icon">💫</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Seed of Life Portal</h3>
-                    <p class="card-description">7 overlapping circles pulsing in ethereal cool tones - the portal to
-                        creation.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag" style="background: rgba(255,215,0,0.2); color: #ffd700;">Sacred</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-sacred-tesseract.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ffd700, #b37cff);">
-                    <span class="card-icon">🔷</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Sacred Tesseract</h3>
-                    <p class="card-description">4D hypercube projection with Flower of Life background, rotating in higher dimensions.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(255,215,0,0.2); color: #ffd700;">Sacred</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-crystal-lattice-network.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #40e0d0, #ff00ff);">
-                    <span class="card-icon">💠</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Crystal Lattice Network</h3>
-                    <p class="card-description">Interactive 3D network of interconnected crystalline structures with light propagation.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag" style="background: rgba(255,215,0,0.2); color: #ffd700;">Sacred</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <h2
-            style="text-align: center; margin: 2rem 0 1.5rem; color: rgba(255,255,255,0.7); font-weight: 400; font-size: 1.2rem;">
-            ✨ JaZeR Collection</h2>
-
-        <div class="grid">
-            <a href="effects/jazer-aurora-veil.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌈</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Aurora Veil</h3>
-                    <p class="card-description">Flowing aurora ribbons in JaZeR neon palette with "JaZeR" text woven into the flow.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-glitch-fracture-grid.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff0055, #00ffff);">
-                    <span class="card-icon">💥</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Glitch Fracture Grid</h3>
-                    <p class="card-description">Grid that occasionally fractures into offset strips and glitch blocks with JaZeR text.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-starfall-conveyor.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ffdd00, #ff2aff);">
-                    <span class="card-icon">🌠</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Starfall Conveyor</h3>
-                    <p class="card-description">Conveyor belt of stars and JaZeR logo particles flowing like a space highway.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-void-bloom-portal.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #000000, #ff00ff);">
-                    <span class="card-icon">🌀</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Void Bloom Portal</h3>
-                    <p class="card-description">Central portal that blooms open and closed, with petals/rings of neon light revealing "JaZeR".</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-hex-tunnel-cascade.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">⬢</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Hex Tunnel Cascade</h3>
-                    <p class="card-description">Infinite tunnel made of hexagonal frames, each edged in neon, with JaZeR text.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-neon-circuit-maze.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00ffff, #00ff00);">
-                    <span class="card-icon">⚡</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Circuit Maze</h3>
-                    <p class="card-description">Top-down view of glowing circuit maze with paths that pulse like flowing power.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-gravity-well-spiral.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff00ff, #00ffff);">
-                    <span class="card-icon">💫</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Gravity Well Spiral</h3>
-                    <p class="card-description">Particles orbit a central "gravity well" (JaZeR core), spiraling inward and outward.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-sonic-pulse-lines.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff00ff, #00ff00);">
-                    <span class="card-icon">🔊</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Sonic Pulse Lines</h3>
-                    <p class="card-description">Horizontal/vertical lines pulsing in sync like an audio EQ with JaZeR text.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-echoing-logo-orbits.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff00ff);">
-                    <span class="card-icon">🔄</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Echoing Logo Orbits</h3>
-                    <p class="card-description">Multiple JaZeR logos orbiting around a center point at different radii and speeds.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-crystal-shard-tunnel.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff6b00);">
-                    <span class="card-icon">💎</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Crystal Shard Tunnel</h3>
-                    <p class="card-description">Traveling through a tunnel lined with refractive crystal shards that reflect JaZeR colors.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-vaporwave-horizon-ride.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff00ff);">
-                    <span class="card-icon">🌅</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Vaporwave Horizon Ride</h3>
-                    <p class="card-description">Classic synthwave grid with big sun and mountains, all branded with JaZeR colors.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-infinite-logo-kaleidoscope.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff00ff, #ff0055);">
-                    <span class="card-icon">🔷</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Infinite Logo Kaleidoscope</h3>
-                    <p class="card-description">Symmetric kaleidoscope built from mirrored tiles of the JaZeR logo and neon shapes.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-hyperspace-streaks.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff2aff, #00f5ff);">
-                    <span class="card-icon">🚀</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Hyperspace Streaks</h3>
-                    <p class="card-description">Classic warp speed effect with stars stretching into lines and JaZeR text streaking by.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-flux-ribbon-trails.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🎀</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Flux Ribbon Trails</h3>
-                    <p class="card-description">Multiple flowing neon ribbons weaving through space, leaving soft trails behind.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-magnetic-particle-swirl.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff0055, #00f5ff);">
-                    <span class="card-icon">🧲</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Magnetic Particle Swirl</h3>
-                    <p class="card-description">Particles move like iron filings in a magnetic field shaped like the JaZeR logo.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-laser-lattice-cage.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🔒</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Laser Lattice Cage</h3>
-                    <p class="card-description">Intersecting laser beams forming a 3D cage that rotates around the viewer with JaZeR labels.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-anamorphic-logo-waves.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff0055, #00f5ff);">
-                    <span class="card-icon">🌊</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Anamorphic Logo Waves</h3>
-                    <p class="card-description">Grid/wave surface where only from a certain angle you can see the JaZeR logo.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-binary-star-tunnel.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">⭐</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Binary Star Tunnel</h3>
-                    <p class="card-description">Two bright star cores orbiting while camera travels through a tunnel of stars.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-neon-smoke-vortex.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">💨</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Neon Smoke Vortex</h3>
-                    <p class="card-description">Swirling smoke-like wisps in JaZeR neon palette forming a vortex toward the center.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-quantum-logo-particles.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">⚛️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Quantum Logo Particles</h3>
-                    <p class="card-description">Tiny glowing quanta teleport around, occasionally briefly "locking" into position to outline the JaZeR logo before scattering again.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-warp-grid-twister.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🔄</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Warp Grid Twister</h3>
-                    <p class="card-description">A 2D grid being sucked into a twisted center like fabric spiraling into a vortex.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-eclipse-ring-halo.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">⭕</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Eclipse Ring Halo</h3>
-                    <p class="card-description">Central dark disc (eclipse) surrounded by intensely glowing rings in JaZeR colors with solar flares.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-supernova-shockwave.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">💥</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Supernova Shockwave</h3>
-                    <p class="card-description">Repeating supernova burst with expanding rings and particles that fade out and restart.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-infinite-mirror-corridor.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🪞</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Infinite Mirror Corridor</h3>
-                    <p class="card-description">Corridor of mirrors reflecting the JaZeR logo infinitely in both directions.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-logo-constellation-field.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌟</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Logo Constellation Field</h3>
-                    <p class="card-description">Starfield where groups of stars connect to form JaZeR letters like constellations.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-digital-sandstorm.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌪️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Digital Sandstorm</h3>
-                    <p class="card-description">Millions of tiny square "sand" pixels blowing across the screen in waves, briefly assembling into JaZeR shapes.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-chromatic-glitch-tunnel.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌈</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Chromatic Glitch Tunnel</h3>
-                    <p class="card-description">Tunnel with RGB-split edges and shifting glitch slices that move toward viewer.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-floating-monoliths.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🏛️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Floating Monoliths</h3>
-                    <p class="card-description">Tall rectangular monoliths floating in a dark void with glowing JaZeR glyphs.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-zero-gravity-logo-cloud.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">☁️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Zero-Gravity Logo Cloud</h3>
-                    <p class="card-description">Hundreds of JaZeR logos floating in zero gravity like confetti with physics-based motion.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-synthwave-sun-grid.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌞</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Synthwave Sun Grid</h3>
-                    <p class="card-description">Big retro sun with horizontal scanlines and grid floor leading toward JaZeR text.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-laser-fountain-columns.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">⛲</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Laser Fountain Columns</h3>
-                    <p class="card-description">Vertical columns of pulsing laser beams shooting up and down with JaZeR text.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-suspended-light-orbs.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🔵</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Suspended Light Orbs</h3>
-                    <p class="card-description">Glowing orbs hanging in space by invisible strings, swaying with JaZeR colors.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-singularity-swirl.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌀</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Singularity Swirl</h3>
-                    <p class="card-description">Particles swirl around a central singularity, spiraling inward and then flung outward.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-electric-vein-network.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">⚡</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Electric Vein Network</h3>
-                    <p class="card-description">Branching network of "veins" glowing with JaZeR electric energy and crackling.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-neon-vine-growth.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌿</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Neon Vine Growth</h3>
-                    <p class="card-description">Procedural growth of glowing vines that follow a path and occasionally form "JaZeR" shapes.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-radiant-pulse-rings.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">⭕</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Radiant Pulse Rings</h3>
-                    <p class="card-description">Concentric rings radiating from the center, like ripples in neon light, with JaZeR text repeated around their circumference.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-holographic-logo-shards.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">💎</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Holographic Logo Shards</h3>
-                    <p class="card-description">The JaZeR logo appears as if made of floating glass shards, each slightly offset and shimmering.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-parallax-starfield-drift.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌌</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Parallax Starfield Drift</h3>
-                    <p class="card-description">Parallax starfield where different layers move at different speeds and depths, creating 3D depth illusion with floating JaZeR elements.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-oscillating-wave-tunnel.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">〰️</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Oscillating Wave Tunnel</h3>
-                    <p class="card-description">Tunnel formed by sine/cosine waves in both X and Y creating a continuously shifting tunnel effect.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-celestial-logo-haloes.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🛅</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">JaZeR Celestial Logo Haloes</h3>
-                    <p class="card-description">Each letter of JaZeR has its own orbit of smaller glowing particles that circle it like planetary rings.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <h2
-            style="text-align: center; margin: 2rem 0 1.5rem; color: rgba(255,255,255,0.7); font-weight: 400; font-size: 1.2rem;">
-            ⚡ Original Effects</h2>
-
-        <div class="grid">
-            <a href="effects/jazer-hyperspace-tunnel.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff0055, #00ffff);">
-                    <span class="card-icon">🚀</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Hyperspace Tunnel</h3>
-                    <p class="card-description">Infinite wireframe vortex with speed lines racing through a neon void.
-                    </p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-hexagon-tunnel.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff71ce, #01cdfe);">
-                    <span class="card-icon">⬢</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Neon Hexagon Tunnel</h3>
-                    <p class="card-description">Pulsating hexagonal rings receding into infinity with vaporwave colors.
-                    </p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-cosmic-stardust.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #4c1d95, #f472b6);">
-                    <span class="card-icon">✨</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Cosmic Stardust</h3>
-                    <p class="card-description">800 particles flowing through 3D space with nebula effects and mouse
-                        attraction.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-synthwave-grid.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff006e, #1a0033);">
-                    <span class="card-icon">🌅</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Synthwave Grid</h3>
-                    <p class="card-description">Classic outrun aesthetic with infinite grid, procedural mountains, and
-                        neon sunset.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-digital-lattice-tunnel.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🌐</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Digital Lattice Tunnel</h3>
-                    <p class="card-description">Cyberpunk tunnel of concentric hexagons and circles, connected by neon
-                        lines, with camera wobble and pulsing glow.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-dna-helix.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00f5ff, #ff2aff);">
-                    <span class="card-icon">🧬</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">DNA Helix Infinity</h3>
-                    <p class="card-description">Double helix spiral with glowing nodes and molecular connections.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-crystal-cave.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #a5f3fc, #06b6d4);">
-                    <span class="card-icon">💎</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Crystal Cave</h3>
-                    <p class="card-description">Flythrough of a glowing ice crystal cavern with dynamic lighting.</p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-matrix-rain.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00ff00, #003300);">
-                    <span class="card-icon">📟</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Matrix Rain 3D</h3>
-                    <p class="card-description">Classic digital rain with true 3D depth and Japanese characters.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-mobius-infinity.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #ff00ff, #00ffff);">
-                    <span class="card-icon">∞</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Möbius Infinity</h3>
-                    <p class="card-description">Non-orientable surface with flowing edge particles and color gradients.
-                    </p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-aurora-borealis.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #00ff87, #b967ff);">
-                    <span class="card-icon">🌌</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Aurora Borealis</h3>
-                    <p class="card-description">Flowing ribbons of northern lights over mountain silhouettes.</p>
-                    <div class="card-tags">
-                        <span class="tag canvas">Canvas 2D</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-            <a href="effects/jazer-fractal-cubes.html" class="card">
-                <div class="card-preview" style="background: linear-gradient(45deg, #39ff14, #ff073a);">
-                    <span class="card-icon">🔲</span>
-                </div>
-                <div class="card-content">
-                    <h3 class="card-title">Fractal Cubes</h3>
-                    <p class="card-description">Recursive cubes within cubes with continuous zoom and ambient particles.
-                    </p>
-                    <div class="card-tags">
-                        <span class="tag threejs">Three.js</span>
-                        <span class="tag interactive">Interactive</span>
-                    </div>
-                </div>
-            </a>
-
-        </div>
+        <div id="gallery" class="grid"></div>
 
         <footer>
-            <p>Powered by <a href="#">JaZeR Background Engine</a></p>
+            <p>Powered by <strong>JaZeR Background Engine</strong> & Three.js r160</p>
             <p style="margin-top: 0.5rem; font-size: 0.85rem;">
-                Move mouse to interact • Click for additional effects
+                Move mouse to interact • Click cards to launch effects
             </p>
         </footer>
     </div>
-</body>
 
+    <script type="module">
+        // === EFFECTS DATABASE ===
+        const effects = [
+            // 🔥 INTENSE EFFECTS
+            { title: "Plasma Storm", file: "jazer-plasma-storm.html", description: "Electric arcs connect glowing plasma orbs. Lightning follows your cursor!", icon: "⚡", category: "intense", type: "canvas2d", colors: ["#ff0055", "#00f5ff"] },
+            { title: "Plasma Vortex", file: "jazer-plasma-vortex.html", description: "Swirling plasma formation with dynamic color gradients and morphing shapes.", icon: "🌪️", category: "intense", type: "threejs", colors: ["#ff5500", "#00aaff"] },
+            { title: "Cyber Glitch Tunnel", file: "jazer-cyber-glitch.html", description: "RGB splitting, data corruption, and digital chaos in a neon void.", icon: "📺", category: "intense", type: "canvas2d", colors: ["#39ff14", "#ff2aff"] },
+            { title: "Singularity Vortex", file: "jazer-singularity.html", description: "15,000 particles spiral into a black hole with accretion disk & jets.", icon: "🕳️", category: "intense", type: "threejs", colors: ["#000000", "#ff0055"] },
+            { title: "Neon City Flythrough", file: "jazer-neon-city.html", description: "Cyberpunk cityscape with buildings, holographic ads, and flying vehicles.", icon: "🌆", category: "intense", type: "threejs", colors: ["#ff00ff", "#00f5ff"] },
+            { title: "Particle Galaxy", file: "jazer-particle-galaxy.html", description: "50,000 star spiral galaxy with orbital rotation and glowing core.", icon: "🌌", category: "intense", type: "threejs", colors: ["#0055ff", "#ff0055"] },
+            { title: "Digital Lattice Tunnel", file: "jazer-digital-lattice-tunnel.html", description: "Hexagonal wireframe tunnel with interconnected lattice and speed particles.", icon: "🔷", category: "intense", type: "canvas2d", colors: ["#00f5ff", "#b37cff"] },
+
+            // 🌌 COSMIC & PORTALS
+            { title: "Quantum Wormhole Portal", file: "jazer-quantum-wormhole.html", description: "Spiral into a gravitational vortex with event horizon, accretion disk, and energy jets.", icon: "🌀", category: "cosmic", type: "threejs", colors: ["#ff0055", "#00f5ff"] },
+            { title: "Cosmic Nebula Voyage", file: "jazer-cosmic-nebula.html", description: "Fly through volumetric nebula clouds with plasma spheres, cosmic rays, and glowing ribbons.", icon: "☁️", category: "cosmic", type: "threejs", colors: ["#b37cff", "#ff0055"] },
+            { title: "Cosmic Nebula Enhanced", file: "jazer-cosmic-nebula-enhanced.html", description: "Enhanced nebula clouds with improved lighting and particle effects.", icon: "✨", category: "cosmic", type: "threejs", colors: ["#9b5de5", "#f15bb5"] },
+            { title: "Aurora Borealis", file: "jazer-aurora-borealis.html", description: "Flowing ribbons of northern lights over mountain silhouettes.", icon: "🌌", category: "cosmic", type: "canvas2d", colors: ["#00ff87", "#b967ff"] },
+
+            // ⚡ ADVANCED 3D TECH
+            { title: "Laser Grid Sphere", file: "jazer-laser-grid-sphere.html", description: "Geodesic sphere with pulsing laser beams, rotating rings, and glowing vertex nodes.", icon: "🔵", category: "tech", type: "threejs", colors: ["#00f5ff", "#39ff14"] },
+            { title: "Neural Network Universe", file: "jazer-neural-network.html", description: "150 interconnected nodes with energy pulses traveling through synaptic connections.", icon: "🧠", category: "tech", type: "threejs", colors: ["#ff2aff", "#00f5ff"] },
+            { title: "Holographic City Tunnel", file: "jazer-holographic-city-tunnel.html", description: "Futuristic cityscape with RGB glitch effects, holographic data planes, and laser scan lines.", icon: "🏙️", category: "tech", type: "threejs", colors: ["#ff00ff", "#00f5ff"] },
+            { title: "Energy Reactor Core", file: "jazer-energy-reactor.html", description: "Pulsing fusion reactor with plasma arcs, electromagnetic fields, and containment rings.", icon: "⚛️", category: "tech", type: "threejs", colors: ["#ffd700", "#ff0055"] },
+            { title: "Quantum Foam", file: "jazer-quantum-foam.html", description: "Visualization of quantum fluctuations in space-time with dynamic particles.", icon: "⚛️", category: "tech", type: "threejs", colors: ["#ff00ff", "#00ffff"] },
+            { title: "Neon Wireframe Ocean", file: "jazer-neon-ocean.html", description: "Undulating wave mesh with energy orbs, light beams, and particle crests.", icon: "🌊", category: "tech", type: "threejs", colors: ["#00f5ff", "#ff2aff"] },
+
+            // 🔮 SACRED GEOMETRY
+            { title: "Flower of Life Mandala", file: "jazer-flower-of-life-mandala.html", description: "Hypnotic tunnel of overlapping circles forming the ancient Flower of Life pattern.", icon: "🌸", category: "sacred", type: "canvas2d", colors: ["#ffd700", "#ff2aff"] },
+            { title: "Flower of Life", file: "jazer-flower-of-life.html", description: "Sacred geometry pattern with interlocking circles and golden ratio proportions.", icon: "🌼", category: "sacred", type: "canvas2d", colors: ["#ffeb3b", "#e91e63"] },
+            { title: "Metatron's Cube", file: "jazer-metatrons-cube.html", description: "Dynamic 3D unfolding of Metatron's Cube with emerging Platonic Solids.", icon: "🔮", category: "sacred", type: "threejs", colors: ["#b37cff", "#00f5ff"] },
+            { title: "Sri Yantra", file: "jazer-sri-yantra.html", description: "Interlocking triangles with warm sacred tones and the central bindu point.", icon: "🕉️", category: "sacred", type: "canvas2d", colors: ["#ff6b00", "#d946ef"] },
+            { title: "Torus Knot Tunnel", file: "jazer-torus-knot-tunnel.html", description: "Slow 3D wireframe torus knots floating through an infinite tunnel.", icon: "🌀", category: "sacred", type: "threejs", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Seed of Life", file: "jazer-seed-of-life.html", description: "7 overlapping circles pulsing in ethereal cool tones - the portal to creation.", icon: "💫", category: "sacred", type: "canvas2d", colors: ["#00d4ff", "#7c3aed"] },
+            { title: "Sacred Tesseract", file: "jazer-sacred-tesseract.html", description: "4D hypercube projection with Flower of Life background, rotating in higher dimensions.", icon: "🔷", category: "sacred", type: "threejs", colors: ["#ffd700", "#b37cff"] },
+            { title: "Crystal Lattice Network", file: "jazer-crystal-lattice-network.html", description: "Interactive 3D network of interconnected crystalline structures with light propagation.", icon: "💠", category: "sacred", type: "threejs", colors: ["#40e0d0", "#ff00ff"] },
+
+            // ✨ JAZER SIGNATURE COLLECTION
+            { title: "Aurora Veil", file: "jazer-aurora-veil.html", description: "Flowing aurora ribbons in JaZeR neon palette with text woven into the flow.", icon: "🌈", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Glitch Fracture Grid", file: "jazer-glitch-fracture-grid.html", description: "Grid that occasionally fractures into offset strips and glitch blocks with JaZeR text.", icon: "💥", category: "jazer", type: "canvas2d", colors: ["#ff0055", "#00ffff"] },
+            { title: "Starfall Conveyor", file: "jazer-starfall-conveyor.html", description: "Conveyor belt of stars and JaZeR logo particles flowing like a space highway.", icon: "🌠", category: "jazer", type: "canvas2d", colors: ["#ffdd00", "#ff2aff"] },
+            { title: "Void Bloom Portal", file: "jazer-void-bloom-portal.html", description: "Central portal that blooms open and closed, with petals/rings of neon light revealing JaZeR.", icon: "🌀", category: "jazer", type: "canvas2d", colors: ["#000000", "#ff00ff"] },
+            { title: "Hex Tunnel Cascade", file: "jazer-hex-tunnel-cascade.html", description: "Infinite tunnel made of hexagonal frames, each edged in neon, with JaZeR text.", icon: "⬢", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Neon Circuit Maze", file: "jazer-neon-circuit-maze.html", description: "Top-down view of glowing circuit maze with paths that pulse like flowing power.", icon: "⚡", category: "jazer", type: "canvas2d", colors: ["#00ffff", "#00ff00"] },
+            { title: "Gravity Well Spiral", file: "jazer-gravity-well-spiral.html", description: "Particles orbit a central gravity well (JaZeR core), spiraling inward and outward.", icon: "💫", category: "jazer", type: "canvas2d", colors: ["#ff00ff", "#00ffff"] },
+            { title: "Sonic Pulse Lines", file: "jazer-sonic-pulse-lines.html", description: "Horizontal/vertical lines pulsing in sync like an audio EQ with JaZeR text.", icon: "🔊", category: "jazer", type: "canvas2d", colors: ["#ff00ff", "#00ff00"] },
+            { title: "Echoing Logo Orbits", file: "jazer-echoing-logo-orbits.html", description: "Multiple JaZeR logos orbiting around a center point at different radii and speeds.", icon: "🔄", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff00ff"] },
+            { title: "Crystal Shard Tunnel", file: "jazer-crystal-shard-tunnel.html", description: "Traveling through a tunnel lined with refractive crystal shards that reflect JaZeR colors.", icon: "💎", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff6b00"] },
+            { title: "Vaporwave Horizon Ride", file: "jazer-vaporwave-horizon-ride.html", description: "Classic synthwave grid with big sun and mountains, all branded with JaZeR colors.", icon: "🌅", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff00ff"] },
+            { title: "Infinite Logo Kaleidoscope", file: "jazer-infinite-logo-kaleidoscope.html", description: "Symmetric kaleidoscope built from mirrored tiles of the JaZeR logo and neon shapes.", icon: "🔷", category: "jazer", type: "canvas2d", colors: ["#ff00ff", "#ff0055"] },
+            { title: "Hyperspace Streaks", file: "jazer-hyperspace-streaks.html", description: "Classic warp speed effect with stars stretching into lines and JaZeR text streaking by.", icon: "🚀", category: "jazer", type: "canvas2d", colors: ["#ff2aff", "#00f5ff"] },
+            { title: "Flux Ribbon Trails", file: "jazer-flux-ribbon-trails.html", description: "Multiple flowing neon ribbons weaving through space, leaving soft trails behind.", icon: "🎀", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Magnetic Particle Swirl", file: "jazer-magnetic-particle-swirl.html", description: "Particles move like iron filings in a magnetic field shaped like the JaZeR logo.", icon: "🧲", category: "jazer", type: "canvas2d", colors: ["#ff0055", "#00f5ff"] },
+            { title: "Laser Lattice Cage", file: "jazer-laser-lattice-cage.html", description: "Intersecting laser beams forming a 3D cage that rotates around the viewer with JaZeR labels.", icon: "🔒", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Anamorphic Logo Waves", file: "jazer-anamorphic-logo-waves.html", description: "Grid/wave surface where only from a certain angle you can see the JaZeR logo.", icon: "🌊", category: "jazer", type: "canvas2d", colors: ["#ff0055", "#00f5ff"] },
+            { title: "Binary Star Tunnel", file: "jazer-binary-star-tunnel.html", description: "Two bright star cores orbiting while camera travels through a tunnel of stars.", icon: "⭐", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Neon Smoke Vortex", file: "jazer-neon-smoke-vortex.html", description: "Swirling smoke-like wisps in JaZeR neon palette forming a vortex toward the center.", icon: "💨", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Quantum Logo Particles", file: "jazer-quantum-logo-particles.html", description: "Tiny glowing quanta teleport around, occasionally briefly locking into position to outline the JaZeR logo.", icon: "⚛️", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Warp Grid Twister", file: "jazer-warp-grid-twister.html", description: "A 2D grid being sucked into a twisted center like fabric spiraling into a vortex.", icon: "🔄", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Eclipse Ring Halo", file: "jazer-eclipse-ring-halo.html", description: "Central dark disc (eclipse) surrounded by intensely glowing rings in JaZeR colors with solar flares.", icon: "⭕", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Supernova Shockwave", file: "jazer-supernova-shockwave.html", description: "Repeating supernova burst with expanding rings and particles that fade out and restart.", icon: "💥", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Infinite Mirror Corridor", file: "jazer-infinite-mirror-corridor.html", description: "Corridor of mirrors reflecting the JaZeR logo infinitely in both directions.", icon: "🪞", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Logo Constellation Field", file: "jazer-logo-constellation-field.html", description: "Starfield where groups of stars connect to form JaZeR letters like constellations.", icon: "🌟", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Digital Sandstorm", file: "jazer-digital-sandstorm.html", description: "Millions of tiny square sand pixels blowing across the screen in waves, briefly assembling into JaZeR shapes.", icon: "🌪️", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Chromatic Glitch Tunnel", file: "jazer-chromatic-glitch-tunnel.html", description: "Tunnel with RGB-split edges and shifting glitch slices that move toward viewer.", icon: "🌈", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Floating Monoliths", file: "jazer-floating-monoliths.html", description: "Tall rectangular monoliths floating in a dark void with glowing JaZeR glyphs.", icon: "🏛️", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Zero-Gravity Logo Cloud", file: "jazer-zero-gravity-logo-cloud.html", description: "Hundreds of JaZeR logos floating in zero gravity like confetti with physics-based motion.", icon: "☁️", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Synthwave Sun Grid", file: "jazer-synthwave-sun-grid.html", description: "Big retro sun with horizontal scanlines and grid floor leading toward JaZeR text.", icon: "🌞", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Laser Fountain Columns", file: "jazer-laser-fountain-columns.html", description: "Vertical columns of pulsing laser beams shooting up and down with JaZeR text.", icon: "⛲", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Suspended Light Orbs", file: "jazer-suspended-light-orbs.html", description: "Glowing orbs hanging in space by invisible strings, swaying with JaZeR colors.", icon: "🔵", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Singularity Swirl", file: "jazer-singularity-swirl.html", description: "Particles swirl around a central singularity, spiraling inward and then flung outward.", icon: "🌀", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Electric Vein Network", file: "jazer-electric-vein-network.html", description: "Branching network of veins glowing with JaZeR electric energy and crackling.", icon: "⚡", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Neon Vine Growth", file: "jazer-neon-vine-growth.html", description: "Procedural growth of glowing vines that follow a path and occasionally form JaZeR shapes.", icon: "🌿", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Radiant Pulse Rings", file: "jazer-radiant-pulse-rings.html", description: "Concentric rings radiating from the center, like ripples in neon light, with JaZeR text repeated around their circumference.", icon: "⭕", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Holographic Logo Shards", file: "jazer-holographic-logo-shards.html", description: "The JaZeR logo appears as if made of floating glass shards, each slightly offset and shimmering.", icon: "💎", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Parallax Starfield Drift", file: "jazer-parallax-starfield-drift.html", description: "Parallax starfield where different layers move at different speeds and depths, creating 3D depth illusion with floating JaZeR elements.", icon: "🌌", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Oscillating Wave Tunnel", file: "jazer-oscillating-wave-tunnel.html", description: "Tunnel formed by sine/cosine waves in both X and Y creating a continuously shifting tunnel effect.", icon: "〰️", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Celestial Logo Haloes", file: "jazer-celestial-logo-haloes.html", description: "Each letter of JaZeR has its own orbit of smaller glowing particles that circle it like planetary rings.", icon: "✨", category: "jazer", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+
+            // 🎨 CLASSIC EFFECTS
+            { title: "Hyperspace Tunnel", file: "jazer-hyperspace-tunnel.html", description: "Infinite wireframe vortex with speed lines racing through a neon void.", icon: "🚀", category: "intense", type: "canvas2d", colors: ["#ff0055", "#00ffff"] },
+            { title: "Neon Hexagon Tunnel", file: "jazer-hexagon-tunnel.html", description: "Pulsating hexagonal rings receding into infinity with vaporwave colors.", icon: "⬢", category: "intense", type: "canvas2d", colors: ["#ff71ce", "#01cdfe"] },
+            { title: "Cosmic Stardust", file: "jazer-cosmic-stardust.html", description: "800 particles flowing through 3D space with nebula effects and mouse attraction.", icon: "✨", category: "cosmic", type: "canvas2d", colors: ["#4c1d95", "#f472b6"] },
+            { title: "Synthwave Grid", file: "jazer-synthwave-grid.html", description: "Classic outrun aesthetic with infinite grid, procedural mountains, and neon sunset.", icon: "🌅", category: "jazer", type: "canvas2d", colors: ["#ff006e", "#1a0033"] },
+            { title: "DNA Helix Infinity", file: "jazer-dna-helix.html", description: "Double helix spiral with glowing nodes and molecular connections.", icon: "🧬", category: "tech", type: "canvas2d", colors: ["#00f5ff", "#ff2aff"] },
+            { title: "Crystal Cave", file: "jazer-crystal-cave.html", description: "Flythrough of a glowing ice crystal cavern with dynamic lighting.", icon: "💎", category: "tech", type: "threejs", colors: ["#a5f3fc", "#06b6d4"] },
+            { title: "Matrix Rain 3D", file: "jazer-matrix-rain.html", description: "Classic digital rain with true 3D depth and Japanese characters.", icon: "📟", category: "tech", type: "canvas2d", colors: ["#00ff00", "#003300"] },
+            { title: "Möbius Infinity", file: "jazer-mobius-infinity.html", description: "Non-orientable surface with flowing edge particles and color gradients.", icon: "∞", category: "sacred", type: "threejs", colors: ["#ff00ff", "#00ffff"] },
+            { title: "Fractal Cubes", file: "jazer-fractal-cubes.html", description: "Recursive cubes within cubes with continuous zoom and ambient particles.", icon: "🔲", category: "sacred", type: "threejs", colors: ["#39ff14", "#ff073a"] },
+        ];
+
+        // === STATE ===
+        let currentFilter = 'all';
+        let searchQuery = '';
+
+        // === RENDER FUNCTIONS ===
+        function renderCard(effect) {
+            const gradient = `linear-gradient(45deg, ${effect.colors[0]}, ${effect.colors[1]})`;
+            
+            return `
+                <a href="effects/${effect.file}" 
+                   class="card" 
+                   data-category="${effect.category}"
+                   data-type="${effect.type}"
+                   data-title="${effect.title.toLowerCase()}"
+                   data-description="${effect.description.toLowerCase()}">
+                    <div class="card-preview" style="background: ${gradient};">
+                        <span class="card-icon">${effect.icon}</span>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">${effect.title}</h3>
+                        <p class="card-description">${effect.description}</p>
+                        <div class="card-tags">
+                            <span class="tag ${effect.type}">${effect.type === 'canvas2d' ? 'Canvas 2D' : 'Three.js'}</span>
+                        </div>
+                    </div>
+                </a>
+            `;
+        }
+
+        function renderGallery() {
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = effects.map(renderCard).join('');
+            updateStats();
+        }
+
+        function filterCards() {
+            const cards = document.querySelectorAll('.card');
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const category = card.dataset.category;
+                const type = card.dataset.type;
+                const title = card.dataset.title;
+                const description = card.dataset.description;
+
+                const matchesFilter = 
+                    currentFilter === 'all' || 
+                    category === currentFilter || 
+                    type === currentFilter;
+
+                const matchesSearch = 
+                    searchQuery === '' ||
+                    title.includes(searchQuery) ||
+                    description.includes(searchQuery);
+
+                if (matchesFilter && matchesSearch) {
+                    card.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('visible-effects').textContent = visibleCount;
+        }
+
+        function updateStats() {
+            document.getElementById('total-effects').textContent = effects.length;
+            document.getElementById('visible-effects').textContent = effects.length;
+        }
+
+        // === EVENT LISTENERS ===
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                filterCards();
+            });
+        });
+
+        document.getElementById('search').addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase();
+            filterCards();
+        });
+
+        // === INITIALIZE ===
+        renderGallery();
+    </script>
+</body>
 </html>
