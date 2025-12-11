@@ -57,6 +57,8 @@
         const spawnRate = 5;            // Particles per frame
         const warpSpeed = 400;          // How fast particles fly outward
         const trailLength = 0.08;       // Motion blur trail length
+        const MIN_PARTICLE_SIZE = 1;    // Minimum particle size
+        const PARTICLE_SIZE_RANGE = 2;  // Range of particle sizes
         
         // Particle array
         const particles = [];
@@ -105,7 +107,7 @@
                 this.vy = Math.sin(this.angle) * this.speed;
                 
                 // Visual properties
-                this.size = 1 + Math.random() * 2;
+                this.size = MIN_PARTICLE_SIZE + Math.random() * PARTICLE_SIZE_RANGE;
                 const colorIndex = Math.floor(Math.random() * neonPalette.length);
                 this.color = neonPalette[colorIndex];
                 this.life = 1.0;

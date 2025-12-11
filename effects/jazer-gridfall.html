@@ -57,6 +57,7 @@
         const gridDepth = 25;           // How many rows deep the grid extends
         const gridWidth = 40;           // How many columns wide the grid is
         const scrollSpeed = 80;         // Forward movement speed
+        const SCAN_LINE_SPACING = 3;    // Spacing for hologram scan line effect
         
         // Hologram text instances
         const holograms = [];
@@ -175,7 +176,7 @@
                 ctx.globalAlpha = alpha * 0.3;
                 ctx.strokeStyle = this.color;
                 ctx.lineWidth = 1;
-                for (let i = -fontSize/2; i < fontSize/2; i += 3) {
+                for (let i = -fontSize/2; i < fontSize/2; i += SCAN_LINE_SPACING) {
                     ctx.beginPath();
                     ctx.moveTo(-fontSize, i);
                     ctx.lineTo(fontSize, i);
