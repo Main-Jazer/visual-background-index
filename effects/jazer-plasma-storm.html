@@ -149,6 +149,12 @@
             }
 
             draw() {
+                // Validate position to prevent NaN
+                if (!isFinite(this.x) || !isFinite(this.y)) {
+                    this.reset();
+                    return;
+                }
+
                 const pulse = Math.sin(time * this.pulseSpeed) * 0.3 + 1;
                 const size = this.size * pulse;
                 const color = plasmaColors[this.colorIndex];
