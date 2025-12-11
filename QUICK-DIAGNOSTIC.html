@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Diagnostic Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a1a;
+            color: #00ff00;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #00f5ff; margin-bottom: 20px; }
+        .test { 
+            background: rgba(255,255,255,0.05); 
+            padding: 15px; 
+            margin: 10px 0;
+            border-left: 4px solid #00ff00;
+        }
+        .error { border-left-color: #ff0055; color: #ff0055; }
+        .success { border-left-color: #00ff00; color: #00ff00; }
+        .info { border-left-color: #00f5ff; color: #00f5ff; }
+        pre { 
+            background: rgba(0,0,0,0.3); 
+            padding: 10px; 
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background: #00f5ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #00ff00; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Quick Diagnostic Test</h1>
+    
+    <div class="test info">
+        <strong>Current URL:</strong> <span id="currentUrl"></span>
+    </div>
+    
+    <div class="test info">
+        <strong>Protocol:</strong> <span id="protocol"></span>
+        <div id="protocolWarning"></div>
+    </div>
+    
+    <div id="engineTest" class="test">
+        <strong>Test 1: jazer-background-engine.js</strong>
+        <div id="engineResult">Testing...</div>
+    </div>
+    
+    <div id="threeTest" class="test">
+        <strong>Test 2: Three.js</strong>
+        <div id="threeResult">Testing...</div>
+    </div>
+    
+    <div id="sampleTest" class="test">
+        <strong>Test 3: Sample Effect</strong>
+        <div id="sampleResult">Testing...</div>
+        <iframe id="sampleFrame" style="width:100%; height:300px; margin-top:10px; display:none; border: 2px solid #00f5ff;"></iframe>
+    </div>
+    
+    <div class="test">
+        <strong>Test Individual Effects:</strong><br>
+        <button onclick="testEffect('effects/jazer-plasma-storm.html')">Plasma Storm (Canvas)</button>
+        <button onclick="testEffect('effects/jazer-neon-city.html')">Neon City (Three.js)</button>
+        <button onclick="testEffect('effects/jazer-crystal-cave.html')">Crystal Cave (Three.js)</button>
+        <button onclick="testEffect('effects/jazer-hyperspace-tunnel.html')">Hyperspace Tunnel (Canvas)</button>
+    </div>
+    
+    <div id="console" class="test">
+        <strong>Console Output:</strong>
+        <pre id="consoleLog"></pre>
+    </div>
+    
+    <script type="module">
+        const log = document.getElementById('consoleLog');
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        
+        function addLog(msg, isError = false) {
+            log.textContent += `${isError ? '❌' : '✓'} ${msg}\n`;
+            if (isError) originalConsoleError(msg);
+            else originalConsoleLog(msg);
+        }
+        
+        console.log = (...args) => addLog(args.join(' '));
+        console.error = (...args) => addLog(args.join(' '), true);
+        
+        // Display current info
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('protocol').textContent = window.location.protocol;
+        
+        if (window.location.protocol === 'file:') {
+            document.getElementById('protocolWarning').innerHTML = 
+                '<br><strong style="color:#ff0055;">⚠️ WARNING: Using file:// protocol. ES6 modules require http:// or https://</strong>' +
+                '<br>Please start a local server: <code>python -m http.server 8000</code>';
+        }
+        
+        // Test 1: Background Engine
+        try {
+            addLog('Importing jazer-background-engine.js...');
+            const engine = await import('./jazer-background-engine.js');
+            
+            if (engine.noise2D && engine.mouse && engine.ColorPalettes) {
+                document.getElementById('engineResult').innerHTML = 
+                    '<span class="success">✓ SUCCESS</span><br>' +
+                    `Found: noise2D, noise3D, mouse, ColorPalettes, Easing, and more`;
+                document.getElementById('engineTest').classList.add('success');
+                addLog('Engine loaded successfully');
+            } else {
+                throw new Error('Missing expected exports');
+            }
+        } catch (err) {
+            document.getElementById('engineResult').innerHTML = 
+                `<span class="error">✗ FAILED</span><br>${err.message}<br><pre>${err.stack}</pre>`;
+            document.getElementById('engineTest').classList.add('error');
+            addLog('Engine failed: ' + err.message, true);
+        }
+        
+        // Test 2: Three.js
+        try {
+            addLog('Importing Three.js...');
+            const THREE = await import('./Three.js');
+            
+            if (THREE.Scene && THREE.WebGLRenderer) {
+                document.getElementById('threeResult').innerHTML = 
+                    `<span class="success">✓ SUCCESS</span><br>Three.js r${THREE.REVISION} loaded`;
+                document.getElementById('threeTest').classList.add('success');
+                addLog(`Three.js r${THREE.REVISION} loaded successfully`);
+            } else {
+                throw new Error('Missing THREE classes');
+            }
+        } catch (err) {
+            document.getElementById('threeResult').innerHTML = 
+                `<span class="error">✗ FAILED</span><br>${err.message}<br><pre>${err.stack}</pre>`;
+            document.getElementById('threeTest').classList.add('error');
+            addLog('Three.js failed: ' + err.message, true);
+        }
+        
+        // Test 3: Sample Effect
+        window.testEffect = function(url) {
+            const frame = document.getElementById('sampleFrame');
+            const result = document.getElementById('sampleResult');
+            result.innerHTML = `Loading ${url}...`;
+            frame.style.display = 'block';
+            frame.src = url;
+            
+            frame.onload = () => {
+                result.innerHTML = `<span class="success">✓ Loaded</span><br>Effect: ${url}`;
+                addLog(`Effect loaded: ${url}`);
+            };
+            
+            frame.onerror = (err) => {
+                result.innerHTML = `<span class="error">✗ Failed to load</span><br>${err}`;
+                addLog(`Effect failed: ${url}`, true);
+            };
+        };
+        
+        addLog('Diagnostic tests complete');
+        addLog('');
+        addLog('INSTRUCTIONS:');
+        addLog('1. If protocol is file:// - start a local server first');
+        addLog('2. Click buttons above to test individual effects');
+        addLog('3. Check console for detailed error messages');
+    </script>
+</body>
+</html>

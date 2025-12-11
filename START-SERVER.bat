@@ -1,54 +1,81 @@
 @echo off
+cls
+echo.
 echo ========================================
-echo   JaZeR Visual Effects - Local Server
+echo    IMPORTANT: HOW TO VIEW EFFECTS
 echo ========================================
 echo.
-echo Starting local server on port 8000...
+echo ERROR: You are trying to open files directly!
 echo.
-echo Once started, open your browser to:
-echo   http://localhost:8000/TEST-FIXES.html
+echo Files opened with "file://" will NOT work because:
+echo   - ES6 modules require HTTP protocol
+echo   - Security restrictions block file:// imports
 echo.
-echo Press Ctrl+C to stop the server
+echo ========================================
+echo    CORRECT WAY TO VIEW EFFECTS:
+echo ========================================
+echo.
+echo 1. Double-click THIS FILE to start server
+echo 2. Wait for "Serving HTTP" message
+echo 3. Open browser to: http://localhost:8000
+echo 4. Click any effect from the gallery
+echo.
+echo DO NOT double-click the HTML files directly!
+echo.
+echo ========================================
+echo    Starting Server Now...
+echo ========================================
+echo.
+echo Server will start on: http://localhost:8000
+echo.
+echo After server starts:
+echo   1. Open: http://localhost:8000/index.html
+echo   2. Browse effects
+echo   3. Click to launch
+echo.
+echo Press Ctrl+C to stop server
 echo ========================================
 echo.
 
 cd /d "%~dp0"
 
-rem Try Python 3 first
 python --version >nul 2>&1
 if %errorlevel% == 0 (
-    echo Using Python...
+    echo Starting Python HTTP Server...
     echo.
+    echo READY! Open your browser to: http://localhost:8000/index.html
+    echo.
+    start http://localhost:8000/index.html
     python -m http.server 8000
     goto :end
 )
 
-rem Try Python 2
-python2 --version >nul 2>&1
+python3 --version >nul 2>&1
 if %errorlevel% == 0 (
-    echo Using Python 2...
+    echo Starting Python HTTP Server...
     echo.
-    python2 -m SimpleHTTPServer 8000
+    echo READY! Open your browser to: http://localhost:8000/index.html
+    echo.
+    start http://localhost:8000/index.html
+    python3 -m http.server 8000
     goto :end
 )
 
-rem Try Node.js
 node --version >nul 2>&1
 if %errorlevel% == 0 (
-    echo Using Node.js http-server...
-    echo Installing http-server (one-time setup)...
+    echo Installing http-server...
     call npm install -g http-server
     echo.
+    echo READY! Open your browser to: http://localhost:8000/index.html
+    echo.
+    start http://localhost:8000/index.html
     http-server -p 8000
     goto :end
 )
 
-rem No server found
-echo ERROR: No server found!
 echo.
-echo Please install one of the following:
-echo   - Python: https://www.python.org/downloads/
-echo   - Node.js: https://nodejs.org/
+echo ERROR: No server found!
+echo Please install Python or Node.js first.
 echo.
 pause
 
