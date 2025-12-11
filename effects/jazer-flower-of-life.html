@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flower of Life Vortex - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .watermark {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            color: rgba(255, 255, 255, 0.1);
+            text-transform: uppercase;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <div class="watermark">JaZeR</div>
+    <script type="module">
+        import {
+            noise2D, SimplexNoise, mouse,
+            ColorPalettes, hexToRgb, lerpColor,
+            map, smoothstep, degToRad
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ['#ffd700', '#ff6b35', '#ff2aff', '#00f5ff', '#b37cff'];
+        const layerCount = 12;
+        const petalsPerRing = 6;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Draw a single circle (seed of flower of life)
+        function drawCircle(x, y, radius, alpha, color) {
+            const rgb = hexToRgb(color);
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Draw Flower of Life pattern at position
+        function drawFlowerOfLife(x, y, baseRadius, rotation, alpha, colorOffset) {
+            const r = baseRadius;
+
+            // Center circle
+            const color1 = palette[Math.floor((colorOffset) % palette.length)];
+            drawCircle(x, y, r, alpha * 0.8, color1);
+
+            // First ring - 6 circles
+            for (let i = 0; i < 6; i++) {
+                const angle = rotation + (i / 6) * Math.PI * 2;
+                const px = x + Math.cos(angle) * r;
+                const py = y + Math.sin(angle) * r;
+                const color = palette[Math.floor((colorOffset + i * 0.5) % palette.length)];
+                drawCircle(px, py, r, alpha * 0.6, color);
+            }
+
+            // Second ring - 12 circles
+            for (let i = 0; i < 12; i++) {
+                const angle = rotation + (i / 12) * Math.PI * 2;
+                const dist = r * 1.732; // sqrt(3)
+                const px = x + Math.cos(angle) * dist;
+                const py = y + Math.sin(angle) * dist;
+                const color = palette[Math.floor((colorOffset + i * 0.3) % palette.length)];
+                drawCircle(px, py, r, alpha * 0.4, color);
+            }
+        }
+
+        class VortexLayer {
+            constructor(index) {
+                this.index = index;
+                this.z = index * 0.15;
+                this.rotationSpeed = 0.1 + (index % 2 === 0 ? 0.02 : -0.02);
+                this.colorOffset = index * 0.7;
+            }
+
+            update(dt) {
+                // Very slow movement toward viewer
+                this.z += dt * 0.08;
+                if (this.z > 1.8) {
+                    this.z = 0;
+                    this.colorOffset = Math.random() * palette.length;
+                }
+            }
+
+            draw() {
+                const scale = 1 / (1 + this.z * 2);
+                const alpha = smoothstep(0, 0.3, this.z) * smoothstep(1.8, 1.2, this.z);
+
+                if (alpha < 0.01) return;
+
+                const baseRadius = 60 * scale;
+                const rotation = time * this.rotationSpeed + this.index * 0.3;
+
+                // Mouse influence for parallax
+                const parallax = this.z * 0.5;
+                const offsetX = mouse.centeredX * 100 * parallax;
+                const offsetY = mouse.centeredY * 100 * parallax;
+
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                drawFlowerOfLife(cx + offsetX, cy + offsetY, baseRadius, rotation, alpha, this.colorOffset);
+                ctx.restore();
+            }
+        }
+
+        const layers = Array.from({ length: layerCount }, (_, i) => new VortexLayer(i));
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            // Dark background with subtle gradient
+            const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.7);
+            bgGrad.addColorStop(0, '#0a0515');
+            bgGrad.addColorStop(1, '#000005');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Trail effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            ctx.fillRect(0, 0, W, H);
+
+            const dt = 1 / 60;
+
+            // Sort and draw back to front
+            layers.sort((a, b) => b.z - a.z);
+            layers.forEach(l => { l.update(dt); l.draw(); });
+
+            // Central glow
+            const centerGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 150);
+            centerGlow.addColorStop(0, 'rgba(255, 215, 0, 0.15)');
+            centerGlow.addColorStop(0.5, 'rgba(255, 42, 255, 0.05)');
+            centerGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = centerGlow;
+            ctx.fillRect(0, 0, W, H);
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

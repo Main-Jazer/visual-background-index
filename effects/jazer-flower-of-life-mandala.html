@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flower of Life Mandala - JaZeR</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #020010; }
+        canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        import {
+            noise2D, mouse, ColorPalettes, lerpColor, hexToRgb,
+            smoothstep, clamp, fract
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ColorPalettes.galaxy;
+        const ringCount = 25;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function drawFlowerOfLife(centerX, centerY, radius, maxDepth) {
+            const circles = new Set();
+            const queue = [{ x: 0, y: 0, depth: 0 }];
+            circles.add("0,0");
+
+            const drawnCircles = [];
+
+            while (queue.length > 0) {
+                const { x, y, depth } = queue.shift();
+                drawnCircles.push({x: centerX + x * radius, y: centerY + y * radius});
+                
+                if (depth >= maxDepth) continue;
+
+                for (let i = 0; i < 6; i++) {
+                    const angle = i * Math.PI / 3;
+                    const newX = x + Math.cos(angle);
+                    const newY = y + Math.sin(angle);
+                    const key = `${newX.toFixed(3)},${newY.toFixed(3)}`;
+
+                    if (!circles.has(key)) {
+                        circles.add(key);
+                        queue.push({ x: newX, y: newY, depth: depth + 1 });
+                    }
+                }
+            }
+            
+            drawnCircles.forEach(c => {
+                ctx.moveTo(c.x + radius, c.y);
+                ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
+            });
+        }
+
+        class TunnelRing {
+            constructor(z) { this.respawn(z); }
+
+            respawn(z) {
+                this.z = z;
+                this.colorPhase = Math.random();
+            }
+
+            update(dt, speed) {
+                this.z -= dt * speed;
+                if (this.z < 0.2) {
+                    this.respawn(30);
+                }
+            }
+
+            draw() {
+                if (this.z < 0.2) return;
+                
+                const perspective = 200 / this.z;
+                
+                const tunnelTwist = this.z * 0.05 + time * 0.05;
+
+                const radius = (20 + this.z * 0.8) * perspective;
+                const alpha = smoothstep(30, 15, this.z) * smoothstep(0.2, 1, this.z);
+
+                if (alpha < 0.01) return;
+
+                const colorT = fract(time * 0.1 + this.colorPhase);
+                const colorIdx = Math.floor(colorT * palette.length);
+                const colorNext = (colorIdx + 1) % palette.length;
+                const color = lerpColor(palette[colorIdx], palette[colorNext], fract(colorT * palette.length));
+                const rgb = hexToRgb(color);
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(tunnelTwist);
+
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.4})`;
+                ctx.lineWidth = Math.max(0.1, 1.5 * perspective);
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 10 * perspective;
+                
+                ctx.beginPath();
+                drawFlowerOfLife(0, 0, radius, 1);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+        
+        function drawCenterMandala() {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.globalCompositeOperation = 'lighter';
+
+            const layers = 8;
+            const maxRadius = W * 0.8;
+
+            for (let i = 1; i <= layers; i++) {
+                const progress = i / layers;
+                const rotation = time * 0.2 * (i % 2 === 0 ? -1 : 1) * progress;
+                const radius = progress * 200;
+                
+                const alpha = (1 - progress) * 0.5;
+                const sides = 3 + i;
+                
+                const colorT = fract(time * 0.1 + progress);
+                const colorIdx = Math.floor(colorT * palette.length);
+                const colorNext = (colorIdx + 1) % palette.length;
+                const color = lerpColor(palette[colorIdx], palette[colorNext], fract(colorT * palette.length));
+
+                ctx.save();
+                ctx.rotate(rotation);
+                
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1.5;
+                ctx.globalAlpha = alpha;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 15;
+
+                ctx.beginPath();
+                for (let j = 0; j < sides; j++) {
+                    const angle = j * Math.PI * 2 / sides;
+                    const r1 = radius + Math.sin(time * 2 + i) * 20 * progress;
+                    ctx.moveTo(0,0);
+                    ctx.lineTo(Math.cos(angle) * r1, Math.sin(angle) * r1);
+
+                    const r2 = r1 * 0.8;
+                    const nextAngle = (j + 1) * Math.PI * 2 / sides;
+                    const midAngle = angle + (nextAngle-angle)*0.5;
+                    ctx.moveTo(Math.cos(angle) * r1, Math.sin(angle) * r1);
+                    ctx.quadraticCurveTo(
+                        Math.cos(midAngle) * r2 * (1 + Math.sin(time*3 + i) * 0.2), 
+                        Math.sin(midAngle) * r2 * (1 + Math.sin(time*3 + i) * 0.2), 
+                        Math.cos(nextAngle) * r1, 
+                        Math.sin(nextAngle) * r1
+                    );
+                }
+                ctx.stroke();
+
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+
+
+        const rings = Array.from({ length: ringCount }, (_, i) => new TunnelRing(i * (30 / ringCount)));
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            ctx.fillStyle = 'rgba(2, 0, 16, 0.2)';
+            ctx.fillRect(0, 0, W, H);
+            
+            drawCenterMandala();
+
+            const speed = 1.5 + mouse.y * 5;
+
+            rings.sort((a, b) => b.z - a.z);
+            rings.forEach(ring => {
+                ring.update(dt, speed);
+                ring.draw();
+            });
+            
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>

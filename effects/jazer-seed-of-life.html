@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seed of Life Portal - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .jazer-center {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.5em;
+            color: rgba(255, 255, 255, 0.06);
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <div class="jazer-center">JaZeR</div>
+    <script type="module">
+        import {
+            noise2D, mouse,
+            ColorPalettes, hexToRgb,
+            smoothstep
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        // Ethereal cool tones
+        const palette = ['#00d4ff', '#00ff88', '#b37cff', '#00f5ff', '#7c3aed'];
+        const layerCount = 15;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Seed of Life: 7 overlapping circles
+        function drawSeedOfLife(x, y, radius, rotation, alpha, colorOffset) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+            ctx.globalCompositeOperation = 'lighter';
+
+            const r = radius;
+
+            // Center circle
+            drawGlowCircle(0, 0, r, alpha, palette[Math.floor(colorOffset) % palette.length]);
+
+            // 6 surrounding circles
+            for (let i = 0; i < 6; i++) {
+                const angle = (i / 6) * Math.PI * 2;
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r;
+                const color = palette[Math.floor((colorOffset + i * 0.5) % palette.length)];
+                drawGlowCircle(px, py, r, alpha * 0.8, color);
+            }
+
+            // Vesica piscis highlights (intersections)
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.2})`;
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < 6; i++) {
+                const angle1 = (i / 6) * Math.PI * 2;
+                const angle2 = ((i + 1) / 6) * Math.PI * 2;
+                const midAngle = (angle1 + angle2) / 2;
+                const px = Math.cos(midAngle) * r * 0.5;
+                const py = Math.sin(midAngle) * r * 0.5;
+
+                ctx.beginPath();
+                ctx.arc(px, py, r * 0.2, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function drawGlowCircle(x, y, radius, alpha, color) {
+            const rgb = hexToRgb(color);
+
+            // Outer glow
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.3})`;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner line
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.8})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        class PortalLayer {
+            constructor(index) {
+                this.index = index;
+                this.z = index * 0.15;
+                this.rotationDir = index % 3 === 0 ? 1 : index % 3 === 1 ? -0.5 : 0.3;
+                this.colorOffset = index * 0.5;
+                this.pulseOffset = index * 0.3;
+            }
+
+            update(dt) {
+                this.z += dt * 0.04; // Very slow, meditative
+                if (this.z > 2.2) {
+                    this.z = 0;
+                    this.colorOffset = Math.random() * palette.length;
+                }
+            }
+
+            draw() {
+                const scale = 1 / (1 + this.z * 2);
+                const alpha = smoothstep(0, 0.4, this.z) * smoothstep(2.2, 1.4, this.z);
+
+                if (alpha < 0.01) return;
+
+                const pulse = Math.sin(time * 0.8 + this.pulseOffset) * 0.1 + 1;
+                const radius = 70 * scale * pulse;
+                const rotation = time * 0.03 * this.rotationDir + this.index * 0.2;
+
+                const parallax = this.z * 0.3;
+                const offsetX = mouse.centeredX * 50 * parallax;
+                const offsetY = mouse.centeredY * 50 * parallax;
+
+                drawSeedOfLife(cx + offsetX, cy + offsetY, radius, rotation, alpha, this.colorOffset + time * 0.2);
+            }
+        }
+
+        const layers = Array.from({ length: layerCount }, (_, i) => new PortalLayer(i));
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            // Deep blue-black background
+            const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.7);
+            bgGrad.addColorStop(0, '#000815');
+            bgGrad.addColorStop(1, '#000005');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Slow trail
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+            ctx.fillRect(0, 0, W, H);
+
+            const dt = 1 / 60;
+
+            layers.sort((a, b) => b.z - a.z);
+            layers.forEach(l => { l.update(dt); l.draw(); });
+
+            // Ethereal center glow
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 200);
+            glow.addColorStop(0, 'rgba(0, 212, 255, 0.08)');
+            glow.addColorStop(0.3, 'rgba(124, 58, 237, 0.04)');
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+            ctx.restore();
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.4, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>
