@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JaZeR Gridfall - Infinite Loop</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        import {
+            noise2D, mouse, Easing,
+            ColorPalettes, cycleColor, hexToRgb,
+            map, clamp, smoothstep
+        } from '../jazer-background-engine.js';
+
+        // =====================================================
+        // CONFIGURATION
+        // =====================================================
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        // Neon color palette for 80s synthwave aesthetic
+        const neonPalette = ['#00ffff', '#ff00ff', '#9d00ff', '#00ccff', '#ff1aff'];
+        
+        // Grid parameters
+        const gridSize = 30;            // Spacing between grid lines
+        const gridDepth = 25;           // How many rows deep the grid extends
+        const gridWidth = 40;           // How many columns wide the grid is
+        const scrollSpeed = 80;         // Forward movement speed
+        
+        // Hologram text instances
+        const holograms = [];
+        const maxHolograms = 12;
+        const spawnInterval = 1.5;      // Seconds between spawns
+        let lastSpawnTime = 0;
+
+        // =====================================================
+        // RESIZE HANDLER
+        // =====================================================
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // =====================================================
+        // HOLOGRAM TEXT CLASS
+        // =====================================================
+        /**
+         * HologramText represents a "JaZeR" text rising from a grid tile.
+         * It appears, glows, rises, and then fades away.
+         */
+        class HologramText {
+            constructor() {
+                // Random position on the grid
+                this.gridX = Math.floor(Math.random() * gridWidth) - gridWidth / 2;
+                this.gridZ = Math.floor(Math.random() * gridDepth);
+                
+                // Animation properties
+                this.age = 0;
+                this.maxAge = 3 + Math.random() * 2;  // Lifespan in seconds
+                this.riseSpeed = 30 + Math.random() * 20;
+                this.height = 0;                       // Height above grid
+                
+                // Visual properties
+                const colorIndex = Math.floor(Math.random() * neonPalette.length);
+                this.color = neonPalette[colorIndex];
+                this.glowPhase = Math.random() * Math.PI * 2;
+            }
+
+            /**
+             * Update hologram animation
+             * @param {number} dt - Delta time in seconds
+             */
+            update(dt) {
+                this.age += dt;
+                
+                // Rise up from the grid
+                this.height += this.riseSpeed * dt;
+                
+                // Move with the grid
+                this.gridZ += scrollSpeed * dt / gridSize;
+                
+                return this.age < this.maxAge && this.gridZ < gridDepth;
+            }
+
+            /**
+             * Draw the hologram with perspective transformation
+             */
+            draw(scrollOffset) {
+                // Calculate perspective position
+                const worldZ = this.gridZ * gridSize - scrollOffset;
+                if (worldZ < 0 || worldZ > gridDepth * gridSize) return;
+                
+                // Perspective transformation (3D to 2D)
+                const perspective = 300;
+                const scale = perspective / (perspective + worldZ);
+                
+                if (scale < 0.01) return; // Too far away
+                
+                const screenX = cx + this.gridX * gridSize * scale;
+                const screenY = cy + (100 - this.height) * scale; // Above horizon
+                
+                // Calculate alpha based on age (fade in and fade out)
+                const fadeIn = smoothstep(0, 0.3, this.age);
+                const fadeOut = smoothstep(this.maxAge, this.maxAge - 0.5, this.age);
+                let alpha = fadeIn * fadeOut;
+                
+                // Add pulsing glow
+                const glow = Math.sin(time * 3 + this.glowPhase);
+                const glowIntensity = map(glow, -1, 1, 0.7, 1.3);
+                alpha *= glowIntensity;
+                
+                if (alpha < 0.05) return;
+                
+                // Calculate size with perspective
+                const fontSize = Math.max(12, 40 * scale);
+                
+                // Configure text rendering
+                ctx.font = `bold ${fontSize}px "Arial", sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const rgb = hexToRgb(this.color);
+                
+                // Draw text with strong glow effect
+                ctx.save();
+                ctx.translate(screenX, screenY);
+                
+                // Glow layers
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 25 * scale * glowIntensity;
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                
+                // Draw multiple times for intense glow
+                for (let g = 0; g < 3; g++) {
+                    ctx.fillText('JaZeR', 0, 0);
+                }
+                
+                // Draw scan lines for hologram effect
+                ctx.globalAlpha = alpha * 0.3;
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 1;
+                for (let i = -fontSize/2; i < fontSize/2; i += 3) {
+                    ctx.beginPath();
+                    ctx.moveTo(-fontSize, i);
+                    ctx.lineTo(fontSize, i);
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        // =====================================================
+        // GRID DRAWING FUNCTIONS
+        // =====================================================
+        /**
+         * Draw the perspective 3D grid floor
+         * @param {number} scrollOffset - Current scroll position for infinite loop
+         */
+        function drawGrid(scrollOffset) {
+            const horizon = cy + 50; // Horizon line Y position
+            const perspective = 300;  // Perspective strength
+            
+            // Cycle grid color
+            const gridColor = cycleColor(neonPalette, time * 0.2);
+            const rgb = hexToRgb(gridColor);
+            
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            
+            // Draw horizontal lines (receding into distance)
+            for (let z = 0; z < gridDepth; z++) {
+                const worldZ = z * gridSize - (scrollOffset % gridSize);
+                if (worldZ < 0) continue;
+                
+                const scale = perspective / (perspective + worldZ);
+                const y = horizon + worldZ * scale * 0.5;
+                
+                // Fade lines in the distance
+                const alpha = smoothstep(gridDepth * gridSize, gridSize * 2, worldZ) * 0.6;
+                const lineWidth = Math.max(0.5, 2 * scale);
+                
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.lineWidth = lineWidth;
+                ctx.shadowColor = gridColor;
+                ctx.shadowBlur = 5 * scale;
+                
+                // Draw horizontal line
+                ctx.beginPath();
+                const leftX = cx - gridWidth * gridSize * scale / 2;
+                const rightX = cx + gridWidth * gridSize * scale / 2;
+                ctx.moveTo(leftX, y);
+                ctx.lineTo(rightX, y);
+                ctx.stroke();
+            }
+            
+            // Draw vertical lines (perspective converging lines)
+            for (let x = -gridWidth / 2; x <= gridWidth / 2; x++) {
+                const alpha = 0.6 * (1 - Math.abs(x) / (gridWidth / 2) * 0.5);
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.lineWidth = 1.5;
+                ctx.shadowBlur = 5;
+                
+                ctx.beginPath();
+                
+                // Start at near point
+                const nearZ = 0;
+                const nearScale = perspective / (perspective + nearZ);
+                const nearX = cx + x * gridSize * nearScale;
+                const nearY = horizon + nearZ * nearScale * 0.5;
+                ctx.moveTo(nearX, nearY);
+                
+                // End at far point
+                const farZ = gridDepth * gridSize;
+                const farScale = perspective / (perspective + farZ);
+                const farX = cx + x * gridSize * farScale;
+                const farY = horizon + farZ * farScale * 0.5;
+                ctx.lineTo(farX, farY);
+                
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+
+        // =====================================================
+        // HOLOGRAM MANAGEMENT
+        // =====================================================
+        /**
+         * Spawn a new hologram if it's time
+         */
+        function updateHolograms(dt) {
+            // Spawn new holograms periodically
+            if (time - lastSpawnTime > spawnInterval && holograms.length < maxHolograms) {
+                holograms.push(new HologramText());
+                lastSpawnTime = time;
+            }
+            
+            // Update and remove dead holograms
+            for (let i = holograms.length - 1; i >= 0; i--) {
+                if (!holograms[i].update(dt)) {
+                    holograms.splice(i, 1);
+                }
+            }
+        }
+
+        // =====================================================
+        // ANIMATION LOOP
+        // =====================================================
+        /**
+         * Main render loop
+         */
+        function render(now) {
+            const dt = 1 / 60; // Assume 60fps
+            time += dt;
+            
+            // Update mouse tracking
+            mouse.update();
+            
+            // Clear canvas with gradient (synthwave sky)
+            const gradient = ctx.createLinearGradient(0, 0, 0, H);
+            gradient.addColorStop(0, '#000000');
+            gradient.addColorStop(0.3, '#0a0015');
+            gradient.addColorStop(0.6, '#1a0030');
+            gradient.addColorStop(1, '#000020');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, W, H);
+            
+            // Calculate infinite scroll offset
+            const scrollOffset = (time * scrollSpeed) % gridSize;
+            
+            // Draw the grid
+            drawGrid(scrollOffset);
+            
+            // Update and draw holograms
+            updateHolograms(dt);
+            for (const hologram of holograms) {
+                hologram.draw(scrollOffset);
+            }
+            
+            requestAnimationFrame(render);
+        }
+
+        // =====================================================
+        // START THE EFFECT
+        // =====================================================
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>
