@@ -192,7 +192,7 @@
             }
         }
 
-        const orbs = Array.from({ length: 8 }, () => new PlasmaOrb());
+        let orbs = [];
 
         function render() {
             time += 1 / 60;
@@ -278,6 +278,7 @@
 
         window.addEventListener('resize', resize);
         resize();
+        orbs = Array.from({ length: 8 }, () => new PlasmaOrb());
         requestAnimationFrame(render);
     </script>
 </body>
