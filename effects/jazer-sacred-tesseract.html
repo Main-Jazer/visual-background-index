@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sacred Tesseract - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script src="../Three.js"></script>
+    <script type="module">
+        import { noise3D, mouse, smoothstep } from '../jazer-background-engine.js';
+
+        const THREE = window.THREE;
+        const canvas = document.getElementById('c');
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 12;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const goldColors = [0xffd700, 0xff2aff, 0x00f5ff, 0xb37cff, 0xff0055, 0x39ff14];
+
+        // Create 4D Tesseract (hypercube) vertices
+        // A tesseract has 16 vertices, 32 edges
+        const tesseractVertices = [];
+        for (let i = 0; i < 16; i++) {
+            const x = (i & 1) ? 1 : -1;
+            const y = (i & 2) ? 1 : -1;
+            const z = (i & 4) ? 1 : -1;
+            const w = (i & 8) ? 1 : -1;
+            tesseractVertices.push({ x, y, z, w });
+        }
+
+        // Tesseract edges (connections between vertices)
+        const tesseractEdges = [];
+        for (let i = 0; i < 16; i++) {
+            for (let j = i + 1; j < 16; j++) {
+                const v1 = tesseractVertices[i];
+                const v2 = tesseractVertices[j];
+
+                // Count differing coordinates
+                let diff = 0;
+                if (v1.x !== v2.x) diff++;
+                if (v1.y !== v2.y) diff++;
+                if (v1.z !== v2.z) diff++;
+                if (v1.w !== v2.w) diff++;
+
+                // Connect if only one coordinate differs
+                if (diff === 1) {
+                    tesseractEdges.push([i, j]);
+                }
+            }
+        }
+
+        // Project 4D to 3D with rotation
+        function project4Dto3D(vertex, angleXW, angleYW, angleZW) {
+            const cosXW = Math.cos(angleXW);
+            const sinXW = Math.sin(angleXW);
+            const cosYW = Math.cos(angleYW);
+            const sinYW = Math.sin(angleYW);
+            const cosZW = Math.cos(angleZW);
+            const sinZW = Math.sin(angleZW);
+
+            // Rotate in 4D space
+            let x = vertex.x;
+            let y = vertex.y;
+            let z = vertex.z;
+            let w = vertex.w;
+
+            // XW rotation
+            let newX = x * cosXW - w * sinXW;
+            let newW = x * sinXW + w * cosXW;
+            x = newX;
+            w = newW;
+
+            // YW rotation
+            let newY = y * cosYW - w * sinYW;
+            newW = y * sinYW + w * cosYW;
+            y = newY;
+            w = newW;
+
+            // ZW rotation
+            let newZ = z * cosZW - w * sinZW;
+            newW = z * sinZW + w * cosZW;
+            z = newZ;
+            w = newW;
+
+            // Perspective projection from 4D to 3D
+            const distance = 3;
+            const scale = distance / (distance - w);
+
+            return new THREE.Vector3(x * scale * 2, y * scale * 2, z * scale * 2);
+        }
+
+        // Create tesseract wireframe group
+        const tesseractGroup = new THREE.Group();
+        scene.add(tesseractGroup);
+
+        // Create vertex spheres
+        const vertexSpheres = [];
+        for (let i = 0; i < 16; i++) {
+            const sphereGeo = new THREE.SphereGeometry(0.15, 16, 16);
+            const sphereMat = new THREE.MeshBasicMaterial({
+                color: goldColors[i % goldColors.length],
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending
+            });
+
+            const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+            sphere.userData = { index: i };
+
+            // Glow
+            const glowGeo = new THREE.SphereGeometry(0.3, 16, 16);
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: sphereMat.color,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
+            const glow = new THREE.Mesh(glowGeo, glowMat);
+            sphere.add(glow);
+
+            tesseractGroup.add(sphere);
+            vertexSpheres.push(sphere);
+        }
+
+        // Create edge lines
+        const edgeLines = [];
+        tesseractEdges.forEach(([i, j]) => {
+            const points = [new THREE.Vector3(), new THREE.Vector3()];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+            const material = new THREE.LineBasicMaterial({
+                color: goldColors[Math.floor(Math.random() * goldColors.length)],
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending
+            });
+
+            const line = new THREE.Line(geometry, material);
+            line.userData = { vertexIndices: [i, j] };
+
+            tesseractGroup.add(line);
+            edgeLines.push(line);
+        });
+
+        // Sacred geometry pattern - Flower of Life in background
+        const flowerGroup = new THREE.Group();
+        const flowerRadius = 2;
+        const circleCount = 19;
+
+        for (let i = 0; i < circleCount; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const layer = Math.floor(i / 6);
+            const radius = layer * flowerRadius;
+
+            const circleGeo = new THREE.TorusGeometry(flowerRadius, 0.02, 16, 100);
+            const circleMat = new THREE.MeshBasicMaterial({
+                color: goldColors[i % goldColors.length],
+                transparent: true,
+                opacity: 0.2,
+                blending: THREE.AdditiveBlending
+            });
+
+            const circle = new THREE.Mesh(circleGeo, circleMat);
+            circle.position.x = Math.cos(angle) * radius;
+            circle.position.y = Math.sin(angle) * radius;
+            circle.userData = { offset: i };
+
+            flowerGroup.add(circle);
+        }
+
+        flowerGroup.position.z = -8;
+        flowerGroup.scale.setScalar(2);
+        scene.add(flowerGroup);
+
+        // Particle energy field
+        const particleCount = 1500;
+        const particleGeo = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+
+        for (let i = 0; i < particleCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI * 2;
+            const r = 5 + Math.random() * 15;
+
+            positions[i * 3] = Math.cos(theta) * Math.sin(phi) * r;
+            positions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * r;
+            positions[i * 3 + 2] = Math.cos(phi) * r;
+
+            const color = new THREE.Color(goldColors[Math.floor(Math.random() * goldColors.length)]);
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
+
+            sizes[i] = 0.05 + Math.random() * 0.1;
+        }
+
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        particleGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const particleMat = new THREE.PointsMaterial({
+            size: 0.1,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const particles = new THREE.Points(particleGeo, particleMat);
+        scene.add(particles);
+
+        // Sacred energy beams from center
+        const beamCount = 8;
+        const beams = [];
+
+        for (let i = 0; i < beamCount; i++) {
+            const angle = (i / beamCount) * Math.PI * 2;
+            const beamGeo = new THREE.CylinderGeometry(0.05, 0.05, 20, 8);
+            const beamMat = new THREE.MeshBasicMaterial({
+                color: goldColors[i % goldColors.length],
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
+
+            const beam = new THREE.Mesh(beamGeo, beamMat);
+            beam.rotation.z = Math.PI / 2;
+            beam.rotation.y = angle;
+            beam.userData = { baseAngle: angle };
+
+            tesseractGroup.add(beam);
+            beams.push(beam);
+        }
+
+        let time = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.016;
+            mouse.update();
+
+            // Rotate tesseract in 4D space
+            const angleXW = time * 0.3;
+            const angleYW = time * 0.4;
+            const angleZW = time * 0.5;
+
+            // Update vertex positions
+            vertexSpheres.forEach(sphere => {
+                const vertex = tesseractVertices[sphere.userData.index];
+                const projected = project4Dto3D(vertex, angleXW, angleYW, angleZW);
+                sphere.position.copy(projected);
+
+                // Pulse effect
+                const pulse = Math.sin(time * 2 + sphere.userData.index * 0.5) * 0.3 + 0.7;
+                sphere.scale.setScalar(pulse);
+            });
+
+            // Update edge lines
+            edgeLines.forEach(line => {
+                const [i, j] = line.userData.vertexIndices;
+                const pos1 = vertexSpheres[i].position;
+                const pos2 = vertexSpheres[j].position;
+
+                const points = [pos1, pos2];
+                line.geometry.setFromPoints(points);
+
+                // Pulse opacity
+                const pulse = Math.sin(time * 3 + i + j) * 0.3 + 0.7;
+                line.material.opacity = 0.4 + pulse * 0.4;
+            });
+
+            // Rotate flower of life
+            flowerGroup.rotation.z += 0.002;
+            flowerGroup.children.forEach((circle, i) => {
+                const pulse = Math.sin(time * 2 + circle.userData.offset) * 0.5 + 0.5;
+                circle.material.opacity = 0.1 + pulse * 0.2;
+            });
+
+            // Rotate particles
+            particles.rotation.x += 0.0005;
+            particles.rotation.y += 0.001;
+
+            // Animate beams
+            beams.forEach((beam, i) => {
+                beam.rotation.y = beam.userData.baseAngle + time * 0.2;
+                const pulse = Math.sin(time * 2 + i) * 0.5 + 0.5;
+                beam.material.opacity = 0.2 + pulse * 0.2;
+                beam.scale.y = 0.8 + pulse * 0.4;
+            });
+
+            // Rotate entire tesseract group slowly
+            tesseractGroup.rotation.x = Math.sin(time * 0.1) * 0.3;
+            tesseractGroup.rotation.y = time * 0.1;
+
+            // Camera follows mouse
+            camera.position.x = mouse.centeredX * 3;
+            camera.position.y = mouse.centeredY * 3;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>

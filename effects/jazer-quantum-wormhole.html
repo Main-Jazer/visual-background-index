@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantum Wormhole Portal - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script src="../Three.js"></script>
+    <script type="module">
+        import { noise3D, mouse, hexToRgb, smoothstep } from '../jazer-background-engine.js';
+
+        const THREE = window.THREE;
+        const canvas = document.getElementById('c');
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 8;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const neonColors = [0xff0055, 0x00f5ff, 0xff2aff, 0xffd700, 0x39ff14, 0xb37cff];
+
+        // Wormhole tunnel with shader
+        const tunnelGeometry = new THREE.TorusGeometry(3, 0.05, 32, 100);
+        const tunnelRings = [];
+
+        for (let i = 0; i < 30; i++) {
+            const ring = new THREE.Mesh(
+                tunnelGeometry,
+                new THREE.MeshBasicMaterial({
+                    color: neonColors[i % neonColors.length],
+                    transparent: true,
+                    opacity: 0.6,
+                    blending: THREE.AdditiveBlending
+                })
+            );
+            ring.position.z = -i * 1.5;
+            ring.scale.setScalar(1 - i * 0.02);
+            ring.userData = { originalZ: ring.position.z, index: i };
+            scene.add(ring);
+            tunnelRings.push(ring);
+        }
+
+        // Spiral particles being pulled into wormhole
+        const particleCount = 8000;
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+        const velocities = [];
+
+        for (let i = 0; i < particleCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI * 2;
+            const r = 2 + Math.random() * 8;
+
+            positions[i * 3] = Math.cos(theta) * Math.sin(phi) * r;
+            positions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * r;
+            positions[i * 3 + 2] = Math.cos(phi) * r - 15;
+
+            const color = new THREE.Color(neonColors[Math.floor(Math.random() * neonColors.length)]);
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
+
+            sizes[i] = 0.05 + Math.random() * 0.1;
+
+            velocities.push({
+                theta: (Math.random() - 0.5) * 0.02,
+                z: 0.1 + Math.random() * 0.2
+            });
+        }
+
+        const particleGeometry = new THREE.BufferGeometry();
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        particleGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.1,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particles);
+
+        // Event horizon sphere with distortion shader
+        const horizonGeometry = new THREE.SphereGeometry(1.5, 64, 64);
+        const horizonMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 },
+                color1: { value: new THREE.Color(0xff0055) },
+                color2: { value: new THREE.Color(0x00f5ff) },
+                color3: { value: new THREE.Color(0xff2aff) }
+            },
+            vertexShader: `
+                varying vec3 vNormal;
+                varying vec3 vPosition;
+                uniform float time;
+
+                void main() {
+                    vNormal = normalize(normalMatrix * normal);
+                    vPosition = position;
+
+                    vec3 pos = position;
+                    float distortion = sin(pos.x * 5.0 + time * 2.0) *
+                                      sin(pos.y * 5.0 + time * 2.0) *
+                                      sin(pos.z * 5.0 + time * 2.0) * 0.1;
+                    pos += normal * distortion;
+
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform float time;
+                uniform vec3 color1;
+                uniform vec3 color2;
+                uniform vec3 color3;
+                varying vec3 vNormal;
+                varying vec3 vPosition;
+
+                void main() {
+                    float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.0);
+
+                    vec3 color = mix(color1, color2, sin(vPosition.x * 3.0 + time) * 0.5 + 0.5);
+                    color = mix(color, color3, sin(vPosition.y * 3.0 + time * 1.5) * 0.5 + 0.5);
+
+                    float pulse = sin(time * 3.0) * 0.3 + 0.7;
+                    float intensity = fresnel * pulse;
+
+                    gl_FragColor = vec4(color * intensity, intensity * 0.8);
+                }
+            `,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide
+        });
+
+        const eventHorizon = new THREE.Mesh(horizonGeometry, horizonMaterial);
+        scene.add(eventHorizon);
+
+        // Gravitational lensing rings
+        const lensingRings = [];
+        for (let i = 0; i < 5; i++) {
+            const ringGeo = new THREE.RingGeometry(1.6 + i * 0.3, 1.7 + i * 0.3, 64);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: neonColors[i % neonColors.length],
+                transparent: true,
+                opacity: 0.3 - i * 0.05,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide
+            });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.userData = { speed: 0.5 + i * 0.2, offset: i * Math.PI / 2.5 };
+            scene.add(ring);
+            lensingRings.push(ring);
+        }
+
+        // Energy jets shooting from poles
+        const jetGeometry = new THREE.CylinderGeometry(0.05, 0.5, 8, 16, 1, true);
+        const jetMaterial = new THREE.MeshBasicMaterial({
+            color: 0x00f5ff,
+            transparent: true,
+            opacity: 0.4,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide
+        });
+
+        const jetTop = new THREE.Mesh(jetGeometry, jetMaterial);
+        jetTop.position.y = 5;
+        scene.add(jetTop);
+
+        const jetBottom = new THREE.Mesh(jetGeometry, jetMaterial.clone());
+        jetBottom.material.color = new THREE.Color(0xff2aff);
+        jetBottom.position.y = -5;
+        scene.add(jetBottom);
+
+        let time = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.016;
+            mouse.update();
+
+            // Rotate tunnel rings and move them
+            tunnelRings.forEach((ring, i) => {
+                ring.rotation.z += 0.01 + i * 0.001;
+                ring.position.z += 0.05;
+
+                if (ring.position.z > 5) {
+                    ring.position.z = -45;
+                }
+
+                // Pulse effect
+                const pulse = Math.sin(time * 2 + i * 0.3) * 0.1 + 0.9;
+                ring.material.opacity = 0.4 + pulse * 0.3;
+            });
+
+            // Animate particles spiraling into wormhole
+            const pos = particleGeometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                const idx = i * 3;
+                const x = pos[idx];
+                const y = pos[idx + 1];
+                const z = pos[idx + 2];
+
+                // Calculate spiral motion
+                const r = Math.sqrt(x * x + y * y);
+                const theta = Math.atan2(y, x) + velocities[i].theta;
+
+                // Move toward center and forward
+                const newR = r * 0.99;
+                pos[idx] = Math.cos(theta) * newR;
+                pos[idx + 1] = Math.sin(theta) * newR;
+                pos[idx + 2] += velocities[i].z;
+
+                // Reset if passed through or too close
+                if (pos[idx + 2] > 10 || newR < 0.5) {
+                    const newTheta = Math.random() * Math.PI * 2;
+                    const newPhi = Math.random() * Math.PI * 2;
+                    const newRadius = 2 + Math.random() * 8;
+
+                    pos[idx] = Math.cos(newTheta) * Math.sin(newPhi) * newRadius;
+                    pos[idx + 1] = Math.sin(newTheta) * Math.sin(newPhi) * newRadius;
+                    pos[idx + 2] = Math.cos(newPhi) * newRadius - 15;
+                }
+            }
+            particleGeometry.attributes.position.needsUpdate = true;
+
+            // Rotate event horizon with distortion
+            eventHorizon.rotation.x += 0.003;
+            eventHorizon.rotation.y += 0.005;
+            horizonMaterial.uniforms.time.value = time;
+
+            // Animate lensing rings
+            lensingRings.forEach((ring, i) => {
+                ring.rotation.z = time * ring.userData.speed + ring.userData.offset;
+                ring.rotation.x = Math.sin(time + i) * 0.3;
+                ring.rotation.y = Math.cos(time * 0.7 + i) * 0.3;
+
+                const scale = 1 + Math.sin(time * 2 + i) * 0.1;
+                ring.scale.setScalar(scale);
+            });
+
+            // Animate jets
+            jetTop.rotation.y += 0.02;
+            jetBottom.rotation.y -= 0.02;
+            jetTop.material.opacity = 0.3 + Math.sin(time * 3) * 0.2;
+            jetBottom.material.opacity = 0.3 + Math.cos(time * 3) * 0.2;
+
+            // Camera follows mouse
+            camera.position.x = mouse.centeredX * 2;
+            camera.position.y = mouse.centeredY * 2;
+            camera.lookAt(0, 0, 0);
+
+            // Rotate entire scene slowly
+            scene.rotation.y = Math.sin(time * 0.1) * 0.2;
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>

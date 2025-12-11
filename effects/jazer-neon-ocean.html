@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neon Wireframe Ocean - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script src="../Three.js"></script>
+    <script type="module">
+        import { noise2D, noise3D, mouse, smoothstep } from '../jazer-background-engine.js';
+
+        const THREE = window.THREE;
+        const canvas = document.getElementById('c');
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x000510, 10, 100);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 8, 15);
+        camera.rotation.x = -0.3;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const oceanColors = [0x00f5ff, 0xff2aff, 0xff0055, 0x39ff14, 0xffd700, 0xb37cff];
+
+        // Create ocean wave mesh
+        const oceanWidth = 200;
+        const oceanDepth = 200;
+        const oceanResolution = 100;
+
+        const oceanGeometry = new THREE.PlaneGeometry(
+            oceanWidth,
+            oceanDepth,
+            oceanResolution,
+            oceanResolution
+        );
+
+        // Store original positions
+        const oceanPositions = oceanGeometry.attributes.position.array;
+        const originalPositions = new Float32Array(oceanPositions.length);
+        for (let i = 0; i < oceanPositions.length; i++) {
+            originalPositions[i] = oceanPositions[i];
+        }
+
+        const oceanMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 },
+                color1: { value: new THREE.Color(0x00f5ff) },
+                color2: { value: new THREE.Color(0xff2aff) }
+            },
+            vertexShader: `
+                varying vec3 vPosition;
+                varying float vElevation;
+                uniform float time;
+
+                void main() {
+                    vPosition = position;
+                    vElevation = position.z;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform float time;
+                uniform vec3 color1;
+                uniform vec3 color2;
+                varying vec3 vPosition;
+                varying float vElevation;
+
+                void main() {
+                    vec3 color = mix(color1, color2, vElevation * 0.2 + 0.5);
+                    float intensity = vElevation * 0.3 + 0.7;
+                    gl_FragColor = vec4(color * intensity, 0.9);
+                }
+            `,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide
+        });
+
+        const ocean = new THREE.Mesh(oceanGeometry, oceanMaterial);
+        ocean.rotation.x = -Math.PI / 2;
+        scene.add(ocean);
+
+        // Wireframe overlay
+        const wireframeGeometry = oceanGeometry.clone();
+        const wireframeEdges = new THREE.EdgesGeometry(wireframeGeometry);
+        const wireframeMaterial = new THREE.LineBasicMaterial({
+            color: 0x00f5ff,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+
+        const wireframe = new THREE.LineSegments(wireframeEdges, wireframeMaterial);
+        wireframe.rotation.x = -Math.PI / 2;
+        scene.add(wireframe);
+
+        // Wave crest particles
+        const crestParticleCount = 2000;
+        const crestGeo = new THREE.BufferGeometry();
+        const crestPositions = new Float32Array(crestParticleCount * 3);
+        const crestColors = new Float32Array(crestParticleCount * 3);
+        const crestSizes = new Float32Array(crestParticleCount);
+        const crestVelocities = [];
+
+        for (let i = 0; i < crestParticleCount; i++) {
+            crestPositions[i * 3] = (Math.random() - 0.5) * oceanWidth;
+            crestPositions[i * 3 + 1] = Math.random() * 5;
+            crestPositions[i * 3 + 2] = (Math.random() - 0.5) * oceanDepth;
+
+            const color = new THREE.Color(oceanColors[Math.floor(Math.random() * oceanColors.length)]);
+            crestColors[i * 3] = color.r;
+            crestColors[i * 3 + 1] = color.g;
+            crestColors[i * 3 + 2] = color.b;
+
+            crestSizes[i] = 0.2 + Math.random() * 0.4;
+
+            crestVelocities.push({
+                x: (Math.random() - 0.5) * 0.05,
+                y: 0.02 + Math.random() * 0.05,
+                z: (Math.random() - 0.5) * 0.05,
+                life: Math.random()
+            });
+        }
+
+        crestGeo.setAttribute('position', new THREE.BufferAttribute(crestPositions, 3));
+        crestGeo.setAttribute('color', new THREE.BufferAttribute(crestColors, 3));
+        crestGeo.setAttribute('size', new THREE.BufferAttribute(crestSizes, 1));
+
+        const crestMat = new THREE.PointsMaterial({
+            size: 0.5,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.7,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const crestParticles = new THREE.Points(crestGeo, crestMat);
+        scene.add(crestParticles);
+
+        // Energy orbs floating above water
+        const orbs = [];
+        for (let i = 0; i < 20; i++) {
+            const orbGeo = new THREE.SphereGeometry(0.5, 16, 16);
+            const orbMat = new THREE.MeshBasicMaterial({
+                color: oceanColors[i % oceanColors.length],
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending
+            });
+
+            const orb = new THREE.Mesh(orbGeo, orbMat);
+            orb.position.set(
+                (Math.random() - 0.5) * oceanWidth * 0.8,
+                2 + Math.random() * 8,
+                (Math.random() - 0.5) * oceanDepth * 0.8
+            );
+
+            // Add glow
+            const glowGeo = new THREE.SphereGeometry(0.8, 16, 16);
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: orbMat.color,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending
+            });
+            const glow = new THREE.Mesh(glowGeo, glowMat);
+            orb.add(glow);
+
+            orb.userData = {
+                baseY: orb.position.y,
+                offset: Math.random() * Math.PI * 2,
+                speed: 0.5 + Math.random()
+            };
+
+            scene.add(orb);
+            orbs.push(orb);
+        }
+
+        // Light beams shooting up from wave crests
+        const beams = [];
+        for (let i = 0; i < 30; i++) {
+            const beamGeo = new THREE.CylinderGeometry(0.1, 0.3, 10, 8);
+            const beamMat = new THREE.MeshBasicMaterial({
+                color: oceanColors[Math.floor(Math.random() * oceanColors.length)],
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending
+            });
+
+            const beam = new THREE.Mesh(beamGeo, beamMat);
+            beam.position.set(
+                (Math.random() - 0.5) * oceanWidth * 0.9,
+                5,
+                (Math.random() - 0.5) * oceanDepth * 0.9
+            );
+
+            beam.userData = {
+                active: false,
+                timer: Math.random() * 10
+            };
+
+            scene.add(beam);
+            beams.push(beam);
+        }
+
+        // Sky particles
+        const skyParticleCount = 1000;
+        const skyGeo = new THREE.BufferGeometry();
+        const skyPositions = new Float32Array(skyParticleCount * 3);
+        const skyColors = new Float32Array(skyParticleCount * 3);
+
+        for (let i = 0; i < skyParticleCount; i++) {
+            skyPositions[i * 3] = (Math.random() - 0.5) * oceanWidth * 2;
+            skyPositions[i * 3 + 1] = Math.random() * 50 + 10;
+            skyPositions[i * 3 + 2] = (Math.random() - 0.5) * oceanDepth * 2;
+
+            const color = new THREE.Color(oceanColors[Math.floor(Math.random() * oceanColors.length)]);
+            skyColors[i * 3] = color.r;
+            skyColors[i * 3 + 1] = color.g;
+            skyColors[i * 3 + 2] = color.b;
+        }
+
+        skyGeo.setAttribute('position', new THREE.BufferAttribute(skyPositions, 3));
+        skyGeo.setAttribute('color', new THREE.BufferAttribute(skyColors, 3));
+
+        const skyMat = new THREE.PointsMaterial({
+            size: 0.3,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.4,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const skyParticles = new THREE.Points(skyGeo, skyMat);
+        scene.add(skyParticles);
+
+        let time = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.016;
+            mouse.update();
+
+            // Animate ocean waves with multi-layered noise
+            const positions = ocean.geometry.attributes.position.array;
+            const wirePositions = wireframe.geometry.attributes.position.array;
+
+            for (let i = 0; i < positions.length / 3; i++) {
+                const x = originalPositions[i * 3];
+                const y = originalPositions[i * 3 + 1];
+
+                // Multi-octave wave using noise
+                const wave1 = noise2D(x * 0.02, y * 0.02 + time * 0.3) * 2;
+                const wave2 = noise2D(x * 0.05, y * 0.05 + time * 0.5) * 1;
+                const wave3 = noise2D(x * 0.1, y * 0.1 + time * 0.7) * 0.5;
+
+                const elevation = wave1 + wave2 + wave3;
+
+                positions[i * 3 + 2] = elevation;
+                wirePositions[i * 3 + 2] = elevation;
+            }
+
+            ocean.geometry.attributes.position.needsUpdate = true;
+            wireframe.geometry.attributes.position.needsUpdate = true;
+
+            // Update ocean shader
+            oceanMaterial.uniforms.time.value = time;
+
+            // Change wireframe color over time
+            const colorIndex = Math.floor(time * 0.5) % oceanColors.length;
+            wireframeMaterial.color.setHex(oceanColors[colorIndex]);
+
+            // Animate crest particles
+            const crestPos = crestGeo.attributes.position.array;
+            for (let i = 0; i < crestParticleCount; i++) {
+                const idx = i * 3;
+
+                crestPos[idx] += crestVelocities[i].x;
+                crestPos[idx + 1] += crestVelocities[i].y;
+                crestPos[idx + 2] += crestVelocities[i].z;
+
+                crestVelocities[i].life += 0.01;
+
+                // Reset if too high or out of bounds
+                if (crestPos[idx + 1] > 15 || crestVelocities[i].life > 1) {
+                    crestPos[idx] = (Math.random() - 0.5) * oceanWidth;
+                    crestPos[idx + 1] = 0;
+                    crestPos[idx + 2] = (Math.random() - 0.5) * oceanDepth;
+                    crestVelocities[i].life = 0;
+                }
+            }
+            crestGeo.attributes.position.needsUpdate = true;
+
+            // Animate floating orbs
+            orbs.forEach(orb => {
+                orb.position.y = orb.userData.baseY + Math.sin(time * orb.userData.speed + orb.userData.offset) * 2;
+                orb.rotation.y += 0.01;
+                orb.rotation.x += 0.005;
+
+                const pulse = Math.sin(time * 2 + orb.userData.offset) * 0.3 + 0.7;
+                orb.material.opacity = 0.5 + pulse * 0.3;
+            });
+
+            // Animate light beams
+            beams.forEach(beam => {
+                beam.userData.timer += 0.016;
+
+                if (beam.userData.timer > 2 + Math.random() * 3) {
+                    beam.userData.active = true;
+                    beam.userData.timer = 0;
+                    beam.material.opacity = 0.7;
+                    beam.scale.y = 0.1;
+                }
+
+                if (beam.userData.active) {
+                    beam.scale.y = Math.min(beam.scale.y + 0.05, 1);
+                    beam.material.opacity -= 0.015;
+
+                    if (beam.material.opacity <= 0) {
+                        beam.userData.active = false;
+                        beam.position.x = (Math.random() - 0.5) * oceanWidth * 0.9;
+                        beam.position.z = (Math.random() - 0.5) * oceanDepth * 0.9;
+                    }
+                }
+
+                beam.rotation.y += 0.02;
+            });
+
+            // Camera movement with mouse
+            camera.position.x = mouse.centeredX * 15;
+            camera.position.y = 8 + mouse.centeredY * 5;
+            camera.lookAt(0, 0, -20);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>

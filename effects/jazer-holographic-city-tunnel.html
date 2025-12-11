@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Holographic City Tunnel - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script src="../Three.js"></script>
+    <script type="module">
+        import { noise2D, noise3D, mouse, smoothstep } from '../jazer-background-engine.js';
+
+        const THREE = window.THREE;
+        const canvas = document.getElementById('c');
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000510, 0.01);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
+        camera.position.set(0, 3, 0);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const neonColors = [0xff0055, 0x00f5ff, 0xff2aff, 0x39ff14, 0xffd700, 0xb37cff];
+
+        // Holographic data planes
+        const dataPlanes = [];
+        for (let i = 0; i < 40; i++) {
+            const planeGeo = new THREE.PlaneGeometry(80, 60);
+            const planeMat = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    color: { value: new THREE.Color(neonColors[i % neonColors.length]) },
+                    glitchAmount: { value: 0 }
+                },
+                vertexShader: `
+                    varying vec2 vUv;
+                    uniform float time;
+                    uniform float glitchAmount;
+
+                    void main() {
+                        vUv = uv;
+                        vec3 pos = position;
+
+                        // Holographic scan lines
+                        float scanline = sin(uv.y * 200.0 + time * 10.0) * 0.1;
+                        pos.z += scanline * glitchAmount;
+
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    uniform vec3 color;
+                    uniform float glitchAmount;
+                    varying vec2 vUv;
+
+                    float random(vec2 st) {
+                        return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+                    }
+
+                    void main() {
+                        vec2 uv = vUv;
+
+                        // Digital grid
+                        vec2 grid = abs(fract(uv * vec2(40.0, 30.0)) - 0.5);
+                        float gridLine = min(grid.x, grid.y);
+                        float grid_intensity = 1.0 - smoothstep(0.0, 0.02, gridLine);
+
+                        // Scan lines
+                        float scanline = sin(uv.y * 200.0 + time * 10.0) * 0.5 + 0.5;
+
+                        // Random pixels (glitch)
+                        float glitch = random(floor(uv * 100.0 + time * 5.0)) * glitchAmount;
+
+                        // RGB split
+                        float rgbSplit = step(0.98, random(vec2(uv.y + time * 0.1, time))) * glitchAmount;
+
+                        // Combine effects
+                        float intensity = grid_intensity * 0.6 + scanline * 0.2 + glitch * 0.5;
+                        intensity *= (1.0 - uv.y * 0.5); // Fade with distance
+
+                        vec3 finalColor = color * intensity;
+
+                        // RGB chromatic aberration
+                        if (rgbSplit > 0.0) {
+                            finalColor.r += 0.3;
+                            finalColor.b += 0.3;
+                        }
+
+                        gl_FragColor = vec4(finalColor, intensity * 0.5);
+                    }
+                `,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide
+            });
+
+            const plane = new THREE.Mesh(planeGeo, planeMat);
+            plane.position.z = -i * 8 - 20;
+            plane.rotation.x = -Math.PI / 2;
+            plane.position.y = -5;
+            plane.userData = {
+                originalZ: plane.position.z,
+                glitchTimer: Math.random() * 10
+            };
+
+            scene.add(plane);
+            dataPlanes.push(plane);
+        }
+
+        // Holographic buildings
+        const buildings = [];
+        for (let i = 0; i < 60; i++) {
+            const side = i % 2 === 0 ? -1 : 1;
+            const width = 5 + Math.random() * 12;
+            const height = 15 + Math.random() * 60;
+            const depth = 5 + Math.random() * 12;
+
+            const buildingGeo = new THREE.BoxGeometry(width, height, depth);
+            const edges = new THREE.EdgesGeometry(buildingGeo);
+
+            const buildingMat = new THREE.LineBasicMaterial({
+                color: neonColors[Math.floor(Math.random() * neonColors.length)],
+                transparent: true,
+                opacity: 0.4,
+                blending: THREE.AdditiveBlending
+            });
+
+            const building = new THREE.LineSegments(edges, buildingMat);
+            building.position.x = side * (25 + Math.random() * 20);
+            building.position.y = height / 2 - 5;
+            building.position.z = -i * 7 - 20;
+
+            // Holographic glitch effect on building
+            building.userData = {
+                originalX: building.position.x,
+                originalY: building.position.y,
+                baseOpacity: building.material.opacity,
+                glitchTimer: Math.random() * 10
+            };
+
+            scene.add(building);
+            buildings.push(building);
+
+            // Floating holographic symbols
+            if (Math.random() > 0.6) {
+                const symbols = ['◇', '◆', '○', '●', '△', '▽', '□', '■'];
+                const symbolCanvas = document.createElement('canvas');
+                symbolCanvas.width = 64;
+                symbolCanvas.height = 64;
+                const ctx = symbolCanvas.getContext('2d');
+                ctx.fillStyle = `hsl(${Math.random() * 360}, 100%, 60%)`;
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(symbols[Math.floor(Math.random() * symbols.length)], 32, 32);
+
+                const texture = new THREE.CanvasTexture(symbolCanvas);
+                const symbolGeo = new THREE.PlaneGeometry(3, 3);
+                const symbolMat = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    opacity: 0.6,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.DoubleSide
+                });
+
+                const symbol = new THREE.Mesh(symbolGeo, symbolMat);
+                symbol.position.x = building.position.x + (Math.random() - 0.5) * 10;
+                symbol.position.y = 10 + Math.random() * 30;
+                symbol.position.z = building.position.z;
+                symbol.userData = { bobOffset: Math.random() * Math.PI * 2 };
+
+                building.add(symbol);
+            }
+        }
+
+        // Laser scan lines crossing the tunnel
+        const scanLines = [];
+        for (let i = 0; i < 15; i++) {
+            const lineGeo = new THREE.PlaneGeometry(100, 0.5);
+            const lineMat = new THREE.MeshBasicMaterial({
+                color: neonColors[i % neonColors.length],
+                transparent: true,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide
+            });
+
+            const line = new THREE.Mesh(lineGeo, lineMat);
+            line.position.y = -5 + Math.random() * 30;
+            line.position.z = -Math.random() * 200;
+            line.rotation.x = Math.PI / 2;
+            line.userData = {
+                speed: 0.3 + Math.random() * 0.5,
+                pulseSpeed: 1 + Math.random() * 2
+            };
+
+            scene.add(line);
+            scanLines.push(line);
+        }
+
+        // Data stream particles
+        const dataParticleCount = 3000;
+        const dataParticleGeo = new THREE.BufferGeometry();
+        const positions = new Float32Array(dataParticleCount * 3);
+        const colors = new Float32Array(dataParticleCount * 3);
+        const sizes = new Float32Array(dataParticleCount);
+
+        for (let i = 0; i < dataParticleCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 80;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 60;
+            positions[i * 3 + 2] = -Math.random() * 300;
+
+            const color = new THREE.Color(neonColors[Math.floor(Math.random() * neonColors.length)]);
+            colors[i * 3] = color.r;
+            colors[i * 3 + 1] = color.g;
+            colors[i * 3 + 2] = color.b;
+
+            sizes[i] = 0.5 + Math.random() * 1.5;
+        }
+
+        dataParticleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        dataParticleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        dataParticleGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+        const dataParticleMat = new THREE.PointsMaterial({
+            size: 1,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.7,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const dataParticles = new THREE.Points(dataParticleGeo, dataParticleMat);
+        scene.add(dataParticles);
+
+        let time = 0;
+        const flySpeed = 0.5;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.016;
+            mouse.update();
+
+            // Update holographic planes with glitch
+            dataPlanes.forEach(plane => {
+                plane.position.z += flySpeed;
+
+                if (plane.position.z > 20) {
+                    plane.position.z = -320;
+                }
+
+                // Random glitch effect
+                plane.userData.glitchTimer += 0.016;
+                if (plane.userData.glitchTimer > Math.random() * 2 + 1) {
+                    plane.material.uniforms.glitchAmount.value = Math.random();
+                    plane.userData.glitchTimer = 0;
+                } else {
+                    plane.material.uniforms.glitchAmount.value *= 0.9;
+                }
+
+                plane.material.uniforms.time.value = time;
+            });
+
+            // Move and glitch buildings
+            buildings.forEach((building, i) => {
+                building.position.z += flySpeed;
+
+                if (building.position.z > 20) {
+                    building.position.z = -420;
+                }
+
+                // Random holographic glitch
+                building.userData.glitchTimer += 0.016;
+                if (building.userData.glitchTimer > Math.random() * 3 + 2) {
+                    building.position.x = building.userData.originalX + (Math.random() - 0.5) * 2;
+                    building.material.opacity = Math.random() * 0.5 + 0.3;
+                    building.userData.glitchTimer = 0;
+                } else {
+                    building.position.x += (building.userData.originalX - building.position.x) * 0.1;
+                    building.material.opacity += (building.userData.baseOpacity - building.material.opacity) * 0.1;
+                }
+
+                // Animate symbols
+                building.children.forEach(child => {
+                    if (child.userData.bobOffset !== undefined) {
+                        child.position.y += Math.sin(time * 2 + child.userData.bobOffset) * 0.02;
+                        child.rotation.z += 0.01;
+                    }
+                });
+            });
+
+            // Animate scan lines
+            scanLines.forEach(line => {
+                line.position.z += line.userData.speed;
+
+                if (line.position.z > 20) {
+                    line.position.z = -200;
+                    line.position.y = -5 + Math.random() * 30;
+                }
+
+                const pulse = Math.sin(time * line.userData.pulseSpeed) * 0.3 + 0.7;
+                line.material.opacity = 0.4 + pulse * 0.4;
+                line.scale.y = 1 + pulse * 0.5;
+            });
+
+            // Move data particles
+            const dataPos = dataParticleGeo.attributes.position.array;
+            for (let i = 0; i < dataParticleCount; i++) {
+                dataPos[i * 3 + 2] += 0.8;
+
+                if (dataPos[i * 3 + 2] > 20) {
+                    dataPos[i * 3 + 2] = -300;
+                    dataPos[i * 3] = (Math.random() - 0.5) * 80;
+                    dataPos[i * 3 + 1] = (Math.random() - 0.5) * 60;
+                }
+            }
+            dataParticleGeo.attributes.position.needsUpdate = true;
+
+            // Camera movement
+            camera.position.x = mouse.centeredX * 8;
+            camera.position.y = 3 + mouse.centeredY * 5;
+            camera.rotation.z = mouse.centeredX * 0.03;
+            camera.lookAt(camera.position.x * 0.3, 3, -100);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>

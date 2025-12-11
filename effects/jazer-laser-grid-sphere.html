@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Laser Grid Sphere - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script src="../Three.js"></script>
+    <script type="module">
+        import { noise3D, mouse, smoothstep } from '../jazer-background-engine.js';
+
+        const THREE = window.THREE;
+        const canvas = document.getElementById('c');
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0x000000, 10, 50);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 12;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const neonColors = [0xff0055, 0x00f5ff, 0xff2aff, 0xffd700, 0x39ff14, 0xb37cff];
+
+        // Create geodesic sphere
+        const sphereRadius = 5;
+        const sphereGeometry = new THREE.IcosahedronGeometry(sphereRadius, 2);
+        const sphereEdges = new THREE.EdgesGeometry(sphereGeometry);
+
+        // Main wireframe sphere
+        const sphereWireframe = new THREE.LineSegments(
+            sphereEdges,
+            new THREE.LineBasicMaterial({
+                color: 0x00f5ff,
+                transparent: true,
+                opacity: 0.6,
+                linewidth: 2
+            })
+        );
+        scene.add(sphereWireframe);
+
+        // Get vertices for laser beams
+        const vertices = [];
+        const positionAttribute = sphereGeometry.attributes.position;
+        for (let i = 0; i < positionAttribute.count; i++) {
+            vertices.push(new THREE.Vector3(
+                positionAttribute.getX(i),
+                positionAttribute.getY(i),
+                positionAttribute.getZ(i)
+            ));
+        }
+
+        // Create laser beams between vertices
+        const laserBeams = [];
+        const beamCount = 60;
+
+        for (let i = 0; i < beamCount; i++) {
+            const v1 = vertices[Math.floor(Math.random() * vertices.length)];
+            const v2 = vertices[Math.floor(Math.random() * vertices.length)];
+
+            const points = [v1.clone(), v2.clone()];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+            const material = new THREE.LineBasicMaterial({
+                color: neonColors[Math.floor(Math.random() * neonColors.length)],
+                transparent: true,
+                opacity: 0,
+                linewidth: 2,
+                blending: THREE.AdditiveBlending
+            });
+
+            const beam = new THREE.Line(geometry, material);
+            beam.userData = {
+                life: Math.random(),
+                speed: 0.01 + Math.random() * 0.02,
+                color: material.color.clone()
+            };
+
+            scene.add(beam);
+            laserBeams.push(beam);
+        }
+
+        // Vertex glow points
+        const glowPoints = [];
+        vertices.forEach((vertex, i) => {
+            const glowGeo = new THREE.SphereGeometry(0.1, 8, 8);
+            const glowMat = new THREE.MeshBasicMaterial({
+                color: neonColors[i % neonColors.length],
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            const glow = new THREE.Mesh(glowGeo, glowMat);
+            glow.position.copy(vertex);
+            glow.userData = {
+                offset: i * 0.1,
+                baseColor: glowMat.color.clone()
+            };
+
+            sphereWireframe.add(glow);
+            glowPoints.push(glow);
+        });
+
+        // Rotating ring sections
+        const rings = [];
+        for (let i = 0; i < 3; i++) {
+            const ringGeo = new THREE.TorusGeometry(sphereRadius + 0.5 + i * 0.3, 0.05, 16, 100);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: neonColors[i * 2 % neonColors.length],
+                transparent: true,
+                opacity: 0.5,
+                blending: THREE.AdditiveBlending
+            });
+
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.random() * Math.PI;
+            ring.rotation.y = Math.random() * Math.PI;
+            ring.userData = {
+                speedX: 0.001 + Math.random() * 0.002,
+                speedY: 0.001 + Math.random() * 0.002,
+                speedZ: 0.001 + Math.random() * 0.002
+            };
+
+            scene.add(ring);
+            rings.push(ring);
+        }
+
+        // Particle field around sphere
+        const particleCount = 2000;
+        const particleGeo = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        const particleColors = new Float32Array(particleCount * 3);
+        const particleSizes = new Float32Array(particleCount);
+
+        for (let i = 0; i < particleCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI * 2;
+            const r = sphereRadius + 2 + Math.random() * 10;
+
+            particlePositions[i * 3] = Math.cos(theta) * Math.sin(phi) * r;
+            particlePositions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * r;
+            particlePositions[i * 3 + 2] = Math.cos(phi) * r;
+
+            const color = new THREE.Color(neonColors[Math.floor(Math.random() * neonColors.length)]);
+            particleColors[i * 3] = color.r;
+            particleColors[i * 3 + 1] = color.g;
+            particleColors[i * 3 + 2] = color.b;
+
+            particleSizes[i] = 0.05 + Math.random() * 0.1;
+        }
+
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        particleGeo.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+        particleGeo.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
+
+        const particleMat = new THREE.PointsMaterial({
+            size: 0.1,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const particleSystem = new THREE.Points(particleGeo, particleMat);
+        scene.add(particleSystem);
+
+        // Central energy core
+        const coreGeo = new THREE.SphereGeometry(0.5, 32, 32);
+        const coreMat = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 },
+                color1: { value: new THREE.Color(0xff0055) },
+                color2: { value: new THREE.Color(0x00f5ff) }
+            },
+            vertexShader: `
+                varying vec3 vNormal;
+                void main() {
+                    vNormal = normalize(normalMatrix * normal);
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform float time;
+                uniform vec3 color1;
+                uniform vec3 color2;
+                varying vec3 vNormal;
+
+                void main() {
+                    float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 3.0);
+                    vec3 color = mix(color1, color2, sin(time * 2.0) * 0.5 + 0.5);
+                    float pulse = sin(time * 4.0) * 0.3 + 0.7;
+                    gl_FragColor = vec4(color * pulse, 1.0);
+                }
+            `,
+            blending: THREE.AdditiveBlending
+        });
+
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        scene.add(core);
+
+        let time = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.016;
+            mouse.update();
+
+            // Rotate main sphere
+            sphereWireframe.rotation.x += 0.002;
+            sphereWireframe.rotation.y += 0.003;
+
+            // Animate laser beams
+            laserBeams.forEach(beam => {
+                beam.userData.life += beam.userData.speed;
+
+                if (beam.userData.life > 1) {
+                    beam.userData.life = 0;
+                    beam.material.opacity = 0;
+
+                    // Reassign random vertices
+                    const v1 = vertices[Math.floor(Math.random() * vertices.length)];
+                    const v2 = vertices[Math.floor(Math.random() * vertices.length)];
+                    const newPoints = [v1.clone(), v2.clone()];
+                    beam.geometry.setFromPoints(newPoints);
+                } else if (beam.userData.life < 0.5) {
+                    beam.material.opacity = beam.userData.life * 2;
+                } else {
+                    beam.material.opacity = (1 - beam.userData.life) * 2;
+                }
+            });
+
+            // Pulse glow points
+            glowPoints.forEach((glow, i) => {
+                const pulse = Math.sin(time * 3 + glow.userData.offset) * 0.5 + 0.5;
+                glow.scale.setScalar(1 + pulse * 0.5);
+                glow.material.opacity = 0.5 + pulse * 0.5;
+            });
+
+            // Rotate rings
+            rings.forEach(ring => {
+                ring.rotation.x += ring.userData.speedX;
+                ring.rotation.y += ring.userData.speedY;
+                ring.rotation.z += ring.userData.speedZ;
+
+                const pulse = Math.sin(time * 2 + ring.rotation.x) * 0.2 + 0.6;
+                ring.material.opacity = pulse;
+            });
+
+            // Rotate particle field
+            particleSystem.rotation.y += 0.001;
+            particleSystem.rotation.x = Math.sin(time * 0.5) * 0.2;
+
+            // Update core
+            coreMat.uniforms.time.value = time;
+            core.rotation.x += 0.01;
+            core.rotation.y += 0.015;
+
+            // Camera movement
+            camera.position.x = mouse.centeredX * 3;
+            camera.position.y = mouse.centeredY * 3;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>
