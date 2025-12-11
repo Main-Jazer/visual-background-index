@@ -177,15 +177,15 @@
     let frameCount = 0;
     let lastFpsUpdate = 0;
 
-    // Parallax starfield properties
+    // Parallax starfield drift properties
     const center = { x: width / 2, y: height / 2 };
     const layers = [];
-    const layerCount = 5;
-    const starsPerLayer = 100;
-    const parallaxMultiplier = 0.1; // How much movement difference between layers
-    const driftSpeed = 0.5; // Base movement speed
+    const layerCount = 5; // Foreground, mid, background, far, extremely far
+    const starsPerLayer = [100, 150, 200, 250, 300]; // More stars in distant layers
+    const parallaxFactors = [1.5, 1.0, 0.7, 0.5, 0.2]; // How much each layer moves relative to camera
+    const baseMovementSpeed = 0.5;
     const jaZerElements = [];
-    const jaZerElementCount = 10;
+    const jaZerElementCount = 15;
 
     // Simplex noise instance
     const simplex = new SimplexNoise();
@@ -203,37 +203,40 @@
       center.x = width / 2;
       center.y = height / 2;
       
-      // Initialize star layers
-      initializeStarLayers();
+      // Initialize parallax layers
+      initializeParallaxLayers();
       initializeJaZeRElements();
     }
 
-    function initializeStarLayers() {
+    function initializeParallaxLayers() {
       layers.length = 0;
+      
       for (let i = 0; i < layerCount; i++) {
-        const layer = {
-          id: i,
-          stars: [],
-          speed: (i + 1) * parallaxMultiplier, // Further layers move slower
-          depth: 1 - (i / layerCount), // 1 = furthest, 0 = closest
-          color: palette[i % palette.length],
-          opacity: 0.5 + (i / layerCount) * 0.5 // Closer layers are more opaque
-        };
+        const stars = [];
+        const starCount = i < starsPerLayer.length ? starsPerLayer[i] : 250;
         
-        // Create stars for this layer
-        for (let j = 0; j < starsPerLayer; j++) {
-          layer.stars.push({
+        for (let j = 0; j < starCount; j++) {
+          stars.push({
             id: j,
             x: Math.random() * width,
             y: Math.random() * height,
-            size: 0.5 + Math.random() * (i * 1.5), // Closer layers have bigger stars
+            size: 0.5 + Math.random() * (i * 0.8), // Stars get larger in foreground
+            brightness: 0.5 + Math.random() * 0.5,
             twinklePhase: Math.random() * Math.PI * 2,
-            twinkleSpeed: 0.5 + Math.random() * 2,
-            brightness: 0.7 + Math.random() * 0.3
+            color: palette[i % palette.length],
+            depth: i, // Layer depth (0 = farthest, higher = closer)
+            originalX: Math.random() * width,
+            originalY: Math.random() * height
           });
         }
         
-        layers.push(layer);
+        layers.push({
+          id: i,
+          stars: stars,
+          parallaxFactor: parallaxFactors[i],
+          movementSpeed: baseMovementSpeed * parallaxFactors[i],
+          offset: { x: 0, y: 0 }
+        });
       }
     }
 
@@ -244,14 +247,14 @@
           id: i,
           x: Math.random() * width,
           y: Math.random() * height,
-          depth: Math.random(), // Distance from viewer (0 = closest, 1 = furthest)
+          depth: Math.floor(Math.random() * layerCount), // Assign to random layer
+          size: 20 + Math.random() * 30,
           rotation: Math.random() * Math.PI * 2,
-          rotationSpeed: (Math.random() - 0.5) * 0.02,
-          size: 20 + Math.random() * 40,
+          rotationSpeed: (Math.random() - 0.5) * 0.05,
           color: palette[Math.floor(Math.random() * palette.length)],
-          opacity: 0.4 + Math.random() * 0.4,
-          driftOffset: { x: Math.random() * 100 - 50, y: Math.random() * 100 - 50 },
-          driftSpeed: { x: (Math.random() - 0.5) * 0.2, y: (Math.random() - 0.5) * 0.2 }
+          opacity: 0.5 + Math.random() * 0.5,
+          driftPhase: Math.random() * Math.PI * 2,
+          driftAmplitude: 20 + Math.random() * 30
         });
       }
     }
@@ -267,22 +270,24 @@
       // Update mouse (for interactive effects)
       mouse.update();
 
-      // Calculate mouse drift
-      const mouseDriftX = mouse.isInside ? (mouse.x - 0.5) * 3 : 0;
-      const mouseDriftY = mouse.isInside ? (mouse.y - 0.5) * 3 : 0;
+      // Apply mouse influence to camera movement
+      if (mouse.isInside) {
+        // Create relative camera movement based on mouse position
+        layers.forEach(layer => {
+          layer.offset.x += (0.5 - mouse.x) * layer.movementSpeed * 10;
+          layer.offset.y += (0.5 - mouse.y) * layer.movementSpeed * 10;
+        });
+      }
 
       // Clear with deep space background
       const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
       bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#000000');
+      bgGradient.addColorStop(1, '#000020');
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, width, height);
 
-      // Update and draw parallax starfield
+      // Update and draw parallax starfield drift
       updateAndDrawStarfield();
-
-      // Draw JaZeR elements floating in space
-      drawJaZeRElements();
 
       // FPS counter
       if (now - lastFpsUpdate > 1000) {
@@ -298,97 +303,106 @@
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       
-      for (const layer of layers) {
+      // Draw each layer with appropriate parallax
+      for (let i = 0; i < layerCount; i++) {
+        const layer = layers[i];
+        
+        // Update star positions with parallax effect
         for (const star of layer.stars) {
-          // Apply parallax effect based on mouse position
-          const offsetX = mouseDriftX * layer.speed;
-          const offsetY = mouseDriftY * layer.speed;
+          // Calculate apparent position based on parallax movement
+          const parallaxX = star.originalX + layer.offset.x * layer.parallaxFactor;
+          const parallaxY = star.originalY + layer.offset.y * layer.parallaxFactor;
           
-          // Calculate position with parallax
-          const x = (star.x + time * layer.speed * driftSpeed + offsetX) % (width * 1.5);
-          const y = (star.y + time * layer.speed * driftSpeed * 0.7 + offsetY) % (height * 1.5);
-          
-          // Wrap around
-          const wrappedX = (x + width * 0.5) % (width * 1.5) - width * 0.25;
-          const wrappedY = (y + height * 0.5) % (height * 1.5) - height * 0.25;
+          // Wrap stars around the screen
+          let wrappedX = parallaxX % width;
+          let wrappedY = parallaxY % height;
+          if (wrappedX < 0) wrappedX += width;
+          if (wrappedY < 0) wrappedY += height;
           
           // Calculate twinkling effect
-          const twinkle = (Math.sin(time * star.twinkleSpeed + star.twinklePhase) * 0.3 + 0.7) * star.brightness;
-          const currentOpacity = layer.opacity * twinkle;
+          const twinkle = Math.sin(time * 2 + star.twinklePhase) * 0.3 + 0.7;
+          const currentBrightness = star.brightness * twinkle;
           
           // Draw star
           ctx.beginPath();
           ctx.arc(wrappedX, wrappedY, star.size, 0, Math.PI * 2);
-          
-          // Create gradient for star glow
-          const gradient = ctx.createRadialGradient(
-            wrappedX, wrappedY, 0,
-            wrappedX, wrappedY, star.size * 3
-          );
-          gradient.addColorStop(0, layer.color + 'FF');
-          gradient.addColorStop(0.5, layer.color + Math.floor(currentOpacity * 100).toString(16).padStart(2, '0'));
-          gradient.addColorStop(1, layer.color + '00');
-          
-          ctx.fillStyle = gradient;
-          ctx.shadowColor = layer.color;
-          ctx.shadowBlur = 15 * star.size;
+          ctx.fillStyle = star.color + Math.floor(currentBrightness * 255).toString(16).padStart(2, '0');
+          ctx.shadowColor = star.color;
+          ctx.shadowBlur = 10 * star.size;
           ctx.fill();
         }
       }
       
-      ctx.restore();
-    }
-
-    function drawJaZeRElements() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
+      // Update and draw JaZeR floating elements
       for (const element of jaZerElements) {
-        // Update position with parallax drift
-        element.x += element.driftSpeed.x * (1 - element.depth);
-        element.y += element.driftSpeed.y * (1 - element.depth);
+        // Update position with drift and rotation
+        element.x += Math.sin(time * 0.5 + element.driftPhase) * 0.2;
+        element.y += Math.cos(time * 0.5 + element.driftPhase + 1000) * 0.2;
         element.rotation += element.rotationSpeed;
         
-        // Apply mouse parallax effect
-        const offsetX = mouseDriftX * (1 - element.depth);
-        const offsetY = mouseDriftY * (1 - element.depth);
-        const parallaxX = element.x + offsetX;
-        const parallaxY = element.y + offsetY;
+        // Calculate parallax position based on depth
+        const layer = layers[element.depth];
+        const parallaxX = element.x + layer.offset.x * layer.parallaxFactor;
+        const parallaxY = element.y + layer.offset.y * layer.parallaxFactor;
         
-        // Wrap around screen
-        if (parallaxX < -element.size) element.x = width + element.size;
-        if (parallaxX > width + element.size) element.x = -element.size;
-        if (parallaxY < -element.size) element.y = height + element.size;
-        if (parallaxY > height + element.size) element.y = -element.size;
+        // Wrap JaZeR elements around screen
+        let wrappedX = parallaxX % (width + element.size * 2);
+        let wrappedY = parallaxY % (height + element.size * 2);
+        if (wrappedX < -element.size) wrappedX += width + element.size * 2;
+        if (wrappedY < -element.size) wrappedY += height + element.size * 2;
         
-        // Draw JaZeR element with floating animation
+        // Draw JaZeR element
         ctx.save();
-        ctx.translate(parallaxX, parallaxY);
+        ctx.translate(wrappedX, wrappedY);
         ctx.rotate(element.rotation);
         
-        // Draw the text with glow
+        // Draw JaZeR text
         ctx.font = `bold ${element.size}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = element.color;
+        ctx.fillStyle = element.color + Math.floor(element.opacity * 200).toString(16).padStart(2, '0');
         ctx.shadowColor = element.color;
-        ctx.shadowBlur = 20 * element.depth + 5;
-        ctx.globalAlpha = element.opacity;
-        
-        // Draw "J" as a representative element (could be "JaZeR" but might be too crowded)
-        ctx.fillText('J', 0, 0);
-        
-        // Draw additional elements occasionally
-        if (Math.floor(time) % 3 === 0) { // Every 3 seconds
-          ctx.font = `${element.size * 0.6}px Arial`;
-          ctx.globalAlpha = element.opacity * 0.6;
-          ctx.fillText('a', element.size * 0.6, 0);
-          ctx.fillText('Z', element.size * 1.2, 0);
-          ctx.fillText('e', element.size * 1.8, 0);
-          ctx.fillText('R', element.size * 2.4, 0);
-        }
+        ctx.shadowBlur = 20;
+        ctx.fillText('JaZeR', 0, 0);
         
         ctx.restore();
+      }
+      
+      // Draw connection lines between nearby JaZeR elements
+      for (let i = 0; i < jaZerElements.length; i++) {
+        for (let j = i + 1; j < jaZerElements.length; j++) {
+          const elem1 = jaZerElements[i];
+          const elem2 = jaZerElements[j];
+          
+          // Calculate distance accounting for parallax positions
+          const layer1 = layers[elem1.depth];
+          const layer2 = layers[elem2.depth];
+          const pos1X = elem1.x + layer1.offset.x * layer1.parallaxFactor;
+          const pos1Y = elem1.y + layer1.offset.y * layer1.parallaxFactor;
+          const pos2X = elem2.x + layer2.offset.x * layer2.parallaxFactor;
+          const pos2Y = elem2.y + layer2.offset.y * layer2.parallaxFactor;
+          
+          const dist = distance(pos1X, pos1Y, pos2X, pos2Y);
+          
+          // Only draw if elements are close and on similar layers (depth)
+          if (dist < 200 && Math.abs(elem1.depth - elem2.depth) < 2) {
+            const alpha = (200 - dist) / 200;
+            const color = lerpColor(hexToRgb(elem1.color), hexToRgb(elem2.color), 0.5);
+            const hexColor = rgbToHex(color.r, color.g, color.b);
+            
+            ctx.beginPath();
+            ctx.moveTo(pos1X, pos1Y);
+            ctx.lineTo(pos2X, pos2Y);
+            ctx.strokeStyle = hexColor + Math.floor(alpha * 100).toString(16).padStart(2, '0');
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            // Add glow
+            ctx.shadowColor = hexColor;
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+          }
+        }
       }
       
       ctx.restore();

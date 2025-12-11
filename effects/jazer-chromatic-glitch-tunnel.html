@@ -179,14 +179,14 @@
 
     // Chromatic glitch tunnel properties
     const center = { x: width / 2, y: height / 2 };
-    const tunnelDepth = 20;
-    const tunnelSections = [];
-    const sectionCount = 20;
-    const movementSpeed = 2;
-    let lastGlitchTime = 0;
-    const glitchInterval = 0.5; // seconds between glitches
-    let activeGlitches = [];
-    const maxGlitches = 5;
+    const tunnelSlices = [];
+    const sliceCount = 30;
+    const rgbOffset = 3; // RGB separation offset
+    const movementSpeed = 0.5; // How fast slices move toward viewer
+    const glitchFrequency = 0.02; // How often glitches happen
+    const glitchIntensity = 10; // Maximum offset during glitches
+    const tunnelRadius = 150;
+    const tunnelLayers = [];
 
     // Simplex noise instance
     const simplex = new SimplexNoise();
@@ -204,22 +204,24 @@
       center.x = width / 2;
       center.y = height / 2;
       
-      // Initialize tunnel sections
-      initializeTunnelSections();
+      // Initialize tunnel slices
+      initializeTunnelSlices();
     }
 
-    function initializeTunnelSections() {
-      tunnelSections.length = 0;
-      for (let i = 0; i < sectionCount; i++) {
-        tunnelSections.push({
+    function initializeTunnelSlices() {
+      tunnelSlices.length = 0;
+      for (let i = 0; i < sliceCount; i++) {
+        tunnelSlices.push({
           id: i,
-          z: i * 100,
-          rotation: Math.random() * Math.PI * 2,
-          rotationSpeed: (Math.random() - 0.5) * 0.05,
-          shape: 'circle', // Could be circle, hexagon, etc.
-          distortion: Math.random() * 0.1,
-          color: palette[Math.floor(Math.random() * palette.length)],
-          pulsePhase: Math.random() * Math.PI * 2
+          angle: (i / sliceCount) * Math.PI * 2,
+          radius: tunnelRadius,
+          depth: i * 20,
+          color: palette[i % palette.length],
+          glitchTimer: 0,
+          glitchOffsetX: 0,
+          glitchOffsetY: 0,
+          baseRotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.05
         });
       }
     }
@@ -235,15 +237,6 @@
       // Update mouse (for interactive effects)
       mouse.update();
 
-      // Check for glitch triggers
-      if (time - lastGlitchTime > glitchInterval) {
-        triggerGlitch();
-        lastGlitchTime = time;
-      }
-
-      // Update active glitches
-      updateGlitches();
-
       // Clear with dark background
       const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
       bgGradient.addColorStop(0, '#000010');
@@ -251,8 +244,8 @@
       ctx.fillStyle = bgGradient;
       ctx.fillRect(0, 0, width, height);
 
-      // Draw chromatic glitch tunnel
-      drawChromaticTunnel();
+      // Update and draw chromatic glitch tunnel
+      updateAndDrawGlitchTunnel();
 
       // FPS counter
       if (now - lastFpsUpdate > 1000) {
@@ -264,192 +257,137 @@
       requestAnimationFrame(render);
     }
 
-    function triggerGlitch() {
-      if (activeGlitches.length < maxGlitches) {
-        activeGlitches.push({
-          x: Math.random() * width,
-          y: Math.random() * height,
-          width: 20 + Math.random() * 100,
-          height: 20 + Math.random() * 100,
-          time: 0,
-          duration: 0.2 + Math.random() * 0.2,
-          offsetRed: (Math.random() - 0.5) * 10,
-          offsetGreen: (Math.random() - 0.5) * 10,
-          offsetBlue: (Math.random() - 0.5) * 10,
-          distortion: 0.1 + Math.random() * 0.3
-        });
-      }
-    }
-
-    function updateGlitches() {
-      for (let i = activeGlitches.length - 1; i >= 0; i--) {
-        const glitch = activeGlitches[i];
-        glitch.time += 1/60;
-        
-        if (glitch.time > glitch.duration) {
-          activeGlitches.splice(i, 1);
-        }
-      }
-    }
-
-    function drawChromaticTunnel() {
+    function updateAndDrawGlitchTunnel() {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       
-      // Draw tunnel sections from back to front
-      for (let i = tunnelSections.length - 1; i >= 0; i--) {
-        const section = tunnelSections[i];
-        
-        // Update section
-        section.z -= movementSpeed * (1 + i * 0.1);
-        section.rotation += section.rotationSpeed;
-        
-        // Reset section when it moves past viewer
-        if (section.z < 0) {
-          section.z = tunnelDepth * 100;
+      // Update and draw each slice of the tunnel
+      for (const slice of tunnelSlices) {
+        // Apply random glitches occasionally
+        if (Math.random() < glitchFrequency) {
+          slice.glitchTimer = 0.3; // 0.3 second glitch
+          slice.glitchOffsetX = (Math.random() - 0.5) * glitchIntensity;
+          slice.glitchOffsetY = (Math.random() - 0.5) * glitchIntensity;
         }
         
-        // Calculate scale based on depth
-        const scale = map(section.z, 0, tunnelDepth * 100, 0.1, 2);
-        
-        // Only draw if the section is large enough to be visible
-        if (scale > 0.05) {
-          // Calculate screen position based on perspective
-          const screenX = center.x;
-          const screenY = center.y;
-          
-          // Calculate radius based on depth
-          const baseRadius = 100;
-          const currentRadius = baseRadius * scale;
-          
-          // Apply distortion based on time
-          const distortion = section.distortion * Math.sin(time * 2 + section.id) * 0.2;
-          
-          // Create the tunnel section with chromatic aberration
-          drawTunnelSection(screenX, screenY, currentRadius, section, distortion);
+        // Update glitch timer
+        if (slice.glitchTimer > 0) {
+          slice.glitchTimer -= 1/60;
+          if (slice.glitchTimer <= 0) {
+            slice.glitchOffsetX = 0;
+            slice.glitchOffsetY = 0;
+          }
         }
+        
+        // Update positions and rotation
+        slice.angle += slice.rotationSpeed;
+        slice.depth -= movementSpeed; // Move toward viewer
+        
+        // Reset slice when it moves past the viewer
+        if (slice.depth < 0) {
+          slice.depth = sliceCount * 20;
+        }
+        
+        // Calculate perspective size based on depth
+        const perspective = Math.max(0.1, 1 - slice.depth / (sliceCount * 20));
+        const currentRadius = slice.radius * perspective;
+        
+        // Calculate position based on angle and depth
+        const x = center.x + Math.cos(slice.angle) * currentRadius;
+        const y = center.y + Math.sin(slice.angle) * currentRadius;
+        
+        // Draw the slice with RGB separation
+        const color = slice.color;
+        
+        // Red channel with offset
+        ctx.beginPath();
+        ctx.arc(x + slice.glitchOffsetX * 0.5, y + slice.glitchOffsetY * 0.5, 3 * perspective, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff0000' + Math.floor(perspective * 200).toString(16).padStart(2, '0');
+        ctx.shadowColor = '#ff0000';
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        
+        // Green channel (original position)
+        ctx.beginPath();
+        ctx.arc(x, y, 3 * perspective, 0, Math.PI * 2);
+        ctx.fillStyle = color + Math.floor(perspective * 255).toString(16).padStart(2, '0');
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        
+        // Blue channel with offset (opposite to red)
+        ctx.beginPath();
+        ctx.arc(x - slice.glitchOffsetX * 0.5, y - slice.glitchOffsetY * 0.5, 3 * perspective, 0, Math.PI * 2);
+        ctx.fillStyle = '#0000ff' + Math.floor(perspective * 200).toString(16).padStart(2, '0');
+        ctx.shadowColor = '#0000ff';
+        ctx.shadowBlur = 10;
+        ctx.fill();
       }
       
-      // Apply chromatic glitch effect to a portion of the screen
-      for (const glitch of activeGlitches) {
-        applyChromaticGlitch(glitch);
+      // Draw tunnel outline with RGB separation
+      for (let depth = 0; depth < 3; depth++) {
+        const offset = depth === 0 ? 0 : (depth === 1 ? rgbOffset : -rgbOffset);
+        ctx.beginPath();
+        ctx.arc(center.x + offset, center.y + offset, tunnelRadius, 0, Math.PI * 2);
+        
+        // Different colors for RGB channels
+        const colors = ['#ff0000', '#00ff00', '#0000ff'];
+        ctx.strokeStyle = colors[depth] + '88';
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
       
-      // Draw central focal point
-      ctx.beginPath();
-      ctx.arc(center.x, center.y, 20, 0, Math.PI * 2);
+      // Add additional glitch artifacts
+      if (Math.random() < 0.02) {
+        // Add scanline glitch
+        const y = Math.random() * height;
+        ctx.fillStyle = '#ffffff44';
+        ctx.fillRect(0, y, width, 1);
+      }
+      
+      // Occasionally show JaZeR text with glitch effect
+      if (Math.floor(time) % 8 === 0 && time % 1 < 0.1) { // Every 8 seconds, for 0.1 seconds
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        
+        // Draw glitched text
+        const text = 'JaZeR';
+        ctx.font = 'bold 100px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Draw multiple copies with different offsets for glitch effect
+        for (let i = 0; i < 5; i++) {
+          const offset = (i - 2) * 3;
+          const color = palette[i % palette.length];
+          ctx.fillStyle = color;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 20 + i * 5;
+          ctx.fillText(text, center.x + offset, center.y);
+        }
+        
+        ctx.restore();
+      }
+      
+      // Add a central focal point
       const coreGradient = ctx.createRadialGradient(
         center.x, center.y, 0,
-        center.x, center.y, 20
+        center.x, center.y, 50
       );
-      coreGradient.addColorStop(0, palette[0] + 'FF');
+      coreGradient.addColorStop(0, palette[0]);
       coreGradient.addColorStop(1, palette[0] + '00');
+      
       ctx.fillStyle = coreGradient;
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, 50, 0, Math.PI * 2);
       ctx.fill();
       
-      // Add glow
+      // Add glow to center
       ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 30;
+      ctx.shadowBlur = 50;
       ctx.fill();
       
       ctx.restore();
-    }
-
-    function drawTunnelSection(x, y, radius, section, distortion) {
-      // Draw with chromatic aberration effect
-      ctx.save();
-      
-      // Red channel offset
-      ctx.save();
-      ctx.globalAlpha = 0.8;
-      ctx.shadowColor = '#FF0000';
-      ctx.shadowBlur = 5;
-      ctx.strokeStyle = '#FF0000';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(x + distortion * 5, y, radius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-      
-      // Green channel offset
-      ctx.save();
-      ctx.globalAlpha = 0.8;
-      ctx.shadowColor = '#00FF00';
-      ctx.shadowBlur = 5;
-      ctx.strokeStyle = '#00FF00';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-      
-      // Blue channel offset
-      ctx.save();
-      ctx.globalAlpha = 0.8;
-      ctx.shadowColor = '#0000FF';
-      ctx.shadowBlur = 5;
-      ctx.strokeStyle = '#0000FF';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(x - distortion * 5, y, radius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-      
-      // Main tunnel section with neon effect
-      const gradient = ctx.createRadialGradient(
-        x, y, radius * 0.8,
-        x, y, radius * 1.2
-      );
-      gradient.addColorStop(0, section.color + '00');
-      gradient.addColorStop(0.5, section.color + '88');
-      gradient.addColorStop(1, section.color + '00');
-      
-      ctx.strokeStyle = gradient;
-      ctx.lineWidth = 8;
-      ctx.shadowColor = section.color;
-      ctx.shadowBlur = 20;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.stroke();
-      
-      ctx.restore();
-    }
-
-    function applyChromaticGlitch(glitch) {
-      // Get the current canvas data for the glitch area
-      const imageData = ctx.getImageData(glitch.x, glitch.y, glitch.width, glitch.height);
-      const data = imageData.data;
-      
-      // Create a temporary canvas to manipulate the image data
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = glitch.width;
-      tempCanvas.height = glitch.height;
-      const tempCtx = tempCanvas.getContext('2d');
-      
-      // Apply RGB shift to the image data
-      for (let i = 0; i < data.length; i += 4) {
-        // Red channel - shifted right
-        const redIndex = i + (glitch.offsetRed > 0 ? Math.floor(glitch.offsetRed) * 4 : 0);
-        if (redIndex >= 0 && redIndex < data.length) {
-          data[i] = data[redIndex];
-        }
-        
-        // Blue channel - shifted left
-        const blueIndex = i + 2 + (glitch.offsetBlue < 0 ? Math.floor(glitch.offsetBlue) * 4 : 0);
-        if (blueIndex >= 2 && blueIndex < data.length - 2) {
-          data[i + 2] = data[blueIndex];
-        }
-      }
-      
-      // Put the modified image data back
-      tempCtx.putImageData(imageData, 0, 0);
-      
-      // Draw the glitched image back to the main canvas
-      ctx.globalAlpha = 0.7;
-      ctx.drawImage(tempCanvas, glitch.x, glitch.y);
-      
-      // Reset global alpha
-      ctx.globalAlpha = 1.0;
     }
 
     // =====================================================

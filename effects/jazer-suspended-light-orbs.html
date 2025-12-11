@@ -87,7 +87,7 @@
   <div class="overlay">
     <div class="card">
       <h1>JaZeR Suspended Light Orbs</h1>
-      <p>Several glowing orbs hanging in space by invisible strings, swaying gently with JaZeR colors and reflections.</p>
+      <p>Glowing orbs hanging in space by invisible strings, swaying gently with JaZeR colors and reflections.</p>
     </div>
   </div>
 
@@ -180,9 +180,13 @@
     // Suspended light orbs properties
     const center = { x: width / 2, y: height / 2 };
     const orbs = [];
-    const orbCount = 8;
+    const orbCount = 15;
     const stringThickness = 1;
-    const maxOrbSize = 60;
+    const maxOrbSize = 40;
+    const minOrbSize = 15;
+    const swaySpeed = 0.5;
+    const swayAmplitude = 30;
+    const depthLayers = 3; // How many depth layers to create
 
     // Simplex noise instance
     const simplex = new SimplexNoise();
@@ -207,33 +211,30 @@
     function initializeOrbs() {
       orbs.length = 0;
       for (let i = 0; i < orbCount; i++) {
-        // Position orbs in a pattern around the center
-        const angle = (i / orbCount) * Math.PI * 2;
-        const distance = 100 + Math.random() * 150;
-        const height = Math.random() * 200 + 100; // Height above the center
+        const layer = i % depthLayers; // Distribute orbs across depth layers
+        const layerY = height * 0.1 + layer * (height * 0.3);
         
         orbs.push({
           id: i,
-          x: center.x + Math.cos(angle) * distance,
-          y: center.y + Math.sin(angle) * distance - height,
-          z: (Math.random() - 0.5) * 100, // For depth perception
-          originalX: center.x + Math.cos(angle) * distance,
-          originalY: center.y + Math.sin(angle) * distance - height,
-          size: 20 + Math.random() * maxOrbSize,
+          x: width * 0.1 + (i % Math.ceil(orbCount / depthLayers)) * (width * 0.8 / Math.ceil(orbCount / depthLayers)),
+          y: layerY + Math.random() * 50,
+          originalX: width * 0.1 + (i % Math.ceil(orbCount / depthLayers)) * (width * 0.8 / Math.ceil(orbCount / depthLayers)),
+          originalY: layerY + Math.random() * 50,
+          z: layer * 100, // Depth (for parallax effect)
+          size: minOrbSize + Math.random() * maxOrbSize,
           color: palette[i % palette.length],
           swayPhase: Math.random() * Math.PI * 2,
-          swaySpeed: 0.2 + Math.random() * 0.3,
-          swayAmplitude: 20 + Math.random() * 30,
+          swaySpeed: swaySpeed * (0.8 + Math.random() * 0.4),
+          swayAmplitude: swayAmplitude * (0.5 + Math.random() * 0.5),
           rotation: 0,
-          rotationSpeed: 0.01 + Math.random() * 0.02,
-          stringLength: 80 + Math.random() * 70,
-          stringTension: 0.95 + Math.random() * 0.05,
-          lightIntensity: 0.5 + Math.random() * 0.5,
+          rotationSpeed: (Math.random() - 0.5) * 0.05,
+          stringLength: 50 + Math.random() * 100,
+          attachedTo: { x: width * 0.1 + (i % Math.ceil(orbCount / depthLayers)) * (width * 0.8 / Math.ceil(orbCount / depthLayers)), y: 30 },
           pulsePhase: Math.random() * Math.PI * 2,
-          pulseSpeed: 0.5 + Math.random() * 0.5,
-          glowIntensity: 0.8 + Math.random() * 0.4,
-          reflectionX: Math.random(), // For reflection effect
-          reflectionY: Math.random()
+          pulseSpeed: 1 + Math.random() * 2,
+          reflections: [],
+          glowIntensity: 0.5 + Math.random() * 0.5,
+          opacity: 0.8 + Math.random() * 0.2
         });
       }
     }
@@ -273,38 +274,46 @@
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       
-      // Update and draw each orb
       for (const orb of orbs) {
-        // Update orb position with gentle swaying
-        orb.x = orb.originalX + Math.sin(time * orb.swaySpeed + orb.swayPhase) * orb.swayAmplitude;
-        orb.y = orb.originalY + Math.cos(time * orb.swaySpeed * 0.7 + orb.swayPhase) * (orb.swayAmplitude * 0.5);
+        // Update orb position with swaying motion
+        const swayX = Math.sin(time * orb.swaySpeed + orb.swayPhase) * orb.swayAmplitude;
+        const swayY = Math.cos(time * orb.swaySpeed * 0.7 + orb.swayPhase) * orb.swayAmplitude * 0.3;
         
-        // Add subtle noise-driven movement
-        orb.x += noise2D(orb.x * 0.01, time * 2 + orb.id) * 10;
-        orb.y += noise2D(orb.y * 0.01, time * 2 + orb.id + 1000) * 10;
+        // Apply noise for more natural movement
+        const noiseX = noise2D(orb.originalX * 0.01, time * 0.5 + orb.id) * 10;
+        const noiseY = noise2D(orb.originalY * 0.01, time * 0.5 + orb.id + 1000) * 5;
+        
+        // Update position with both swaying and noise
+        orb.x = orb.originalX + swayX + noiseX;
+        orb.y = orb.originalY + swayY + noiseY;
         
         // Update rotation
         orb.rotation += orb.rotationSpeed;
         
-        // Calculate pulse effect
+        // Calculate pulsing effect
         const pulse = Math.sin(time * orb.pulseSpeed + orb.pulsePhase) * 0.2 + 0.8;
-        const currentSize = orb.size * pulse * orb.lightIntensity;
+        const currentSize = orb.size * pulse * orb.glowIntensity;
         
         // Draw string first
         ctx.beginPath();
-        ctx.moveTo(orb.x, center.y - 200); // String starts from above
-        ctx.lineTo(orb.x, orb.y + currentSize/2);
-        ctx.strokeStyle = 'rgba(150, 150, 200, 0.3)';
+        ctx.moveTo(orb.attachedTo.x, orb.attachedTo.y);
+        ctx.lineTo(orb.x, orb.y - currentSize / 2);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.lineWidth = stringThickness;
         ctx.stroke();
         
-        // Draw orb with glow effect
+        // Add glow to string
+        ctx.shadowColor = orb.color;
+        ctx.shadowBlur = 5;
+        ctx.stroke();
+        
+        // Draw orb with gradient and glow
         const orbGradient = ctx.createRadialGradient(
           orb.x, orb.y, 0,
           orb.x, orb.y, currentSize
         );
         orbGradient.addColorStop(0, orb.color + 'FF');
-        orbGradient.addColorStop(0.7, orb.color + 'AA');
+        orbGradient.addColorStop(0.7, orb.color + Math.floor(orb.opacity * 150).toString(16).padStart(2, '0'));
         orbGradient.addColorStop(1, orb.color + '00');
         
         ctx.fillStyle = orbGradient;
@@ -312,67 +321,74 @@
         ctx.arc(orb.x, orb.y, currentSize, 0, Math.PI * 2);
         ctx.fill();
         
-        // Add stronger glow
+        // Add strong glow effect
         ctx.shadowColor = orb.color;
-        ctx.shadowBlur = 40 * orb.glowIntensity;
+        ctx.shadowBlur = 30 * orb.glowIntensity;
         ctx.fill();
         
         // Draw inner highlight
         const highlightGradient = ctx.createRadialGradient(
-          orb.x - currentSize * 0.3, orb.y - currentSize * 0.3, 0,
-          orb.x - currentSize * 0.3, orb.y - currentSize * 0.3, currentSize * 0.5
+          orb.x - currentSize * 0.3, 
+          orb.y - currentSize * 0.3, 
+          0,
+          orb.x - currentSize * 0.3, 
+          orb.y - currentSize * 0.3, 
+          currentSize * 0.6
         );
         highlightGradient.addColorStop(0, '#FFFFFFFF');
         highlightGradient.addColorStop(1, orb.color + '00');
         
         ctx.fillStyle = highlightGradient;
         ctx.beginPath();
-        ctx.arc(orb.x - currentSize * 0.3, orb.y - currentSize * 0.3, currentSize * 0.5, 0, Math.PI * 2);
+        ctx.arc(orb.x - currentSize * 0.3, orb.y - currentSize * 0.3, currentSize * 0.6, 0, Math.PI * 2);
         ctx.fill();
         
         // Draw reflections on the orb
-        ctx.save();
-        ctx.translate(orb.x, orb.y);
-        ctx.rotate(orb.rotation);
-        
-        // Reflections as smaller glowing spots
-        for (let r = 0; r < 3; r++) {
-          const rx = Math.cos(r * Math.PI * 2 / 3) * currentSize * 0.4;
-          const ry = Math.sin(r * Math.PI * 2 / 3) * currentSize * 0.4;
-          const spotSize = currentSize * 0.15;
+        for (let i = 0; i < 3; i++) {
+          const reflX = orb.x + Math.cos(orb.rotation + i * Math.PI * 2/3) * currentSize * 0.4;
+          const reflY = orb.y + Math.sin(orb.rotation + i * Math.PI * 2/3) * currentSize * 0.4;
+          const reflSize = currentSize * 0.15;
           
-          const spotGradient = ctx.createRadialGradient(
-            rx, ry, 0,
-            rx, ry, spotSize
-          );
-          spotGradient.addColorStop(0, '#FFFFFFFF');
-          spotGradient.addColorStop(1, orb.color + '00');
-          
-          ctx.fillStyle = spotGradient;
           ctx.beginPath();
-          ctx.arc(rx, ry, spotSize, 0, Math.PI * 2);
+          ctx.arc(reflx, reflY, reflSize, 0, Math.PI * 2);
+          ctx.fillStyle = '#FFFFFF88';
           ctx.fill();
         }
-        
-        ctx.restore();
       }
       
-      // Draw JaZeR text in the center
-      ctx.save();
-      ctx.font = 'bold 40px Arial';
+      // Draw connections between nearby orbs for visual interest
+      for (let i = 0; i < orbs.length; i++) {
+        for (let j = i + 1; j < orbs.length; j++) {
+          const orb1 = orbs[i];
+          const orb2 = orbs[j];
+          const dist = distance(orb1.x, orb1.y, orb2.x, orb2.y);
+          
+          if (dist < 150) {
+            const alpha = (150 - dist) / 150;
+            
+            ctx.beginPath();
+            ctx.moveTo(orb1.x, orb1.y);
+            ctx.lineTo(orb2.x, orb2.y);
+            ctx.strokeStyle = orb1.color + Math.floor(alpha * 100).toString(16).padStart(2, '0');
+            ctx.lineWidth = 1 * alpha;
+            ctx.stroke();
+            
+            // Add glow to connections
+            ctx.shadowColor = orb1.color;
+            ctx.shadowBlur = 10 * alpha;
+            ctx.stroke();
+          }
+        }
+      }
+      
+      // Draw JaZeR text with connection to the orbs
+      ctx.font = 'bold 60px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = palette[0];
       ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 20;
-      ctx.globalAlpha = 0.8;
-      ctx.fillText('JaZeR', center.x, center.y);
-      
-      // Draw outline
-      ctx.strokeStyle = palette[0];
-      ctx.lineWidth = 2;
-      ctx.strokeText('JaZeR', center.x, center.y);
-      ctx.restore();
+      ctx.shadowBlur = 30;
+      ctx.fillText('JaZeR', center.x, center.y * 0.3);
       
       ctx.restore();
     }
