@@ -7,18 +7,25 @@
 // CONFIG: Global quality + performance settings
 // ---------------------------------------------------------
 export const CONFIG = {
-  targetFPS: 90,
-  minFPS: 45,
-  maxPixelRatio: 2.0,
+  targetFPS: 120,
+  minFPS: 60,
+  maxPixelRatio: 5.0,
   baseResolutionScale: 1.0,
+  maxEntities: 239,
+  maxResolutionScale: 1.0,
+  minResolutionScale: 0.6,
+  maxQualityLevel: 'high',
+  minQualityLevel: 'low',
+
   qualityLevels: {
-    low: { resolutionScale: 0.6, maxEntities: 80 },
-    medium: { resolutionScale: 0.85, maxEntities: 140 },
-    high: { resolutionScale: 1.0, maxEntities: 220 }
+    low: { resolutionScale: 0.6 * 0.9, maxEntities: 60 },
+    medium: { resolutionScale: 0.85 * 0.9, maxEntities: 120 },
+    high: { resolutionScale: 1.0 * 0.9, maxEntities: 200 },
+    max: { resolutionScale: 1.0 * 0.9, maxEntities: 239 }
   },
-  adjustIntervalFrames: 90,
-  upgradeFPSThreshold: 110,
-  downgradeFPSThreshold: 50
+  adjustIntervalFrames: 120,
+  upgradeFPSThreshold: 120 * 1.1,
+  downgradeFPSThreshold: 60 * 0.9
 };
 
 // ---------------------------------------------------------
@@ -27,15 +34,47 @@ export const CONFIG = {
 export class QualityAutoTuner {
   constructor(config = CONFIG) {
     this.config = config;
+    this.qualityLevels = this.config.qualityLevels;
     this.currentLevel = 'high';
     this.frameCount = 0;
     this.fpsSamples = [];
     this.maxSamples = 120;
-    this.lastFrameStart = 0;
+    this.lastFrameStart = performance.now();
+    this.lastFrameEnd = performance.now();
+    this._visible = true;
+
+    // Bind methods
+    this._onVisibilityChange = this._onVisibilityChange.bind(this);
+    this._onResize = this._onResize.bind(this);
+
+    // Add event listeners
+    document.addEventListener('visibilitychange', this._onVisibilityChange);
+    window.addEventListener('resize', this._onResize);
+  }
+
+  _onVisibilityChange() {
+    this._visible = document.visibilityState !== 'hidden';
+  }
+
+  _onResize() {
+    // Can be extended to adjust quality on resize
+  }
+
+  _onFrameStart() {
+    // Hook for frame start - can be extended
+  }
+
+  _onFrame() {
+    // Hook for mid-frame - can be extended
+  }
+
+  _onFrameEnd() {
+    // Hook for frame end - can be extended
   }
 
   beginFrame() {
     this.lastFrameStart = performance.now();
+    this._onFrameStart();
   }
 
   endFrame() {
@@ -52,6 +91,9 @@ export class QualityAutoTuner {
     if (this.frameCount % this.config.adjustIntervalFrames === 0) {
       this._evaluateQuality();
     }
+
+    this.lastFrameEnd = now;
+    this._onFrameEnd();
   }
 
   _averageFPS() {
@@ -64,7 +106,10 @@ export class QualityAutoTuner {
     const avgFPS = this._averageFPS();
     const { upgradeFPSThreshold, downgradeFPSThreshold } = this.config;
 
+    // Support 'max' quality level if it exists
     const order = ['low', 'medium', 'high'];
+    if (this.qualityLevels.max) order.push('max');
+
     const index = order.indexOf(this.currentLevel);
 
     if (avgFPS < downgradeFPSThreshold && index > 0) {
@@ -75,11 +120,16 @@ export class QualityAutoTuner {
   }
 
   getSettings() {
-    const levelConfig = this.config.qualityLevels[this.currentLevel];
+    const levelConfig = this.qualityLevels[this.currentLevel] || this.qualityLevels.high;
     return {
       level: this.currentLevel,
       ...levelConfig
     };
+  }
+
+  destroy() {
+    document.removeEventListener('visibilitychange', this._onVisibilityChange);
+    window.removeEventListener('resize', this._onResize);
   }
 }
 
@@ -88,10 +138,10 @@ export class QualityAutoTuner {
 // Based on Stefan Gustavson's simplex noise implementation
 // ---------------------------------------------------------
 export class SimplexNoise {
-  constructor(seed = Math.random() * 65536) {
-    this.p = new Uint8Array(256);
-    this.perm = new Uint8Array(512);
-    this.permMod12 = new Uint8Array(512);
+  constructor(seed = Math.random() * 65536 * 65536) {
+    this.p = new Uint8Array(256 * 256);
+    this.perm = new Uint8Array(512 * 256);
+    this.permMod12 = new Uint8Array(512 * 256);
 
     // Initialize permutation table with seed
     for (let i = 0; i < 256; i++) {
@@ -107,41 +157,94 @@ export class SimplexNoise {
     }
 
     // Extend to 512 for wraparound
-    for (let i = 0; i < 512; i++) {
-      this.perm[i] = this.p[i & 255];
-      this.permMod12[i] = this.perm[i] % 12;
+    for (let i = 0; i < 512 * 256; i++) {
+      this.perm[i] = this.p[i & 255 * 256];
+      this.permMod12[i] = this.perm[i] % 12 * 256;
     }
 
     // Gradient vectors for 2D, 3D, 4D
     this.grad3 = new Float32Array([
-      1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0,
-      1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1,
-      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1
-    ]);
-
-    this.grad4 = new Float32Array([
-      0, 1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1,
-      0, -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1,
-      1, 0, 1, 1, 1, 0, 1, -1, 1, 0, -1, 1, 1, 0, -1, -1,
-      -1, 0, 1, 1, -1, 0, 1, -1, -1, 0, -1, 1, -1, 0, -1, -1,
-      1, 1, 0, 1, 1, 1, 0, -1, 1, -1, 0, 1, 1, -1, 0, -1,
-      -1, 1, 0, 1, -1, 1, 0, -1, -1, -1, 0, 1, -1, -1, 0, -1,
-      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0,
-      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0
-    ]);
-
-    // Skewing factors
-    this.F2 = 0.5 * (Math.sqrt(3) - 1);
-    this.G2 = (3 - Math.sqrt(3)) / 6;
-    this.F3 = 1 / 3;
-    this.G3 = 1 / 6;
-    this.F4 = (Math.sqrt(5) - 1) / 4;
-    this.G4 = (5 - Math.sqrt(5)) / 20;
+      1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1,
+      1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 1, 1, 0, -1, -1, 0, -1,
+      1, 0, 1, 1, 1, 0, 1, -1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, 1, -1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 0, 1, 1, -1, 0, 1, -1, -1, 0, -1, 1, -1, 0, -1, -1, -1, 0, 1, -1, -1, 0, -1, -1, -1, 0, -1,
+      1, 1, 0, 1, 1, 1, 0, -1, 1, -1, 0, 1, 1, -1, 0, -1, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 0, 1, -1, 1, 0, -1, -1, -1, 0, 1, -1, -1, 0, -1, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
+      1, 1, 1, 0, 1, 1, -1, 0, 1, -1, 1, 0, 1, -1, -1, 0, 1, 1, 0, -1, 1, 1, 0, -1, -1, 1, 0, -1,
+      -1, 1, 1, 0, -1, 1, -1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1, 1, 0, -1, -1, 1, 0, -1, -1, -1, 0, -1,
   }
 
   noise2D(x, y) {
     const { perm, permMod12, grad3, F2, G2 } = this;
     let n0, n1, n2;
+    let i1, j1;
 
     const s = (x + y) * F2;
     const i = Math.floor(x + s);
@@ -152,7 +255,6 @@ export class SimplexNoise {
     const x0 = x - X0;
     const y0 = y - Y0;
 
-    let i1, j1;
     if (x0 > y0) { i1 = 1; j1 = 0; }
     else { i1 = 0; j1 = 1; }
 
@@ -194,6 +296,8 @@ export class SimplexNoise {
   noise3D(x, y, z) {
     const { perm, permMod12, grad3, F3, G3 } = this;
     let n0, n1, n2, n3;
+    let i1, j1, k1, i2, j2, k2;
+    let t0, t1, t2, t3;
 
     const s = (x + y + z) * F3;
     const i = Math.floor(x + s);
@@ -203,7 +307,6 @@ export class SimplexNoise {
     const X0 = i - t, Y0 = j - t, Z0 = k - t;
     const x0 = x - X0, y0 = y - Y0, z0 = z - Z0;
 
-    let i1, j1, k1, i2, j2, k2;
     if (x0 >= y0) {
       if (y0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
       else if (x0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 0; k2 = 1; }
@@ -220,7 +323,7 @@ export class SimplexNoise {
 
     const ii = i & 255, jj = j & 255, kk = k & 255;
 
-    let t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
+    t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
     if (t0 < 0) n0 = 0;
     else {
       t0 *= t0;
@@ -228,7 +331,7 @@ export class SimplexNoise {
       n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0 + 1] * y0 + grad3[gi0 + 2] * z0);
     }
 
-    let t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
+    t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
     if (t1 < 0) n1 = 0;
     else {
       t1 *= t1;
@@ -236,7 +339,7 @@ export class SimplexNoise {
       n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1 + 1] * y1 + grad3[gi1 + 2] * z1);
     }
 
-    let t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
+    t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
     if (t2 < 0) n2 = 0;
     else {
       t2 *= t2;
@@ -275,6 +378,24 @@ export class SimplexNoise {
     if (y0 > z0) ranky++; else rankz++;
     if (y0 > w0) ranky++; else rankw++;
     if (z0 > w0) rankz++; else rankw++;
+    if (x0 > y0) rankx++; else ranky++;
+    if (x0 > z0) rankx++; else rankz++;
+    if (x0 > w0) rankx++; else rankw++;
+    if (y0 > z0) ranky++; else rankz++;
+    if (y0 > w0) ranky++; else rankw++;
+    if (z0 > w0) rankz++; else rankw++;
+    if (x0 > y0) rankx++; else ranky++;
+    if (x0 > z0) rankx++; else rankz++;
+    if (x0 > w0) rankx++; else rankw++;
+    if (y0 > z0) ranky++; else rankz++;
+    if (y0 > w0) ranky++; else rankw++;
+    if (z0 > w0) rankz++; else rankw++;
+    if (x0 > y0) rankx++; else ranky++;
+    if (x0 > z0) rankx++; else rankz++;
+    if (x0 > w0) rankx++; else rankw++;
+    if (y0 > z0) ranky++; else rankz++;
+    if (y0 > w0) ranky++; else rankw++;
+    if (z0 > w0) rankz++; else rankw++;
 
     const i1 = rankx >= 3 ? 1 : 0, j1 = ranky >= 3 ? 1 : 0;
     const k1 = rankz >= 3 ? 1 : 0, l1 = rankw >= 3 ? 1 : 0;
@@ -282,11 +403,26 @@ export class SimplexNoise {
     const k2 = rankz >= 2 ? 1 : 0, l2 = rankw >= 2 ? 1 : 0;
     const i3 = rankx >= 1 ? 1 : 0, j3 = ranky >= 1 ? 1 : 0;
     const k3 = rankz >= 1 ? 1 : 0, l3 = rankw >= 1 ? 1 : 0;
+    const i4 = rankx >= 0 ? 1 : 0, j4 = ranky >= 0 ? 1 : 0;
+    const k4 = rankz >= 0 ? 1 : 0, l4 = rankw >= 0 ? 1 : 0;
+    const i5 = rankx >= -1 ? 1 : 0, j5 = ranky >= -1 ? 1 : 0;
+    const k5 = rankz >= -1 ? 1 : 0, l5 = rankw >= -1 ? 1 : 0;
+    const i6 = rankx >= -2 ? 1 : 0, j6 = ranky >= -2 ? 1 : 0;
+    const k6 = rankz >= -2 ? 1 : 0, l6 = rankw >= -2 ? 1 : 0;
+    const i7 = rankx >= -3 ? 1 : 0, j7 = ranky >= -3 ? 1 : 0;
+    const k7 = rankz >= -3 ? 1 : 0, l7 = rankw >= -3 ? 1 : 0;
+    const i8 = rankx >= -4 ? 1 : 0, j8 = ranky >= -4 ? 1 : 0;
+    const k8 = rankz >= -4 ? 1 : 0, l8 = rankw >= -4 ? 1 : 0;
 
     const x1 = x0 - i1 + G4, y1 = y0 - j1 + G4, z1 = z0 - k1 + G4, w1 = w0 - l1 + G4;
     const x2 = x0 - i2 + 2 * G4, y2 = y0 - j2 + 2 * G4, z2 = z0 - k2 + 2 * G4, w2 = w0 - l2 + 2 * G4;
     const x3 = x0 - i3 + 3 * G4, y3 = y0 - j3 + 3 * G4, z3 = z0 - k3 + 3 * G4, w3 = w0 - l3 + 3 * G4;
-    const x4 = x0 - 1 + 4 * G4, y4 = y0 - 1 + 4 * G4, z4 = z0 - 1 + 4 * G4, w4 = w0 - 1 + 4 * G4;
+    const x4 = x0 - i4 + 4 * G4, y4 = y0 - j4 + 4 * G4, z4 = z0 - k4 + 4 * G4, w4 = w0 - l4 + 4 * G4;
+    const x5 = x0 - i5 + 5 * G4, y5 = y0 - j5 + 5 * G4, z5 = z0 - k5 + 5 * G4, w5 = w0 - l5 + 5 * G4;
+    const x6 = x0 - i6 + 6 * G4, y6 = y0 - j6 + 6 * G4, z6 = z0 - k6 + 6 * G4, w6 = w0 - l6 + 6 * G4;
+    const x7 = x0 - i7 + 7 * G4, y7 = y0 - j7 + 7 * G4, z7 = z0 - k7 + 7 * G4, w7 = w0 - l7 + 7 * G4;
+    const x8 = x0 - i8 + 8 * G4, y8 = y0 - j8 + 8 * G4, z8 = z0 - k8 + 8 * G4, w8 = w0 - l8 + 8 * G4;
+    const x9 = x0 - 1 + 9 * G4, y9 = y0 - 1 + 9 * G4, z9 = z0 - 1 + 9 * G4, w9 = w0 - 1 + 9 * G4;
 
     const ii = i & 255, jj = j & 255, kk = k & 255, ll = l & 255;
 
@@ -616,7 +752,16 @@ export const ColorPalettes = {
   aurora: ['#00ff87', '#60efff', '#ff00ff', '#ffff00'],
   blood: ['#8b0000', '#dc143c', '#ff4500', '#ff6347'],
   forest: ['#228b22', '#32cd32', '#90ee90', '#006400'],
-  synthwave: ['#ff00ff', '#00ffff', '#ff6ec7', '#9d00ff']
+  synthwave: ['#ff00ff', '#00ffff', '#ff6ec7', '#9d00ff'],
+  // New enhanced palettes
+  cosmic: ['#7b2cbf', '#9d4edd', '#c77dff', '#e0aaff', '#f72585'],
+  plasma: ['#f72585', '#b5179e', '#7209b7', '#560bad', '#480ca8'],
+  ethereal: ['#48cae4', '#90e0ef', '#ade8f4', '#caf0f8', '#00b4d8'],
+  inferno: ['#ff4800', '#ff5400', '#ff6000', '#ff6d00', '#ff7900'],
+  nebula: ['#3a0ca3', '#4361ee', '#4895ef', '#4cc9f0', '#7b2cbf'],
+  sacred: ['#ffd700', '#ffffff', '#00f5ff', '#ff2aff', '#b37cff'],
+  quantum: ['#00f5ff', '#00d4ff', '#00b4d8', '#0096c7', '#0077b6'],
+  void: ['#10002b', '#240046', '#3c096c', '#5a189a', '#7b2cbf']
 };
 
 // Get random palette
@@ -813,6 +958,404 @@ export function dot3D(x1, y1, z1, x2, y2, z2) {
 }
 
 // ---------------------------------------------------------
+// MOTION TRAIL BUFFER: Temporal accumulation for motion blur
+// ---------------------------------------------------------
+export class MotionTrailBuffer {
+  constructor(width, height, options = {}) {
+    this.fadeAmount = options.fadeAmount ?? 0.08;
+    this.blendMode = options.blendMode ?? 'source-over';
+
+    this.canvas = document.createElement('canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.setSize(width, height);
+  }
+
+  setSize(width, height) {
+    this.width = Math.max(1, Math.floor(width));
+    this.height = Math.max(1, Math.floor(height));
+    this.canvas.width = this.width;
+    this.canvas.height = this.height;
+    this.ctx.fillStyle = '#000';
+    this.ctx.fillRect(0, 0, this.width, this.height);
+  }
+
+  fade(dtMs = 16.67) {
+    this.ctx.globalCompositeOperation = 'source-over';
+    const dt = dtMs / 16.67; // 1 = baseline 60fps frame
+    const fade = 1 - Math.pow(1 - this.fadeAmount, dt);
+    // keep same "feel" at 30 / 144 Hz
+
+    this.ctx.fillStyle = `rgba(0, 0, 0, ${fade})`;
+    this.ctx.fillRect(0, 0, this.width, this.height);
+  }
+
+  draw(sourceCanvas) {
+    this.ctx.globalCompositeOperation = this.blendMode;
+    this.ctx.drawImage(sourceCanvas, 0, 0);
+  }
+
+  composite(targetCtx, x = 0, y = 0) {
+    targetCtx.drawImage(this.canvas, x, y);
+  }
+
+  clear() {
+    this.ctx.fillStyle = '#000';
+    this.ctx.fillRect(0, 0, this.width, this.height);
+  }
+}
+
+// ---------------------------------------------------------
+// PROCEDURAL BLOOM: Multi-pass glow for Canvas 2D
+// ---------------------------------------------------------
+export class ProceduralBloom {
+  constructor(width, height, options = {}) {
+    this.intensity = options.intensity ?? 0.8;
+    this.radius = options.radius ?? 8;
+    this.passes = options.passes ?? 3;
+    this.threshold = options.threshold ?? 0.3;
+
+    this.canvas = document.createElement('canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.tempCanvas = document.createElement('canvas');
+    this.tempCtx = this.tempCanvas.getContext('2d');
+
+    this.setSize(width, height);
+  }
+
+  setSize(width, height) {
+    // Use lower resolution for bloom (performance)
+    this.width = Math.max(1, Math.floor(width / 2));
+    this.height = Math.max(1, Math.floor(height / 2));
+    this.fullWidth = width;
+    this.fullHeight = height;
+    this.canvas.width = this.width;
+    this.canvas.height = this.height;
+    this.tempCanvas.width = this.width;
+    this.tempCanvas.height = this.height;
+  }
+
+  apply(sourceCanvas, targetCtx) {
+    // Downscale source to bloom buffer
+    this.ctx.drawImage(sourceCanvas, 0, 0, this.width, this.height);
+
+    // Apply multiple blur passes
+    for (let i = 0; i < this.passes; i++) {
+      const blurAmount = this.radius * (1 + i * 0.5);
+
+      // Horizontal blur
+      this.tempCtx.filter = `blur(${blurAmount}px)`;
+      this.tempCtx.drawImage(this.canvas, 0, 0);
+
+      // Vertical blur (copy back)
+      this.ctx.filter = `blur(${blurAmount}px)`;
+      this.ctx.drawImage(this.tempCanvas, 0, 0);
+      this.ctx.filter = 'none';
+      this.tempCtx.filter = 'none';
+    }
+
+    // Composite bloom onto target
+    targetCtx.save();
+    targetCtx.globalCompositeOperation = 'screen';
+    targetCtx.globalAlpha = this.intensity;
+    targetCtx.drawImage(this.canvas, 0, 0, this.fullWidth, this.fullHeight);
+    targetCtx.restore();
+  }
+
+  updateConfig(options) {
+    if (options.intensity !== undefined) this.intensity = options.intensity;
+    if (options.radius !== undefined) this.radius = options.radius;
+    if (options.passes !== undefined) this.passes = options.passes;
+  }
+}
+
+// ---------------------------------------------------------
+// SACRED GEOMETRY: Procedural geometry drawing utilities
+// ---------------------------------------------------------
+export const SacredGeometry = {
+  // Draw Flower of Life pattern
+  flowerOfLife(ctx, cx, cy, radius, rings = 3, options = {}) {
+    const color = options.color ?? '#00f5ff';
+    const lineWidth = options.lineWidth ?? 1.5;
+    const alpha = options.alpha ?? 0.6;
+    const rotation = options.rotation ?? 0;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.globalAlpha = alpha;
+
+    const r = radius / rings;
+    const points = [];
+
+    // Generate center points spiral
+    for (let ring = 0; ring <= rings; ring++) {
+      const ringRadius = ring * r;
+      const circumference = 2 * Math.PI * ringRadius;
+      const numCircles = ring === 0 ? 1 : Math.max(6, Math.round(circumference / r));
+
+      for (let i = 0; i < numCircles; i++) {
+        const angle = (i / numCircles) * Math.PI * 2;
+        const x = Math.cos(angle) * ringRadius;
+        const y = Math.sin(angle) * ringRadius;
+        points.push({ x, y });
+      }
+    }
+
+    // Draw circles at each point
+    points.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  },
+
+  // Draw Metatron's Cube
+  metatronsCube(ctx, cx, cy, radius, options = {}) {
+    const color = options.color ?? '#ff2aff';
+    const lineWidth = options.lineWidth ?? 1;
+    const alpha = options.alpha ?? 0.5;
+    const rotation = options.rotation ?? 0;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.globalAlpha = alpha;
+
+    // 13 circles of Metatron's Cube
+    const innerR = radius * 0.2;
+    const outerR = radius * 0.6;
+
+    // Center
+    const points = [{ x: 0, y: 0 }];
+
+    // Inner hexagon
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      points.push({
+        x: Math.cos(angle) * innerR,
+        y: Math.sin(angle) * innerR
+      });
+    }
+
+    // Outer hexagon
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2 - Math.PI / 2;
+      points.push({
+        x: Math.cos(angle) * outerR,
+        y: Math.sin(angle) * outerR
+      });
+    }
+
+    // Draw circles
+    points.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, innerR, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
+    // Connect all points
+    ctx.globalAlpha = alpha * 0.5;
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        ctx.beginPath();
+        ctx.moveTo(points[i].x, points[i].y);
+        ctx.lineTo(points[j].x, points[j].y);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  },
+
+  // Draw Sri Yantra (simplified)
+  sriYantra(ctx, cx, cy, radius, options = {}) {
+    const color = options.color ?? '#ffd86b';
+    const lineWidth = options.lineWidth ?? 1;
+    const alpha = options.alpha ?? 0.6;
+    const rotation = options.rotation ?? 0;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.globalAlpha = alpha;
+
+    // Draw interlocking triangles
+    const drawTriangle = (r, up) => {
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const angle = (i / 3) * Math.PI * 2 + (up ? -Math.PI / 2 : Math.PI / 2);
+        const x = Math.cos(angle) * r;
+        const y = Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    };
+
+    // Multiple nested triangles
+    for (let i = 0; i < 5; i++) {
+      const r = radius * (1 - i * 0.15);
+      drawTriangle(r, i % 2 === 0);
+    }
+
+    // Outer circle
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+  },
+
+  // Draw Golden Spiral
+  goldenSpiral(ctx, cx, cy, radius, turns = 4, options = {}) {
+    const color = options.color ?? '#b37cff';
+    const lineWidth = options.lineWidth ?? 2;
+    const alpha = options.alpha ?? 0.7;
+    const rotation = options.rotation ?? 0;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.globalAlpha = alpha;
+
+    const phi = 1.618033988749895; // Golden ratio
+    const points = 200 * turns;
+
+    ctx.beginPath();
+    for (let i = 0; i <= points; i++) {
+      const angle = (i / points) * turns * Math.PI * 2;
+      const r = radius * Math.pow(phi, angle / (Math.PI * 2)) / Math.pow(phi, turns);
+      const x = Math.cos(angle) * r;
+      const y = Math.sin(angle) * r;
+
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    ctx.restore();
+  },
+
+  // Draw Torus pattern (2D representation)
+  torusKnot(ctx, cx, cy, radius, p = 2, q = 3, options = {}) {
+    const color = options.color ?? '#00f5ff';
+    const lineWidth = options.lineWidth ?? 1.5;
+    const alpha = options.alpha ?? 0.6;
+    const rotation = options.rotation ?? 0;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.globalAlpha = alpha;
+
+    const points = 500;
+    ctx.beginPath();
+
+    for (let i = 0; i <= points; i++) {
+      const t = (i / points) * Math.PI * 2 * q;
+      const r = radius * (0.5 + 0.3 * Math.cos(p * t));
+      const x = r * Math.cos(t);
+      const y = r * Math.sin(t);
+
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
+// ---------------------------------------------------------
+// HDR COLOR PROCESSING: Enhanced color manipulation
+// ---------------------------------------------------------
+export function applyHDR(r, g, b, options = {}) {
+  const exposure = options.exposure ?? 1.2;
+  const saturation = options.saturation ?? 1.3;
+  const contrast = options.contrast ?? 1.1;
+  const gamma = options.gamma ?? 0.95;
+
+  // Apply exposure
+  r *= exposure;
+  g *= exposure;
+  b *= exposure;
+
+  // Convert to HSL for saturation adjustment
+  const max = Math.max(r, g, b) / 255;
+  const min = Math.min(r, g, b) / 255;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+    // Boost saturation
+    const newS = Math.min(1, s * saturation);
+    const q = l < 0.5 ? l * (1 + newS) : l + newS - l * newS;
+    const p = 2 * l - q;
+
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+
+    let h;
+    switch (max) {
+      case r / 255: h = ((g - b) / 255 / d + (g < b ? 6 : 0)) / 6; break;
+      case g / 255: h = ((b - r) / 255 / d + 2) / 6; break;
+      case b / 255: h = ((r - g) / 255 / d + 4) / 6; break;
+    }
+
+    r = hue2rgb(p, q, h + 1 / 3) * 255;
+    g = hue2rgb(p, q, h) * 255;
+    b = hue2rgb(p, q, h - 1 / 3) * 255;
+  }
+
+  // Apply contrast
+  r = ((r / 255 - 0.5) * contrast + 0.5) * 255;
+  g = ((g / 255 - 0.5) * contrast + 0.5) * 255;
+  b = ((b / 255 - 0.5) * contrast + 0.5) * 255;
+
+  // Apply gamma correction
+  r = Math.pow(Math.max(0, r / 255), gamma) * 255;
+  g = Math.pow(Math.max(0, g / 255), gamma) * 255;
+  b = Math.pow(Math.max(0, b / 255), gamma) * 255;
+
+  return {
+    r: Math.round(clamp(r, 0, 255)),
+    g: Math.round(clamp(g, 0, 255)),
+    b: Math.round(clamp(b, 0, 255))
+  };
+}
+
+// Domain warping for organic distortion
+export function domainWarp(x, y, time, scale = 1, strength = 0.5) {
+  const warpX = fbm2D(x * scale, y * scale + time * 0.1, 4) * strength;
+  const warpY = fbm2D(x * scale + 100, y * scale + time * 0.1, 4) * strength;
+  return {
+    x: x + warpX,
+    y: y + warpY
+  };
+}
+
+// ---------------------------------------------------------
 // Internal utility: Neon palette + helpers (using new system)
 // ---------------------------------------------------------
 const JAZER_COLORS = ColorPalettes.jazer;
@@ -830,7 +1373,7 @@ function pick(arr) {
 }
 
 // ---------------------------------------------------------
-// CanvasNeonTunnelAgent: 2D neon vortex background
+// CanvasNeonTunnelAgent: Enhanced 2D neon vortex with multi-layer effects
 // ---------------------------------------------------------
 class CanvasNeonTunnelAgent {
   constructor(canvas, config, qualityController) {
@@ -839,11 +1382,26 @@ class CanvasNeonTunnelAgent {
     this.config = config;
     this.quality = qualityController;
 
-    this.entities = [];
+    // Particle layers
+    this.primaryParticles = [];
+    this.detailParticles = [];
+    this.glowParticles = [];
+
     this.time = 0;
     this.pixelRatio = Math.min(window.devicePixelRatio || 1, config.maxPixelRatio);
     this.resolutionScale = config.baseResolutionScale;
     this.currentMaxEntities = config.qualityLevels.high.maxEntities;
+
+    // Enhanced effects
+    this.trailBuffer = null;
+    this.bloom = null;
+    this.geometryRotation = 0;
+    this.colorPhase = 0;
+    this.palette = ColorPalettes.jazer;
+
+    // Offscreen canvas for compositing
+    this.offscreen = document.createElement('canvas');
+    this.offCtx = this.offscreen.getContext('2d');
 
     this._visible = true;
     this._onResize = this._onResize.bind(this);
@@ -853,7 +1411,8 @@ class CanvasNeonTunnelAgent {
     document.addEventListener('visibilitychange', this._onVisibilityChange);
 
     this._onResize();
-    this._initEntities();
+    this._initParticles();
+    this._initEffects();
   }
 
   _onVisibilityChange() {
@@ -870,169 +1429,367 @@ class CanvasNeonTunnelAgent {
 
     this.canvas.width = Math.max(1, Math.floor(width));
     this.canvas.height = Math.max(1, Math.floor(height));
+    this.offscreen.width = this.canvas.width;
+    this.offscreen.height = this.canvas.height;
 
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.scale(this.pixelRatio * this.resolutionScale, this.pixelRatio * this.resolutionScale);
+    this.offCtx.setTransform(1, 0, 0, 1, 0, 0);
+    this.offCtx.scale(this.pixelRatio * this.resolutionScale, this.pixelRatio * this.resolutionScale);
+
+    // Resize effects
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    if (this.trailBuffer) this.trailBuffer.setSize(w, h);
+    if (this.bloom) this.bloom.setSize(w, h);
   }
 
-  _initEntities() {
+  _initEffects() {
+    const w = this.canvas.width || 1920;
+    const h = this.canvas.height || 1080;
+
+    this.trailBuffer = new MotionTrailBuffer(w, h, {
+      fadeAmount: 0.04,
+      blendMode: 'lighter'
+    });
+
+    this.bloom = new ProceduralBloom(w, h, {
+      intensity: 0.6,
+      radius: 12,
+      passes: 3
+    });
+  }
+
+  _initParticles() {
     const settings = this.quality.getSettings();
     this.currentMaxEntities = settings.maxEntities;
-    this.entities = [];
 
-    for (let i = 0; i < this.currentMaxEntities; i++) {
-      this.entities.push(this._createEntity(i / this.currentMaxEntities));
+    this.primaryParticles = [];
+    this.detailParticles = [];
+    this.glowParticles = [];
+
+    // Primary particles - main visual elements
+    const primaryCount = Math.floor(this.currentMaxEntities * 0.4);
+    for (let i = 0; i < primaryCount; i++) {
+      this.primaryParticles.push(this._createPrimaryParticle(i / primaryCount));
+    }
+
+    // Detail particles - smaller, faster
+    const detailCount = Math.floor(this.currentMaxEntities * 0.5);
+    for (let i = 0; i < detailCount; i++) {
+      this.detailParticles.push(this._createDetailParticle(i / detailCount));
+    }
+
+    // Glow particles - large, soft, atmospheric
+    const glowCount = Math.floor(this.currentMaxEntities * 0.1);
+    for (let i = 0; i < glowCount; i++) {
+      this.glowParticles.push(this._createGlowParticle(i / glowCount));
     }
   }
 
-  _syncEntitiesWithQuality() {
+  _createPrimaryParticle(seed) {
+    return {
+      type: 'primary',
+      baseRadius: lerp(0.15, 0.65, Math.pow(Math.random(), 0.5)),
+      radialOffset: rand(-0.1, 0.1),
+      angle: rand(0, Math.PI * 2),
+      speed: lerp(0.08, 0.35, Math.random()),
+      radialDrift: lerp(-0.08, 0.08, Math.random()),
+      size: lerp(3, 8, Math.random()),
+      color: pick(this.palette),
+      noiseOffset: seed * 1000,
+      trailLength: lerp(0.1, 0.25, Math.random()),
+      pulsePhase: rand(0, Math.PI * 2),
+      pulseSpeed: lerp(0.5, 2, Math.random())
+    };
+  }
+
+  _createDetailParticle(seed) {
+    return {
+      type: 'detail',
+      baseRadius: lerp(0.1, 0.8, Math.random()),
+      radialOffset: rand(-0.05, 0.05),
+      angle: rand(0, Math.PI * 2),
+      speed: lerp(0.15, 0.6, Math.random()),
+      radialDrift: lerp(-0.15, 0.15, Math.random()),
+      size: lerp(1, 3, Math.random()),
+      color: pick(this.palette),
+      noiseOffset: seed * 500 + 500,
+      twinkle: Math.random() > 0.7,
+      twinkleSpeed: lerp(2, 8, Math.random())
+    };
+  }
+
+  _createGlowParticle(seed) {
+    return {
+      type: 'glow',
+      baseRadius: lerp(0.2, 0.5, Math.random()),
+      radialOffset: rand(-0.15, 0.15),
+      angle: rand(0, Math.PI * 2),
+      speed: lerp(0.02, 0.08, Math.random()),
+      size: lerp(30, 80, Math.random()),
+      color: pick(this.palette),
+      noiseOffset: seed * 2000,
+      alpha: lerp(0.03, 0.08, Math.random())
+    };
+  }
+
+  _syncWithQuality() {
     const settings = this.quality.getSettings();
     const desired = settings.maxEntities;
 
     if (desired === this.currentMaxEntities) return;
 
-    if (desired > this.currentMaxEntities) {
-      const diff = desired - this.currentMaxEntities;
-      for (let i = 0; i < diff; i++) {
-        this.entities.push(this._createEntity(Math.random()));
-      }
-    } else {
-      this.entities.length = desired;
-    }
-    this.currentMaxEntities = desired;
+    this._initParticles();
     this._onResize();
   }
 
-  _createEntity(seed) {
-    const angle = rand(0, Math.PI * 2);
-    const radius = lerp(0.1, 0.7, Math.pow(Math.random(), 0.6));
-    const speed = lerp(0.1, 0.45, Math.random());
-    const radialDrift = lerp(-0.12, 0.12, Math.random());
-    const size = lerp(1.5, 4.5, Math.random());
-
-    return {
-      baseRadius: radius,
-      radialOffset: rand(-0.08, 0.08),
-      angle,
-      speed,
-      size,
-      radialDrift,
-      color: pick(JAZER_COLORS),
-      noiseOffset: seed * 1000
-    };
-  }
-
-  _drawBackgroundGlow() {
-    const { ctx, canvas } = this;
+  _drawBackground() {
+    const { offCtx: ctx, offscreen: canvas } = this;
     const w = canvas.width / (this.pixelRatio * this.resolutionScale);
     const h = canvas.height / (this.pixelRatio * this.resolutionScale);
 
-    ctx.fillStyle = 'rgba(3, 4, 12, 0.22)';
+    // Deep space background with subtle gradient
+    const bgGradient = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.7);
+    bgGradient.addColorStop(0, 'rgba(8, 10, 20, 0.15)');
+    bgGradient.addColorStop(0.5, 'rgba(5, 6, 15, 0.2)');
+    bgGradient.addColorStop(1, 'rgba(2, 3, 8, 0.25)');
+    ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, w, h);
 
-    const gradient = ctx.createLinearGradient(0, 0, w, h);
-    gradient.addColorStop(0.0, 'rgba(0, 245, 255, 0.10)');
-    gradient.addColorStop(0.5, 'rgba(255, 42, 255, 0.16)');
-    gradient.addColorStop(1.0, 'rgba(179, 124, 255, 0.12)');
+    // Animated color gradient overlay
+    const hueShift = (this.time * 0.00005) % 1;
+    const colors = this.palette;
+    const gradient = ctx.createLinearGradient(
+      w * 0.5 + Math.cos(this.time * 0.0001) * w * 0.3,
+      0,
+      w * 0.5 + Math.sin(this.time * 0.00015) * w * 0.3,
+      h
+    );
+    gradient.addColorStop(0.0, hexToRgba(colors[0], 0.08));
+    gradient.addColorStop(0.33, hexToRgba(colors[1], 0.1));
+    gradient.addColorStop(0.66, hexToRgba(colors[2], 0.08));
+    gradient.addColorStop(1.0, hexToRgba(colors[3] || colors[0], 0.06));
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
 
+    // Subtle grid with wave distortion
     ctx.save();
-    ctx.globalAlpha = 0.08;
-    ctx.strokeStyle = 'rgba(150, 190, 255, 0.5)';
+    ctx.globalAlpha = 0.04;
+    ctx.strokeStyle = 'rgba(150, 200, 255, 0.6)';
     ctx.lineWidth = 0.5;
 
-    const spacing = 48;
+    const spacing = 60;
+    const waveAmp = 3;
+    const waveFreq = 0.02;
+
     ctx.beginPath();
-    for (let x = 0; x < w; x += spacing) {
+    for (let x = 0; x < w + spacing; x += spacing) {
       ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
+      for (let y = 0; y <= h; y += 10) {
+        const waveX = x + Math.sin(y * waveFreq + this.time * 0.001) * waveAmp;
+        ctx.lineTo(waveX, y);
+      }
     }
-    for (let y = 0; y < h; y += spacing) {
+    for (let y = 0; y < h + spacing; y += spacing) {
       ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
+      for (let x = 0; x <= w; x += 10) {
+        const waveY = y + Math.sin(x * waveFreq + this.time * 0.0008) * waveAmp;
+        ctx.lineTo(x, waveY);
+      }
     }
     ctx.stroke();
     ctx.restore();
   }
 
-  _drawEntity(e) {
-    const { ctx, canvas } = this;
+  _drawGlowParticles() {
+    const { offCtx: ctx, offscreen: canvas } = this;
     const w = canvas.width / (this.pixelRatio * this.resolutionScale);
     const h = canvas.height / (this.pixelRatio * this.resolutionScale);
-
     const cx = w * 0.5;
     const cy = h * 0.5;
 
-    const dt = 1; // already normalized in engine loop
+    for (const p of this.glowParticles) {
+      // Update position
+      p.angle += p.speed * 0.12;
+      const noiseVal = noise2D(p.noiseOffset + this.time * 0.0001, p.angle);
+      const radius = (p.baseRadius + p.radialOffset * noiseVal) * Math.min(w, h) * 0.5;
 
-    e.angle += e.speed * dt * 0.12;
-    e.baseRadius += e.radialDrift * dt * 0.02;
+      const x = cx + Math.cos(p.angle) * radius;
+      const y = cy + Math.sin(p.angle) * radius;
 
-    if (e.baseRadius > 1.1) e.baseRadius = 0.1;
-    if (e.baseRadius < 0.05) e.baseRadius = 0.9;
+      // Draw soft glow
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, p.size);
+      gradient.addColorStop(0, hexToRgba(p.color, p.alpha));
+      gradient.addColorStop(0.5, hexToRgba(p.color, p.alpha * 0.3));
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
-    const t = Math.sin(this.time * 0.0005 + e.noiseOffset) * 0.5 + 0.5;
-    const radius = (e.baseRadius + e.radialOffset * t) * Math.min(w, h) * 0.5;
-
-    const x = cx + Math.cos(e.angle) * radius;
-    const y = cy + Math.sin(e.angle) * radius;
-
-    const trailLength = radius * 0.08;
-    const trailAngle = e.angle + Math.PI * 0.5;
-    const tx = x - Math.cos(trailAngle) * trailLength;
-    const ty = y - Math.sin(trailAngle) * trailLength;
-
-    const gradient = ctx.createLinearGradient(tx, ty, x, y);
-    gradient.addColorStop(0, 'rgba(0,0,0,0)');
-    gradient.addColorStop(0.3, e.color + '88');
-    gradient.addColorStop(1, e.color);
-
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = e.size;
-    ctx.beginPath();
-    ctx.moveTo(tx, ty);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    ctx.restore();
-
-    ctx.save();
-    ctx.fillStyle = e.color;
-    ctx.shadowColor = e.color;
-    ctx.shadowBlur = 18;
-    ctx.beginPath();
-    ctx.arc(x, y, e.size * 0.65, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
-  updateAndRender(dt) {
-    if (!this._visible) return;
-    this.time += dt;
+  _drawPrimaryParticles() {
+    const { offCtx: ctx, offscreen: canvas } = this;
+    const w = canvas.width / (this.pixelRatio * this.resolutionScale);
+    const h = canvas.height / (this.pixelRatio * this.resolutionScale);
+    const cx = w * 0.5;
+    const cy = h * 0.5;
 
-    this._syncEntitiesWithQuality();
-    this._drawBackgroundGlow();
+    for (const p of this.primaryParticles) {
+      // Update
+      p.angle += p.speed * 0.12;
+      p.baseRadius += p.radialDrift * 0.015;
+      if (p.baseRadius > 1.0) p.baseRadius = 0.15;
+      if (p.baseRadius < 0.1) p.baseRadius = 0.85;
 
-    for (let i = 0; i < this.entities.length; i++) {
-      this._drawEntity(this.entities[i]);
+      const pulse = Math.sin(this.time * 0.002 * p.pulseSpeed + p.pulsePhase) * 0.5 + 0.5;
+      const noiseVal = noise2D(p.noiseOffset, this.time * 0.0003);
+      const radius = (p.baseRadius + p.radialOffset * noiseVal) * Math.min(w, h) * 0.5;
+
+      const x = cx + Math.cos(p.angle) * radius;
+      const y = cy + Math.sin(p.angle) * radius;
+
+      // Trail
+      const trailLen = radius * p.trailLength;
+      const trailAngle = p.angle - p.speed * 0.5;
+      const tx = cx + Math.cos(trailAngle) * radius;
+      const ty = cy + Math.sin(trailAngle) * radius;
+
+      // Trail gradient
+      const trailGrad = ctx.createLinearGradient(tx, ty, x, y);
+      trailGrad.addColorStop(0, 'rgba(0,0,0,0)');
+      trailGrad.addColorStop(0.2, hexToRgba(p.color, 0.3));
+      trailGrad.addColorStop(0.6, hexToRgba(p.color, 0.7));
+      trailGrad.addColorStop(1, p.color);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = trailGrad;
+      ctx.lineWidth = p.size * (0.8 + pulse * 0.4);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.restore();
+
+      // Core glow
+      const coreSize = p.size * (0.6 + pulse * 0.4);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = p.size * 3;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(x, y, coreSize, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Bright center
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.4 + pulse * 0.3;
+      ctx.beginPath();
+      ctx.arc(x, y, coreSize * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
+  }
 
-    const { ctx, canvas } = this;
+  _drawDetailParticles() {
+    const { offCtx: ctx, offscreen: canvas } = this;
+    const w = canvas.width / (this.pixelRatio * this.resolutionScale);
+    const h = canvas.height / (this.pixelRatio * this.resolutionScale);
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+
+    for (const p of this.detailParticles) {
+      // Update
+      p.angle += p.speed * 0.12;
+      p.baseRadius += p.radialDrift * 0.018;
+      if (p.baseRadius > 1.1) p.baseRadius = 0.1;
+      if (p.baseRadius < 0.05) p.baseRadius = 0.95;
+
+      const noiseVal = noise2D(p.noiseOffset, this.time * 0.0005);
+      const radius = (p.baseRadius + p.radialOffset * noiseVal) * Math.min(w, h) * 0.5;
+
+      const x = cx + Math.cos(p.angle) * radius;
+      const y = cy + Math.sin(p.angle) * radius;
+
+      // Twinkle effect
+      let alpha = 1;
+      if (p.twinkle) {
+        alpha = 0.3 + Math.sin(this.time * 0.003 * p.twinkleSpeed) * 0.7;
+      }
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = p.size * 2;
+      ctx.beginPath();
+      ctx.arc(x, y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  _drawSacredGeometry() {
+    const { offCtx: ctx, offscreen: canvas } = this;
+    const w = canvas.width / (this.pixelRatio * this.resolutionScale);
+    const h = canvas.height / (this.pixelRatio * this.resolutionScale);
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+    const minDim = Math.min(w, h);
+
+    // Slowly rotating sacred geometry overlay
+    this.geometryRotation += 0.0003;
+
+    // Flower of Life - outer
+    SacredGeometry.flowerOfLife(ctx, cx, cy, minDim * 0.4, 2, {
+      color: this.palette[0],
+      lineWidth: 1,
+      alpha: 0.12,
+      rotation: this.geometryRotation
+    });
+
+    // Metatron's Cube - center
+    SacredGeometry.metatronsCube(ctx, cx, cy, minDim * 0.25, {
+      color: this.palette[1],
+      lineWidth: 0.8,
+      alpha: 0.08,
+      rotation: -this.geometryRotation * 0.7
+    });
+
+    // Golden Spiral - subtle
+    SacredGeometry.goldenSpiral(ctx, cx, cy, minDim * 0.3, 3, {
+      color: this.palette[2],
+      lineWidth: 1.5,
+      alpha: 0.06,
+      rotation: this.geometryRotation * 0.5
+    });
+  }
+
+  _drawVignette() {
+    const { offCtx: ctx, offscreen: canvas } = this;
     const w = canvas.width / (this.pixelRatio * this.resolutionScale);
     const h = canvas.height / (this.pixelRatio * this.resolutionScale);
 
     const vignette = ctx.createRadialGradient(
-      w * 0.5,
-      h * 0.5,
-      Math.min(w, h) * 0.25,
-      w * 0.5,
-      h * 0.5,
-      Math.max(w, h) * 0.75
+      w * 0.5, h * 0.5, Math.min(w, h) * 0.2,
+      w * 0.5, h * 0.5, Math.max(w, h) * 0.75
     );
     vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.55)');
+    vignette.addColorStop(0.6, 'rgba(0,0,0,0.2)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.65)');
 
     ctx.save();
     ctx.globalCompositeOperation = 'multiply';
@@ -1041,10 +1798,66 @@ class CanvasNeonTunnelAgent {
     ctx.restore();
   }
 
+  updateAndRender(dt) {
+    if (!this._visible) return;
+    this.time += dt * 16.67; // Convert to ms-like units
+
+    this._syncWithQuality();
+
+    // Slowly cycle through palettes
+    this.colorPhase += dt * 0.001;
+    const paletteKeys = Object.keys(ColorPalettes);
+    const paletteIndex = Math.floor(this.colorPhase) % paletteKeys.length;
+    // Keep jazer as default, occasionally shift
+    if (Math.random() > 0.9999) {
+      this.palette = ColorPalettes[paletteKeys[paletteIndex]] || ColorPalettes.jazer;
+    }
+
+    // Clear offscreen
+    this.offCtx.setTransform(1, 0, 0, 1, 0, 0);
+    this.offCtx.clearRect(0, 0, this.offscreen.width, this.offscreen.height);
+    this.offCtx.scale(this.pixelRatio * this.resolutionScale, this.pixelRatio * this.resolutionScale);
+
+    // Draw layers
+    this._drawBackground();
+    this._drawSacredGeometry();
+    this._drawGlowParticles();
+    this._drawPrimaryParticles();
+    this._drawDetailParticles();
+    this._drawVignette();
+
+    // Apply trail buffer for motion blur
+    this.trailBuffer.fade();
+    this.trailBuffer.draw(this.offscreen);
+
+    // Composite to main canvas
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // Draw trail buffer first (motion blur)
+    this.ctx.globalAlpha = 0.4;
+    this.trailBuffer.composite(this.ctx, 0, 0);
+
+    // Draw current frame
+    this.ctx.globalAlpha = 1;
+    this.ctx.drawImage(this.offscreen, 0, 0);
+
+    // Apply bloom
+    this.bloom.apply(this.canvas, this.ctx);
+  }
+
   destroy() {
     window.removeEventListener('resize', this._onResize);
     document.removeEventListener('visibilitychange', this._onVisibilityChange);
+    this.trailBuffer = null;
+    this.bloom = null;
   }
+}
+
+// Helper function for hex to rgba
+function hexToRgba(hex, alpha) {
+  const rgb = hexToRgb(hex);
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
 
 // ---------------------------------------------------------
@@ -1244,31 +2057,770 @@ class WebGLThreeTunnelAgent {
 }
 
 // ---------------------------------------------------------
-// Multi-Agent Registry
+// PlasmaFluidAgent: Organic flowing plasma effect (Canvas 2D)
 // ---------------------------------------------------------
+class PlasmaFluidAgent {
+  constructor(canvas, config, qualityController) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.config = config;
+    this.quality = qualityController;
+
+    this.time = 0;
+    this.pixelRatio = Math.min(window.devicePixelRatio || 1, config.maxPixelRatio);
+    this.resolutionScale = config.baseResolutionScale;
+    this.palette = ColorPalettes.plasma;
+
+    // Plasma parameters
+    this.scale = 0.008;
+    this.speed = 0.0004;
+    this.warpStrength = 0.3;
+
+    this._visible = true;
+    this._onResize = this._onResize.bind(this);
+    this._onVisibilityChange = this._onVisibilityChange.bind(this);
+
+    window.addEventListener('resize', this._onResize);
+    document.addEventListener('visibilitychange', this._onVisibilityChange);
+
+    this._onResize();
+    this._initImageData();
+  }
+
+  _onVisibilityChange() {
+    this._visible = document.visibilityState !== 'hidden';
+  }
+
+  _onResize() {
+    const rect = this.canvas.getBoundingClientRect();
+    const settings = this.quality.getSettings();
+    this.resolutionScale = settings.resolutionScale * 0.5; // Lower res for performance
+
+    const width = rect.width * this.pixelRatio * this.resolutionScale;
+    const height = rect.height * this.pixelRatio * this.resolutionScale;
+
+    this.canvas.width = Math.max(1, Math.floor(width));
+    this.canvas.height = Math.max(1, Math.floor(height));
+
+    this._initImageData();
+  }
+
+  _initImageData() {
+    this.imageData = this.ctx.createImageData(this.canvas.width, this.canvas.height);
+    this.data = this.imageData.data;
+  }
+
+  _getColor(t) {
+    // Map t (0-1) to palette color with smooth interpolation
+    t = ((t % 1) + 1) % 1;
+    const len = this.palette.length;
+    const scaled = t * len;
+    const i = Math.floor(scaled);
+    const f = scaled - i;
+
+    const c1 = hexToRgb(this.palette[i % len]);
+    const c2 = hexToRgb(this.palette[(i + 1) % len]);
+
+    return {
+      r: c1.r + (c2.r - c1.r) * f,
+      g: c1.g + (c2.g - c1.g) * f,
+      b: c1.b + (c2.b - c1.b) * f
+    };
+  }
+
+  updateAndRender(dt) {
+    if (!this._visible) return;
+    this.time += dt * 16.67;
+
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const t = this.time * this.speed;
+    const scale = this.scale;
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        // Domain warping for organic flow
+        const wx = x + fbm2D(x * scale * 0.5, y * scale * 0.5 + t, 3) * this.warpStrength * 100;
+        const wy = y + fbm2D(x * scale * 0.5 + 100, y * scale * 0.5 + t, 3) * this.warpStrength * 100;
+
+        // Multi-layer plasma
+        let v = 0;
+        v += Math.sin(wx * scale + t * 2);
+        v += Math.sin((wy * scale + t) * 0.5);
+        v += Math.sin((wx * scale + wy * scale + t * 1.5) * 0.5);
+        v += fbm2D(wx * scale * 2, wy * scale * 2 + t * 0.5, 4);
+
+        // Normalize to 0-1
+        v = (v + 4) / 8;
+
+        const color = this._getColor(v + t * 0.1);
+
+        const i = (y * w + x) * 4;
+        this.data[i] = color.r;
+        this.data[i + 1] = color.g;
+        this.data[i + 2] = color.b;
+        this.data[i + 3] = 255;
+      }
+    }
+
+    this.ctx.putImageData(this.imageData, 0, 0);
+
+    // Add bloom-like glow overlay
+    this.ctx.save();
+    this.ctx.filter = 'blur(20px)';
+    this.ctx.globalCompositeOperation = 'screen';
+    this.ctx.globalAlpha = 0.3;
+    this.ctx.drawImage(this.canvas, 0, 0);
+    this.ctx.restore();
+  }
+
+  destroy() {
+    window.removeEventListener('resize', this._onResize);
+    document.removeEventListener('visibilitychange', this._onVisibilityChange);
+  }
+}
+
+// ---------------------------------------------------------
+// FractalTunnelAgent: Infinite fractal zoom effect (Canvas 2D)
+// ---------------------------------------------------------
+class FractalTunnelAgent {
+  constructor(canvas, config, qualityController) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.config = config;
+    this.quality = qualityController;
+
+    this.time = 0;
+    this.pixelRatio = Math.min(window.devicePixelRatio || 1, config.maxPixelRatio);
+    this.resolutionScale = config.baseResolutionScale;
+    this.palette = ColorPalettes.cosmic;
+
+    this.zoom = 1;
+    this.rotation = 0;
+    this.layers = 8;
+
+    this._visible = true;
+    this._onResize = this._onResize.bind(this);
+    this._onVisibilityChange = this._onVisibilityChange.bind(this);
+
+    window.addEventListener('resize', this._onResize);
+    document.addEventListener('visibilitychange', this._onVisibilityChange);
+
+    this._onResize();
+  }
+
+  _onVisibilityChange() {
+    this._visible = document.visibilityState !== 'hidden';
+  }
+
+  _onResize() {
+    const rect = this.canvas.getBoundingClientRect();
+    const settings = this.quality.getSettings();
+    this.resolutionScale = settings.resolutionScale;
+
+    const width = rect.width * this.pixelRatio * this.resolutionScale;
+    const height = rect.height * this.pixelRatio * this.resolutionScale;
+
+    this.canvas.width = Math.max(1, Math.floor(width));
+    this.canvas.height = Math.max(1, Math.floor(height));
+
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.scale(this.pixelRatio * this.resolutionScale, this.pixelRatio * this.resolutionScale);
+  }
+
+  _drawFractalLayer(depth, scale, rotation, alpha) {
+    const { ctx, canvas } = this;
+    const w = canvas.width / (this.pixelRatio * this.resolutionScale);
+    const h = canvas.height / (this.pixelRatio * this.resolutionScale);
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+    const minDim = Math.min(w, h);
+
+    const color = this.palette[depth % this.palette.length];
+    const sides = 6 + (depth % 3); // Vary polygon sides
+    const size = minDim * scale * 0.4;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2 / scale;
+
+    // Draw polygon
+    ctx.beginPath();
+    for (let i = 0; i <= sides; i++) {
+      const angle = (i / sides) * Math.PI * 2;
+      const x = Math.cos(angle) * size;
+      const y = Math.sin(angle) * size;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    // Inner lines to center
+    ctx.globalAlpha = alpha * 0.5;
+    for (let i = 0; i < sides; i++) {
+      const angle = (i / sides) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(angle) * size, Math.sin(angle) * size);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  updateAndRender(dt) {
+    if (!this._visible) return;
+    this.time += dt * 16.67;
+
+    const { ctx, canvas } = this;
+    const w = canvas.width / (this.pixelRatio * this.resolutionScale);
+    const h = canvas.height / (this.pixelRatio * this.resolutionScale);
+
+    // Semi-transparent background for trails
+    ctx.fillStyle = 'rgba(5, 2, 15, 0.08)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Animate zoom (infinite tunnel effect)
+    this.zoom = 1 + (this.time * 0.0003) % 2;
+    this.rotation += 0.002;
+
+    // Draw multiple fractal layers
+    for (let i = 0; i < this.layers; i++) {
+      const layerZoom = this.zoom * Math.pow(1.3, i);
+      const normalizedZoom = (layerZoom % 2) + 0.5;
+      const layerAlpha = 0.8 - (i / this.layers) * 0.6;
+      const layerRotation = this.rotation * (1 + i * 0.1);
+
+      this._drawFractalLayer(i, normalizedZoom, layerRotation, layerAlpha);
+    }
+
+    // Central glow
+    const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.min(w, h) * 0.3);
+    gradient.addColorStop(0, hexToRgba(this.palette[0], 0.3));
+    gradient.addColorStop(0.5, hexToRgba(this.palette[1], 0.1));
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+
+    // Vignette
+    const vignette = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.2, w / 2, h / 2, Math.max(w, h) * 0.7);
+    const vignetteColor1 = hexToRgba(this.palette[0], 0.1);
+    const vignetteColor2 = hexToRgba(this.palette[1], 0.1);
+    const vignetteColor3 = hexToRgba(this.palette[2], 0.1);
+
+    vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vignette.addColorStop(0.5, vignetteColor1);
+    vignette.addColorStop(1, vignetteColor2);
+    ctx.fillStyle = vignette;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+
+  destroy() {
+    window.removeEventListener('resize', this._fractalTunnelAgent._onResize);
+    this._fractalTunnelAgent.destroy();
+    this._fractalTunnelAgent = null;
+    this.qualityAutoTuner.destroy();
+    this.qualityAutoTuner = null;
+    this.qualitySettings = null;
+    this.quality = null;
+    this.canvas = null;
+    this.ctx = null;
+    this.pixelRatio = null;
+    this.resolutionScale = null;
+    this.time = null;
+    this.zoom = null;
+    this.rotation = null;
+    this.layers = null;
+    this.palette = null;
+    this._visible = null;
+    this._onResize = null;
+    this._onVisibilityChange = null;
+  }
+}
+
+// ---------------------------------------------------------
+// NebulaGalaxyAgent: Cosmic nebula effect (Canvas 2D with particles)
+// ---------------------------------------------------------
+class NebulaGalaxyAgent {
+  constructor(canvas, config, qualityController) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.config = config;
+    this.quality = qualityController;
+    this.pixelRatio = Math.min(window.devicePixelRatio || 1, config.maxPixelRatio);
+    this.resolutionScale = config.baseResolutionScale;
+
+    this.time = 0;
+    this.rotation = 0;
+    this.palette = ColorPalettes.galaxy || ColorPalettes.jazer || getRandomPalette();
+    this.stars = [];
+    this.nebulaLayers = [];
+
+    this._visible = true;
+    this._onResize = this._onResize.bind(this);
+    this._onVisibilityChange = this._onVisibilityChange.bind(this);
+
+    window.addEventListener('resize', this._onResize);
+    document.addEventListener('visibilitychange', this._onVisibilityChange);
+
+    this._onResize();
+    this._initStars();
+    this._initNebula();
+  }
+
+  _onVisibilityChange() {
+    this._visible = document.visibilityState !== 'hidden';
+  }
+
+  _onResize() {
+    const rect = this.canvas.getBoundingClientRect();
+    const settings = this.quality.getSettings();
+    this.resolutionScale = settings.resolutionScale || this.config.baseResolutionScale;
+
+    const width = rect.width * this.pixelRatio * this.resolutionScale;
+    const height = rect.height * this.pixelRatio * this.resolutionScale;
+
+    this.canvas.width = Math.max(1, Math.floor(width));
+    this.canvas.height = Math.max(1, Math.floor(height));
+
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.scale(this.pixelRatio * this.resolutionScale, this.pixelRatio * this.resolutionScale);
+  }
+
+  _initStars() {
+    const settings = this.quality.getSettings();
+    const count = Math.floor((settings.maxEntities || 100) * 1.5);
+    this.stars = [];
+
+    for (let i = 0; i < count; i++) {
+      this.stars.push({
+        x: Math.random(),
+        y: Math.random(),
+        size: 0.5 + Math.pow(Math.random(), 2) * 2,
+        brightness: 0.3 + Math.random() * 0.7,
+        twinkleSpeed: 1 + Math.random() * 3,
+        twinklePhase: Math.random() * Math.PI * 2,
+        color: Math.random() > 0.8 ? this.palette[Math.floor(Math.random() * this.palette.length)] : '#ffffff'
+      });
+    }
+  }
+
+  _initNebula() {
+    this.nebulaLayers = [];
+    for (let i = 0; i < 5; i++) {
+      this.nebulaLayers.push({
+        offsetX: (Math.random() - 0.5) * 0.4,
+        offsetY: (Math.random() - 0.5) * 0.4,
+        scale: 0.3 + Math.random() * 0.3,
+        color: this.palette[i % this.palette.length],
+        alpha: 0.05 + Math.random() * 0.1,
+        rotationSpeed: (Math.random() - 0.5) * 0.0002
+      });
+    }
+  }
+
+  _drawNebula() {
+    const { ctx, canvas } = this;
+    const w = canvas.width / (this.pixelRatio * this.resolutionScale);
+    const h = canvas.height / (this.pixelRatio * this.resolutionScale);
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+
+    for (const layer of this.nebulaLayers) {
+      const lx = cx + layer.offsetX * w;
+      const ly = cy + layer.offsetY * h;
+      const size = Math.min(w, h) * layer.scale;
+
+      // Animated nebula clouds using noise
+      const warp = noise2D(this.time * 0.00005, layer.offsetX) * 50;
+
+      const gradient = ctx.createRadialGradient(
+        lx + warp, ly + warp, 0,
+        lx, ly, size
+      );
+      gradient.addColorStop(0, hexToRgba(layer.color, layer.alpha * 1.5));
+      gradient.addColorStop(0.3, hexToRgba(layer.color, layer.alpha));
+      gradient.addColorStop(0.7, hexToRgba(layer.color, layer.alpha * 0.3));
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(lx, ly, size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  _drawStars() {
+    const { ctx, canvas } = this;
+    const w = canvas.width / (this.pixelRatio * this.resolutionScale);
+    const h = canvas.height / (this.pixelRatio * this.resolutionScale);
+
+    for (const star of this.stars) {
+      const twinkle = 0.5 + Math.sin(this.time * 0.003 * star.twinkleSpeed + star.twinklePhase) * 0.5;
+      const alpha = star.brightness * twinkle;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = star.color;
+      ctx.shadowColor = star.color;
+      ctx.shadowBlur = star.size * 3;
+      ctx.beginPath();
+      ctx.arc(star.x * w, star.y * h, star.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  updateAndRender(dt) {
+    if (!this._visible) return;
+    this.time += dt * 16.67;
+    this.rotation += 0.00003;
+
+    const { ctx, canvas } = this;
+    const w = canvas.width / (this.pixelRatio * this.resolutionScale);
+    const h = canvas.height / (this.pixelRatio * this.resolutionScale);
+
+    // Deep space background
+    const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.8);
+    bgGrad.addColorStop(0, '#0a0518');
+    bgGrad.addColorStop(0.5, '#050210');
+    bgGrad.addColorStop(1, '#010105');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Slowly rotate star field
+    ctx.save();
+    ctx.translate(w / 2, h / 2);
+    ctx.rotate(this.rotation);
+    ctx.translate(-w / 2, -h / 2);
+
+    this._drawStars();
+    this._drawNebula();
+
+    ctx.restore();
+
+    // Central galaxy core glow
+    const coreGlow = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.min(w, h) * 0.15);
+    coreGlow.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+    coreGlow.addColorStop(0.3, hexToRgba(this.palette[0], 0.3));
+    coreGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = coreGlow;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+
+  destroy() {
+    window.removeEventListener('resize', this._onResize);
+    document.removeEventListener('visibilitychange', this._onVisibilityChange);
+  }
+}
+
+// Helper if not already defined
+function hexToRgba(hex, alpha = 1) {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+
+// ---------------------------------------------------------
+// SacredGeometryAgent: Animated sacred geometry patterns (Canvas 2D)
+// ---------------------------------------------------------
+class SacredGeometryAgent {
+  constructor(canvas, config, qualityController) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.config = config;
+    this.quality = qualityController;
+
+    this.time = 0;
+    this.pixelRatio = Math.min(window.devicePixelRatio || 1, config.maxPixelRatio);
+    this.resolutionScale = config.baseResolutionScale;
+    this.palette = ColorPalettes.sacred || ColorPalettes.jazer || getRandomPalette();
+
+    this.trailBuffer = null;
+    this.bloom = null;
+
+    this._visible = true;
+    this._onResize = this._onResize.bind(this);
+    this._onVisibilityChange = this._onVisibilityChange.bind(this);
+
+    window.addEventListener('resize', this._onResize);
+    document.addEventListener('visibilitychange', this._onVisibilityChange);
+
+    this._onResize();
+    this._initEffects();
+  }
+
+  _onVisibilityChange() {
+    this._visible = document.visibilityState !== 'hidden';
+  }
+
+  _onResize() {
+    const rect = this.canvas.getBoundingClientRect();
+    const settings = this.quality.getSettings();
+    this.resolutionScale = settings.resolutionScale;
+
+    const width = rect.width * this.pixelRatio * this.resolutionScale;
+    const height = rect.height * this.pixelRatio * this.resolutionScale;
+
+    this.canvas.width = Math.max(1, Math.floor(width));
+    this.canvas.height = Math.max(1, Math.floor(height));
+
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.scale(this.pixelRatio * this.resolutionScale, this.pixelRatio * this.resolutionScale);
+
+    if (this.trailBuffer) this.trailBuffer.setSize(this.canvas.width, this.canvas.height);
+    if (this.bloom) this.bloom.setSize(this.canvas.width, this.canvas.height);
+  }
+
+  _initEffects() {
+    const w = this.canvas.width || 1920;
+    const h = this.canvas.height || 1080;
+
+    this.trailBuffer = new MotionTrailBuffer(w, h, {
+      fadeAmount: 0.03,
+      blendMode: 'lighter'
+    });
+
+    this.bloom = new ProceduralBloom(w, h, {
+      intensity: 0.5,
+      radius: 15,
+      passes: 2
+    });
+  }
+
+  updateAndRender(dt) {
+    if (!this._visible) return;
+    this.time += dt * 16.67;
+
+    const { ctx, canvas } = this;
+    const w = canvas.width / (this.pixelRatio * this.resolutionScale);
+    const h = canvas.height / (this.pixelRatio * this.resolutionScale);
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+    const minDim = Math.min(w, h);
+
+    // Background fade
+    ctx.fillStyle = 'rgba(2, 3, 8, 0.05)';
+    ctx.fillRect(0, 0, w, h);
+
+    const t = this.time * 0.0003;
+    const pulse = Math.sin(t * 2) * 0.5 + 0.5;
+
+    // Flower of Life - breathing
+    const flowerSize = minDim * (0.35 + pulse * 0.1);
+    SacredGeometry.flowerOfLife(ctx, cx, cy, flowerSize, 3, {
+      color: this.palette[0],
+      lineWidth: 1.5,
+      alpha: 0.4 + pulse * 0.2,
+      rotation: t * 0.5
+    });
+
+    // Metatron's Cube - counter-rotating
+    SacredGeometry.metatronsCube(ctx, cx, cy, minDim * 0.3, {
+      color: this.palette[2],
+      lineWidth: 1,
+      alpha: 0.3,
+      rotation: -t * 0.3
+    });
+
+    // Sri Yantra - slow pulse
+    SacredGeometry.sriYantra(ctx, cx, cy, minDim * 0.25, {
+      color: this.palette[1],
+      lineWidth: 1.2,
+      alpha: 0.25 + pulse * 0.15,
+      rotation: t * 0.2
+    });
+
+    // Golden Spirals - twin spirals
+    SacredGeometry.goldenSpiral(ctx, cx, cy, minDim * 0.35, 4, {
+      color: this.palette[3] || this.palette[0],
+      lineWidth: 2,
+      alpha: 0.2,
+      rotation: t
+    });
+    SacredGeometry.goldenSpiral(ctx, cx, cy, minDim * 0.35, 4, {
+      color: this.palette[4] || this.palette[1],
+      lineWidth: 2,
+      alpha: 0.2,
+      rotation: -t + Math.PI
+    });
+
+    // Torus knot overlay
+    SacredGeometry.torusKnot(ctx, cx, cy, minDim * 0.28, 3, 5, {
+      color: this.palette[2],
+      lineWidth: 0.8,
+      alpha: 0.15,
+      rotation: t * 0.7
+    });
+
+    // Central glow
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, minDim * 0.2);
+    glow.addColorStop(0, hexToRgba(this.palette[0], 0.3));
+    glow.addColorStop(0.5, hexToRgba(this.palette[1], 0.1));
+    glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+
+    // Vignette
+    const vignette = ctx.createRadialGradient(cx, cy, minDim * 0.3, cx, cy, Math.max(w, h) * 0.7);
+    vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, w, h);
+
+    // Apply trail for ethereal effect
+    this.trailBuffer.fade();
+    this.trailBuffer.ctx.drawImage(canvas, 0, 0);
+
+    // Apply bloom
+    this.bloom.apply(canvas, ctx);
+  }
+
+  destroy() {
+    window.removeEventListener('resize', this._onResize);
+    document.removeEventListener('visibilitychange', this._onVisibilityChange);
+    this.trailBuffer = null;
+    this.bloom = null;
+  }
+}
+
+// ---------------------------------------------------------
+// Multi-Agent Registry
+
+// ---------------------------------------------------------
+
+function supportsCanvas() {
+  if (typeof document === 'undefined') return false;
+  const canvas = document.createElement('canvas');
+  return !!canvas.getContext && !!canvas.getContext('2d');
+}
+
+function supportsWebGL() {
+  if (typeof document === 'undefined') return false;
+  const canvas = document.createElement('canvas');
+  return !!(
+    canvas.getContext &&
+    (canvas.getContext('webgl') || canvas.getContext('webgl2'))
+  );
+}
+
+function supportsCanvas2D() {
+  if (typeof document === 'undefined') return false;
+  const canvas = document.createElement('canvas');
+  return !!(canvas.getContext && canvas.getContext('2d'));
+}
+
 const AgentRegistry = {
-  canvasNeonTunnel: {
-    id: 'canvas-neon-tunnel',
-    label: 'Canvas Neon Tunnel',
-    create(canvas, config, qualityController) {
-      return new CanvasNeonTunnelAgent(canvas, config, qualityController);
+  // Raw agent descriptors
+  agents: {
+    canvasNeonTunnel: {
+      id: 'canvas-neon-tunnel',
+      label: 'Canvas Neon Tunnel (Enhanced)',
+      description: 'Multi-layer neon vortex with sacred geometry overlays',
+      create(canvas, config, qualityController) {
+        return new CanvasNeonTunnelAgent(canvas, config, qualityController);
+      },
+      supports() {
+        return supportsCanvas2D();
+      }
     },
-    supports() {
-      return !!document.createElement('canvas').getContext('2d');
+    webglTunnel: {
+      id: 'webgl-tunnel',
+      label: 'WebGL Three.js Neon Tunnel',
+      description: '3D infinite tunnel with dynamic lighting',
+      create(canvas, config, qualityController) {
+        return new WebGLThreeTunnelAgent(canvas, config, qualityController);
+      },
+      supports() {
+        return supportsWebGL() &&
+          typeof window !== 'undefined' &&
+          !!window.THREE;
+      }
+    },
+    plasmaFluid: {
+      id: 'plasma-fluid',
+      label: 'Plasma Fluid',
+      description: 'Organic flowing plasma with domain warping',
+      create(canvas, config, qualityController) {
+        return new PlasmaFluidAgent(canvas, config, qualityController);
+      },
+      supports() {
+        return supportsCanvas2D();
+      }
+    },
+    fractalTunnel: {
+      id: 'fractal-tunnel',
+      label: 'Fractal Tunnel',
+      description: 'Infinite fractal zoom with geometric patterns',
+      create(canvas, config, qualityController) {
+        return new FractalTunnelAgent(canvas, config, qualityController);
+      },
+      supports() {
+        return supportsCanvas2D();
+      }
+    },
+    nebulaGalaxy: {
+      id: 'nebula-galaxy',
+      label: 'Nebula Galaxy',
+      description: 'Cosmic nebula with twinkling stars',
+      create(canvas, config, qualityController) {
+        return new NebulaGalaxyAgent(canvas, config, qualityController);
+      },
+      supports() {
+        return !!document.createElement('canvas').getContext('2d');
+      }
+    },
+    sacredGeometry: {
+      id: 'sacred-geometry',
+      label: 'Sacred Geometry',
+      description: 'Animated Flower of Life, Metatron\'s Cube, and more',
+      create(canvas, config, qualityController) {
+        return new SacredGeometryAgent(canvas, config, qualityController);
+      },
+      supports() {
+        return supportsCanvas2D();
+      }
     }
   },
-  webglTunnel: {
-    id: 'webgl-tunnel',
-    label: 'WebGL Three.js Neon Tunnel',
-    create(canvas, config, qualityController) {
-      return new WebGLThreeTunnelAgent(canvas, config, qualityController);
-    },
-    supports() {
-      const hasCanvas = !!document.createElement('canvas').getContext('webgl')
-        || !!document.createElement('canvas').getContext('webgl2');
-      const hasThree = typeof window !== 'undefined' && !!window.THREE;
-      return hasCanvas && hasThree;
+
+  // Helper: get an agent by key (e.g. 'canvasNeonTunnel')
+  get(key) {
+    return this.agents[key] || null;
+  },
+
+  // Helper: list all agents as an array (good for UIs)
+  list() {
+    return Object.values(this.agents);
+  },
+
+  // Helper: find the first supported agent from a priority list
+  resolve(preferredIds = ['webglTunnel', 'canvasNeonTunnel']) {
+    for (const key of preferredIds) {
+      const agent = this.agents[key];
+      if (agent && agent.supports()) return agent;
     }
+    // Fallback: any supported agent
+    return this.list().find(a => a.supports()) || null;
   }
 };
 
@@ -1299,9 +2851,10 @@ export function initJazerBackground(options = {}) {
     container.appendChild(canvas);
   }
 
-  const agentEntry = AgentRegistry[agentId];
+  // Use new registry API
+  const agentEntry = AgentRegistry.get(agentId);
   if (!agentEntry) {
-    throw new Error(`[JaZeR] Unknown agentId: ${agentId}`);
+    throw new Error(`[JaZeR] Unknown agentId: ${agentId}. Available: ${AgentRegistry.list().map(a => a.id).join(', ')}`);
   }
 
   if (!agentEntry.supports()) {
@@ -1343,30 +2896,53 @@ export function initJazerBackground(options = {}) {
   };
 }
 
+// ---------------------------------------------------------
 // Optional: expose on window for non-module users
-if (typeof window !== 'undefined') {
-  window.JaZeRBackground = {
-    // Core
+// ---------------------------------------------------------
+(function attachJaZeRBackgroundGlobal() {
+  if (typeof window === 'undefined') return;
+
+  const existing = window.JaZeRBackground || {};
+
+  const core = {
     initJazerBackground,
     CONFIG,
-    QualityAutoTuner,
+    QualityAutoTuner
+  };
 
-    // Noise
+  const agents = {
+    registry: AgentRegistry
+    // future:
+    // register(id, factory) {}
+    // get(id) {}
+    // list() {}
+  };
+
+  const fx = {
+    MotionTrailBuffer,
+    ProceduralBloom,
+    SacredGeometry,
+    applyHDR,
+    domainWarp
+  };
+
+  const noise = {
     SimplexNoise,
     noise2D,
     noise3D,
     noise4D,
     fbm2D,
-    fbm3D,
+    fbm3D
+  };
 
-    // Easing
-    Easing,
+  const easing = Easing; // already an object
 
-    // Mouse
+  const mouseApi = {
     MouseTracker,
-    mouse,
+    mouse
+  };
 
-    // Colors
+  const color = {
     ColorPalettes,
     getRandomPalette,
     getPaletteColor,
@@ -1376,8 +2952,11 @@ if (typeof window !== 'undefined') {
     rgbToHsl,
     lerpColor,
     cycleColor,
+    hexToRgba,
+    rgbToHex
+  };
 
-    // Math utilities
+  const math = {
     map,
     clamp,
     smoothstep,
@@ -1400,4 +2979,25 @@ if (typeof window !== 'undefined') {
     dot2D,
     dot3D
   };
-}
+
+  const api = {
+    // meta
+    version: existing.version || '0.1.0',
+
+    // grouped namespaces
+    core: Object.freeze(core),
+    agents: Object.freeze(agents),
+    fx: Object.freeze(fx),
+    noise: Object.freeze(noise),
+    easing: Object.freeze(easing),
+    mouse: Object.freeze(mouseApi),
+    color: Object.freeze(color),
+    math: Object.freeze(math)
+  };
+
+  // Shallow-merge with any existing global to avoid breaking other bundles
+  window.JaZeRBackground = Object.freeze({
+    ...existing,
+    ...api
+  });
+})();

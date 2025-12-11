@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Digital Sandstorm</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Digital Sandstorm</h1>
+      <p>Millions of tiny square "sand" pixels blowing across screen, occasionally assembling into JaZeR shapes.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Digital sandstorm properties
+    const center = { x: width / 2, y: height / 2 };
+    const sandPixels = [];
+    const pixelCount = 2000; // Number of digital sand pixels
+    const pixelSize = 2;
+    const windDirection = { x: 1, y: 0.2 }; // Overall wind direction
+    const windStrength = 0.5;
+    const formationInterval = 10; // Seconds between JaZeR formations
+    let lastFormationTime = 0;
+    const formationDuration = 3; // Seconds for formation to last
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Initialize sand pixels
+      initializeSandPixels();
+    }
+
+    function initializeSandPixels() {
+      sandPixels.length = 0;
+      for (let i = 0; i < pixelCount; i++) {
+        sandPixels.push({
+          id: i,
+          x: Math.random() * width,
+          y: Math.random() * height,
+          originalX: Math.random() * width,
+          originalY: Math.random() * height,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 2,
+          size: pixelSize,
+          color: palette[Math.floor(Math.random() * palette.length)],
+          isForming: false,
+          targetX: 0,
+          targetY: 0,
+          opacity: 0.7 + Math.random() * 0.3,
+          noiseOffsetX: Math.random() * 1000,
+          noiseOffsetY: Math.random() * 1000,
+          life: 0,
+          angle: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.1
+        });
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Check for JaZeR formation trigger
+      const shouldForm = (time % formationInterval) < formationDuration;
+      if (shouldForm && time - lastFormationTime > formationInterval) {
+        startJaZeRFormation();
+        lastFormationTime = time;
+      }
+
+      // Clear with dark background
+      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#000020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update and draw digital sandstorm
+      updateAndDrawSandstorm();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function startJaZeRFormation() {
+      // Create formation positions for "JaZeR" text
+      const text = "JaZeR";
+      const fontSize = 80;
+      const textY = height / 2;
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Calculate starting x position for the text
+      const textWidth = ctx.measureText(text).width;
+      const startX = width / 2 - textWidth / 2 + fontSize / 2;
+      
+      // Create grid of target positions for each character in "JaZeR"
+      let formationIndex = 0;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const charX = startX + ctx.measureText(text.substring(0, i)).width + ctx.measureText(char).width / 2;
+        
+        // Create points that form the character shape (simplified as a grid)
+        for (let x = -fontSize/3; x <= fontSize/3; x += 6) {
+          for (let y = -fontSize/2; y <= fontSize/2; y += 6) {
+            // Only create target positions where the character would be (simplified approach)
+            if (Math.abs(x) < fontSize/3 || Math.abs(y) < fontSize/4) {
+              if (formationIndex < sandPixels.length) {
+                // Set this pixel to move toward the formation
+                sandPixels[formationIndex].isForming = true;
+                sandPixels[formationIndex].targetX = charX + x + (Math.random() - 0.5) * 2;
+                sandPixels[formationIndex].targetY = textY + y + (Math.random() - 0.5) * 2;
+                sandPixels[formationIndex].formationColor = palette[i % palette.length];
+                formationIndex++;
+              }
+            }
+          }
+        }
+      }
+      
+      // Set remaining pixels to return to normal storm behavior
+      for (let i = formationIndex; i < sandPixels.length; i++) {
+        sandPixels[i].isForming = false;
+      }
+    }
+
+    function updateAndDrawSandstorm() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      for (const pixel of sandPixels) {
+        if (pixel.isForming) {
+          // During formation: move toward target position
+          const dx = pixel.targetX - pixel.x;
+          const dy = pixel.targetY - pixel.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          if (distance > 2) {
+            // Move toward target with easing
+            pixel.x += dx * 0.1;
+            pixel.y += dy * 0.1;
+            
+            // Apply formation color during transition
+            pixel.color = lerpColor(pixel.color, pixel.formationColor, 0.05);
+          } else {
+            // Arrived at target, hold position
+            pixel.x = pixel.targetX;
+            pixel.y = pixel.targetY;
+          }
+        } else {
+          // Normal storm behavior: blow with wind and noise
+          // Apply overall wind direction
+          pixel.vx += windDirection.x * windStrength * 0.02;
+          pixel.vy += windDirection.y * windStrength * 0.02;
+          
+          // Apply noise for turbulent movement
+          const noiseX = noise2D(
+            pixel.x * 0.01 + pixel.noiseOffsetX, 
+            time * 0.5
+          ) * 0.3;
+          const noiseY = noise2D(
+            pixel.y * 0.01 + pixel.noiseOffsetY, 
+            time * 0.5 + 1000
+          ) * 0.3;
+          
+          pixel.vx += noiseX;
+          pixel.vy += noiseY;
+          
+          // Apply damping to velocity
+          pixel.vx *= 0.99;
+          pixel.vy *= 0.99;
+          
+          // Update position with velocity
+          pixel.x += pixel.vx;
+          pixel.y += pixel.vy;
+          
+          // Add rotation for visual interest
+          pixel.angle += pixel.rotationSpeed;
+          
+          // Boundary wrapping: if pixels go off screen, bring them back on the opposite side
+          if (pixel.x < -pixel.size) pixel.x = width + pixel.size;
+          if (pixel.x > width + pixel.size) pixel.x = -pixel.size;
+          if (pixel.y < -pixel.size) pixel.y = height + pixel.size;
+          if (pixel.y > height + pixel.size) pixel.y = -pixel.size;
+        }
+        
+        // Update pixel life
+        pixel.life += 1/60;
+        if (pixel.life > 10) pixel.life = 0; // Reset life after 10 seconds
+        
+        // Draw the digital sand pixel
+        ctx.save();
+        ctx.translate(pixel.x, pixel.y);
+        ctx.rotate(pixel.angle);
+        
+        // Add subtle pulsing effect
+        const pulse = Math.sin(time * 5 + pixel.id) * 0.1 + 1;
+        const currentSize = pixel.size * pulse;
+        
+        ctx.fillStyle = pixel.color + Math.floor(pixel.opacity * 255).toString(16).padStart(2, '0');
+        ctx.shadowColor = pixel.color;
+        ctx.shadowBlur = 10;
+        ctx.fillRect(-currentSize/2, -currentSize/2, currentSize, currentSize);
+        
+        ctx.restore();
+      }
+      
+      // Draw additional JaZeR text during formation that's not formed from particles
+      if (time - lastFormationTime < formationDuration) {
+        const formationProgress = (time - lastFormationTime) / formationDuration;
+        ctx.font = 'bold 80px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Draw text with fade effect
+        for (let i = 0; i < "JaZeR".length; i++) {
+          const char = "JaZeR"[i];
+          const color = palette[i % palette.length];
+          const alpha = map(formationProgress, 0, 1, 0.3, 0.8);
+          
+          ctx.fillStyle = color + Math.floor(alpha * 200).toString(16).padStart(2, '0');
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 30;
+          ctx.fillText(char, center.x - 150 + i * 75, center.y - 100);
+        }
+      }
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

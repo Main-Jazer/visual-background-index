@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Aurora Veil</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Aurora Veil</h1>
+      <p>Soft, flowing aurora ribbons in JaZeR neon drifting across a dark sky with "JaZeR" subtly embedded as brighter streaks.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    // Aurora ribbon properties
+    const ribbonCount = 5;
+    const ribbons = [];
+
+    function createRibbon(index) {
+      return {
+        id: index,
+        y: map(index, 0, ribbonCount - 1, 0.2, 0.8) * height, // Distribute vertically
+        speed: 0.2 + Math.random() * 0.3,
+        offset: Math.random() * 1000,
+        amplitude: 30 + Math.random() * 50,
+        frequency: 0.01 + Math.random() * 0.02,
+        thickness: 20 + Math.random() * 30,
+        colorIndex: index % palette.length,
+        points: [],
+        pointCount: 100,
+        noiseScale: 0.005 + Math.random() * 0.01
+      };
+    }
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Reinitialize ribbons with new dimensions
+      ribbons.length = 0;
+      for (let i = 0; i < ribbonCount; i++) {
+        ribbons.push(createRibbon(i));
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with dark background
+      const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#000000');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw aurora ribbons
+      drawAuroraRibbons();
+
+      // Draw JaZeR text subtly in the ribbons
+      drawSubtleJaZeRText();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function drawAuroraRibbons() {
+      ribbons.forEach(ribbon => {
+        // Update ribbon properties based on mouse interaction
+        const mouseInfluence = mouse.isInside ? distance(mouse.x * width, mouse.y * height, width/2, ribbon.y) < 300 : 0;
+        const baseY = map(ribbon.id, 0, ribbonCount - 1, 0.2, 0.8) * height;
+        
+        // Calculate points for the ribbon
+        ribbon.points = [];
+        for (let i = 0; i < ribbon.pointCount; i++) {
+          const x = map(i, 0, ribbon.pointCount - 1, 0, width);
+          
+          // Base wave with noise
+          let waveY = baseY + Math.sin(time * ribbon.speed + i * ribbon.frequency) * ribbon.amplitude;
+          
+          // Add noise for organic feel
+          waveY += noise2D(x * ribbon.noiseScale, time * 0.3 + ribbon.offset) * ribbon.amplitude * 0.5;
+          
+          // Mouse influence on ribbon
+          if (mouseInfluence) {
+            const dx = x - mouse.x * width;
+            const dy = waveY - mouse.y * height;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 200) {
+              const force = (1 - dist / 200) * 100;
+              waveY += (dy / dist) * force * 0.5;
+            }
+          }
+          
+          ribbon.points.push({ x, y: waveY });
+        }
+
+        // Draw the ribbon
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        
+        // Create gradient for the ribbon
+        const gradient = ctx.createLinearGradient(0, ribbon.y - ribbon.thickness/2, 0, ribbon.y + ribbon.thickness/2);
+        const color = palette[ribbon.colorIndex];
+        gradient.addColorStop(0, color + '00'); // Transparent at edges
+        gradient.addColorStop(0.5, color + 'FF'); // Opaque in center
+        gradient.addColorStop(1, color + '00'); // Transparent at edges
+        
+        ctx.fillStyle = gradient;
+        
+        // Draw ribbon as filled shape
+        ctx.beginPath();
+        for (let i = 0; i < ribbon.points.length; i++) {
+          const point = ribbon.points[i];
+          if (i === 0) {
+            ctx.moveTo(point.x, point.y - ribbon.thickness/2);
+          } else {
+            ctx.lineTo(point.x, point.y - ribbon.thickness/2);
+          }
+        }
+        
+        // Draw bottom edge of ribbon
+        for (let i = ribbon.points.length - 1; i >= 0; i--) {
+          const point = ribbon.points[i];
+          ctx.lineTo(point.x, point.y + ribbon.thickness/2);
+        }
+        
+        ctx.closePath();
+        ctx.fill();
+        
+        // Add glow effect
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        ctx.fill();
+        
+        ctx.restore();
+      });
+    }
+
+    function drawSubtleJaZeRText() {
+      // Draw "JaZeR" text subtly in the aurora ribbons
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.font = 'bold 140px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Create a more subtle version of the text that follows the ribbons
+      const text = 'JaZeR';
+      const textY = height / 2;
+      
+      // Draw the text multiple times with different opacities and colors
+      for (let i = 0; i < 3; i++) {
+        const offset = (i - 1) * 30;
+        const color = palette[i % palette.length];
+        ctx.fillStyle = color + '22'; // Very transparent
+        
+        // Draw along the path of one of the ribbons
+        ctx.save();
+        ctx.translate(width/2, textY + offset);
+        ctx.fillText(text, 0, 0);
+        ctx.restore();
+      }
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

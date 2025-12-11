@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Vaporwave Horizon Ride</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Vaporwave Horizon Ride</h1>
+      <p>Classic synthwave: grid floor, big sun, mountains — but everything branded JaZeR with neon gradients.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.vapor; // Use vapor palette for synthwave feel
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Vaporwave horizon properties
+    const horizonY = height * 0.6;
+    const sun = {
+      x: width * 0.8,
+      y: height * 0.2,
+      radius: 60,
+      pulsePhase: 0
+    };
+    const gridLines = [];
+    const gridSpacing = 40;
+    const mountains = [];
+    const mountainCount = 8;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update horizon
+      horizonY = height * 0.6;
+      sun.x = width * 0.8;
+      sun.y = height * 0.2;
+      
+      // Initialize grid lines
+      initializeGrid();
+      initializeMountains();
+    }
+
+    function initializeGrid() {
+      gridLines.length = 0;
+      // Create grid lines that move toward the horizon
+      for (let i = 0; i < 20; i++) {
+        gridLines.push({
+          id: i,
+          y: horizonY + i * gridSpacing,
+          offset: Math.random() * 100
+        });
+      }
+    }
+
+    function initializeMountains() {
+      mountains.length = 0;
+      for (let i = 0; i < mountainCount; i++) {
+        const widthFrac = 0.2 + Math.random() * 0.3;
+        mountains.push({
+          id: i,
+          x: (i / mountainCount) * width,
+          width: width * widthFrac,
+          height: 50 + Math.random() * 150,
+          color: palette[i % palette.length],
+          offset: Math.random() * 1000
+        });
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with gradient background
+      const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+      bgGradient.addColorStop(0, '#8a2be2'); // Purple sky
+      bgGradient.addColorStop(0.7, '#ff6ec7'); // Pink mid
+      bgGradient.addColorStop(1, '#00f0ff'); // Cyan bottom
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw mountains
+      drawMountains();
+
+      // Draw grid floor
+      drawGrid();
+
+      // Draw sun with pulsing effect
+      drawSun();
+
+      // Draw JaZeR text floating above sun
+      drawJaZeRText();
+
+      // Add scanline effect
+      addScanlines();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function drawMountains() {
+      for (const mountain of mountains) {
+        // Calculate position with movement
+        const x = (mountain.x + time * 10) % (width + mountain.width) - mountain.width;
+        
+        // Create mountain shape
+        ctx.beginPath();
+        ctx.moveTo(x, height);
+        ctx.lineTo(x + mountain.width/2, height - mountain.height);
+        ctx.lineTo(x + mountain.width, height);
+        ctx.closePath();
+        
+        // Fill with neon color
+        const gradient = ctx.createLinearGradient(x, height - mountain.height, x, height);
+        gradient.addColorStop(0, mountain.color + '88');
+        gradient.addColorStop(1, mountain.color + '44');
+        
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // Add outline
+        ctx.strokeStyle = mountain.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = '#ffffff44';
+      ctx.lineWidth = 1;
+      
+      // Draw perspective grid lines
+      for (let i = 0; i < gridLines.length; i++) {
+        const line = gridLines[i];
+        
+        // Move lines toward horizon to simulate forward motion
+        const y = line.y - time * 30 + Math.sin(time * 0.5 + line.offset) * 5;
+        
+        // Reset line if it goes above horizon
+        if (y < horizonY) {
+          gridLines[i].y = height;
+        }
+        
+        // Draw line with perspective
+        const perspective = map(y, horizonY, height, 0.2, 1);
+        const lineWidth = map(perspective, 0.2, 1, 1, 4);
+        
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      
+      // Draw vertical grid lines for perspective
+      ctx.strokeStyle = '#ffffff22';
+      for (let x = 0; x < width; x += gridSpacing) {
+        const perspectiveX = x + Math.sin(time * 0.3 + x * 0.01) * 2;
+        ctx.beginPath();
+        ctx.moveTo(perspectiveX, horizonY);
+        ctx.lineTo(perspectiveX, height);
+        ctx.stroke();
+      }
+    }
+
+    function drawSun() {
+      // Animate sun properties
+      sun.pulsePhase += 0.05;
+      const pulseSize = Math.sin(sun.pulsePhase) * 5;
+      const pulseColor = Math.sin(sun.pulsePhase * 2) * 0.2 + 0.8;
+      
+      // Draw sun with glow
+      const sunGradient = ctx.createRadialGradient(
+        sun.x, sun.y, 0,
+        sun.x, sun.y, sun.radius + pulseSize
+      );
+      sunGradient.addColorStop(0, '#ffff00');
+      sunGradient.addColorStop(0.7, '#ff6ec7');
+      sunGradient.addColorStop(1, '#00f0ff');
+      
+      ctx.fillStyle = sunGradient;
+      ctx.beginPath();
+      ctx.arc(sun.x, sun.y, sun.radius + pulseSize, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Add sun rays
+      ctx.save();
+      ctx.globalCompositeOperation = 'overlay';
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2 + time * 0.2;
+        const rayLength = sun.radius * 2 + pulseSize * 2;
+        const endX = sun.x + Math.cos(angle) * rayLength;
+        const endY = sun.y + Math.sin(angle) * rayLength;
+        
+        ctx.beginPath();
+        ctx.moveTo(sun.x, sun.y);
+        ctx.lineTo(endX, endY);
+        ctx.strokeStyle = palette[i % palette.length];
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.restore();
+      
+      // Add glow
+      ctx.shadowColor = '#ffff00';
+      ctx.shadowBlur = 40;
+      ctx.fill();
+    }
+
+    function drawJaZeRText() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Position text above the sun
+      const textX = sun.x;
+      const textY = sun.y - sun.radius - 40 + Math.sin(time * 2) * 10;
+      
+      // Draw "JaZeR" text with vaporwave style
+      ctx.font = 'bold 40px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Create vertical gradient for text
+      const textGradient = ctx.createLinearGradient(textX, textY - 20, textX, textY + 20);
+      textGradient.addColorStop(0, palette[0]);
+      textGradient.addColorStop(1, palette[2]);
+      
+      ctx.fillStyle = textGradient;
+      ctx.shadowColor = palette[0];
+      ctx.shadowBlur = 20;
+      ctx.fillText('JaZeR', textX, textY);
+      
+      ctx.restore();
+    }
+
+    function addScanlines() {
+      // Add scanline effect for retro feel
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      for (let y = 0; y < height; y += 3) {
+        ctx.fillRect(0, y, width, 1);
+      }
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

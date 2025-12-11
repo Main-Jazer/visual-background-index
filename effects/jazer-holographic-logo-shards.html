@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Holographic Logo Shards</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Holographic Logo Shards</h1>
+      <p>The JaZeR logo appears as if made of floating glass shards, each slightly offset and shimmering.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Holographic logo shards properties
+    const center = { x: width / 2, y: height / 2 };
+    const logoShards = [];
+    const shardCount = 50; // Number of shards in the logo
+    const maxDistance = 100; // Maximum displacement from the original position
+    const rotationSpeed = 0.1;
+    const wobbleSpeed = 0.05;
+    const wobbleAmount = 5;
+    const shimmerIntensity = 0.2;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Initialize holographic logo shards
+      initializeHolographicLogo();
+    }
+
+    function initializeHolographicLogo() {
+      logoShards.length = 0;
+      
+      // Create the JaZeR logo from individual shards
+      const text = "JaZeR";
+      const fontSize = 120;
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Calculate starting x position for the text
+      const textWidth = ctx.measureText(text).width;
+      const textStartX = center.x - textWidth / 2 + fontSize / 2;
+      const textY = center.y;
+      
+      // Create shards by sampling points along the text outline
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const charWidth = ctx.measureText(char).width;
+        const charX = textStartX + ctx.measureText(text.substring(0, i)).width + charWidth / 2;
+        
+        // Create a grid of points within each character
+        for (let x = -charWidth/2; x < charWidth/2; x += 15) {
+          for (let y = -fontSize/2; y < fontSize/2; y += 15) {
+            // Only create shards at points that are likely inside the character
+            if (Math.random() > 0.4) { // Randomly skip some points to create the right density
+              logoShards.push({
+                id: logoShards.length,
+                baseX: charX + x,
+                baseY: textY + y,
+                x: charX + x,
+                y: textY + y,
+                offsetX: (Math.random() - 0.5) * maxDistance,
+                offsetY: (Math.random() - 0.5) * maxDistance,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * rotationSpeed,
+                wobblePhase: Math.random() * Math.PI * 2,
+                wobbleSpeed: wobbleSpeed + Math.random() * 0.02,
+                wobbleAmount: wobbleAmount * (0.5 + Math.random()),
+                color: palette[(i + Math.floor(Math.random() * 3)) % palette.length],
+                size: 4 + Math.random() * 6,
+                opacity: 0.6 + Math.random() * 0.4,
+                shimmerPhase: Math.random() * Math.PI * 2,
+                shimmerSpeed: 0.5 + Math.random(),
+                pulsePhase: Math.random() * Math.PI * 2,
+                pulseSpeed: 0.5 + Math.random() * 0.5
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with dark background
+      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#000020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update and draw holographic logo shards
+      updateAndDrawHolographicLogo();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function updateAndDrawHolographicLogo() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      for (const shard of logoShards) {
+        // Update shard position with floating/wobble effect
+        const wobbleX = Math.sin(time * shard.wobbleSpeed + shard.wobblePhase) * shard.wobbleAmount;
+        const wobbleY = Math.cos(time * shard.wobbleSpeed + shard.wobblePhase) * shard.wobbleAmount;
+        
+        // Apply offset based on time for a fluid movement
+        shard.x = shard.baseX + Math.sin(time * 0.3) * shard.offsetX * 0.2 + wobbleX;
+        shard.y = shard.baseY + Math.cos(time * 0.3) * shard.offsetY * 0.2 + wobbleY;
+        
+        // Apply rotation
+        shard.rotation += shard.rotationSpeed;
+        
+        // Calculate shimmer effect
+        const shimmer = Math.sin(time * shard.shimmerSpeed + shard.shimmerPhase) * shimmerIntensity * shard.opacity + shard.opacity;
+        const currentOpacity = Math.max(0, Math.min(1, shimmer));
+        
+        // Calculate pulse effect
+        const pulse = Math.sin(time * shard.pulseSpeed + shard.pulsePhase) * 0.2 + 1;
+        const currentSize = shard.size * pulse;
+        
+        // Apply mouse interaction - if mouse is near, attract shards
+        if (mouse.isInside) {
+          const mouseX = mouse.x * width;
+          const mouseY = mouse.y * height;
+          const dx = shard.x - mouseX;
+          const dy = shard.y - mouseY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          if (dist < 150) {
+            const force = (150 - dist) / 150 * 2.0;
+            const angle = Math.atan2(dy, dx);
+            shard.x += Math.cos(angle) * force;
+            shard.y += Math.sin(angle) * force;
+          }
+        }
+        
+        // Draw the shard with glow effect
+        ctx.save();
+        ctx.translate(shard.x, shard.y);
+        ctx.rotate(shard.rotation);
+        
+        // Create a polygon shape as a shard
+        const numPoints = 3 + Math.floor(Math.random() * 4); // Triangle to pentagon
+        ctx.beginPath();
+        for (let i = 0; i < numPoints; i++) {
+          const angle = (i / numPoints) * Math.PI * 2;
+          const radius = currentSize;
+          const pointX = Math.cos(angle) * radius;
+          const pointY = Math.sin(angle) * radius;
+          
+          if (i === 0) {
+            ctx.moveTo(pointX, pointY);
+          } else {
+            ctx.lineTo(pointX, pointY);
+          }
+        }
+        ctx.closePath();
+        
+        // Create gradient for the shard
+        const gradient = ctx.createRadialGradient(
+          0, 0, 0,
+          0, 0, currentSize * 2
+        );
+        const colorHex = shard.color;
+        gradient.addColorStop(0, colorHex + 'FF');
+        gradient.addColorStop(0.7, colorHex + Math.floor(currentOpacity * 150).toString(16).padStart(2, '0'));
+        gradient.addColorStop(1, colorHex + '00');
+        
+        ctx.fillStyle = gradient;
+        ctx.strokeStyle = colorHex + Math.floor(currentOpacity * 200).toString(16).padStart(2, '0');
+        ctx.lineWidth = 1;
+        ctx.shadowColor = colorHex;
+        ctx.shadowBlur = 20;
+        
+        // Draw with glow
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.restore();
+      }
+      
+      // Draw connections between nearby shards for holographic effect
+      for (let i = 0; i < logoShards.length; i++) {
+        for (let j = i + 1; j < logoShards.length; j++) {
+          const shard1 = logoShards[i];
+          const shard2 = logoShards[j];
+          const dist = distance(shard1.x, shard1.y, shard2.x, shard2.y);
+          
+          if (dist < 40) {
+            const alpha = (40 - dist) / 40;
+            ctx.beginPath();
+            ctx.moveTo(shard1.x, shard1.y);
+            ctx.lineTo(shard2.x, shard2.y);
+            ctx.strokeStyle = shard1.color + Math.floor(alpha * 100).toString(16).padStart(2, '0');
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

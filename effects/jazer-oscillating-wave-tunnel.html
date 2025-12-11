@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Oscillating Wave Tunnel</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Oscillating Wave Tunnel</h1>
+      <p>Tunnel formed by sine/cosine waves in both X and Y creating a continuously shifting tunnel effect.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Oscillating wave tunnel properties
+    const center = { x: width / 2, y: height / 2 };
+    const tunnelRadius = 200;
+    const waveResolution = 200; // Number of points in the wave
+    const waveFrequency = 3; // Base frequency of the wave
+    const waveAmplitude = 60; // Base amplitude of the wave
+    const waveSpeed = 0.5; // Speed of wave propagation
+    const oscillationSpeed = 0.2; // Speed of oscillation changes
+    const layers = 3; // Number of tunnel layers
+    
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with dark background
+      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#000020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw oscillating wave tunnel
+      drawOscillatingWaveTunnel();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function drawOscillatingWaveTunnel() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Draw multiple layers of the tunnel for depth
+      for (let layer = 0; layer < layers; layer++) {
+        const layerOffset = layer * 0.5;
+        const currentRadius = tunnelRadius + Math.sin(time * 0.3 + layerOffset) * 20;
+        const currentAmplitude = waveAmplitude + Math.cos(time * 0.4 + layerOffset) * 10;
+        const currentFrequency = waveFrequency + Math.sin(time * 0.2 + layerOffset) * 0.5;
+        const color = palette[layer % palette.length];
+        
+        // Create path for the tunnel
+        ctx.beginPath();
+        
+        // Draw the tunnel using sine and cosine waves
+        for (let i = 0; i <= waveResolution; i++) {
+          const angle = (i / waveResolution) * Math.PI * 2;
+          
+          // Calculate oscillating wave pattern
+          const waveX = Math.sin(angle * currentFrequency + time * waveSpeed) * currentAmplitude;
+          const waveY = Math.cos(angle * currentFrequency + time * waveSpeed + layerOffset) * currentAmplitude;
+          
+          // Apply mouse interaction
+          if (mouse.isInside) {
+            const mouseX = mouse.x * width;
+            const mouseY = mouse.y * height;
+            const dx = (i / waveResolution) * width - mouseX;
+            const dy = center.y - mouseY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const influence = Math.max(0, 1 - dist / 300);
+            
+            const mouseEffectX = Math.sin(time * 2) * influence * 30;
+            const mouseEffectY = Math.cos(time * 2 + layerOffset) * influence * 30;
+            
+            // Calculate position with wave distortion
+            const x = center.x + Math.cos(angle) * currentRadius + waveX + mouseEffectX;
+            const y = center.y + Math.sin(angle) * currentRadius + waveY + mouseEffectY;
+            
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          } else {
+            // Calculate position with wave distortion
+            const x = center.x + Math.cos(angle) * currentRadius + waveX;
+            const y = center.y + Math.sin(angle) * currentRadius + waveY;
+            
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+        }
+        
+        // Close the path
+        ctx.closePath();
+        
+        // Create gradient for the tunnel
+        const gradient = ctx.createRadialGradient(
+          center.x, center.y, currentRadius * 0.5,
+          center.x, center.y, currentRadius * 1.5
+        );
+        gradient.addColorStop(0, color + '22');
+        gradient.addColorStop(0.5, color + '88');
+        gradient.addColorStop(1, color + '00');
+        
+        ctx.fillStyle = gradient;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.lineJoin = 'round';
+        ctx.fill();
+        ctx.stroke();
+        
+        // Add glow effect
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        ctx.stroke();
+      }
+      
+      // Draw additional wave patterns for more complexity
+      for (let freq = 1; freq <= 4; freq++) {
+        ctx.beginPath();
+        
+        for (let i = 0; i <= waveResolution; i++) {
+          const angle = (i / waveResolution) * Math.PI * 2;
+          const radius = tunnelRadius * 0.7 + Math.sin(angle * freq + time * oscillationSpeed) * 30 + 
+                         Math.cos(angle * (freq + 1) + time * oscillationSpeed * 0.7) * 20;
+          
+          const x = center.x + Math.cos(angle) * radius;
+          const y = center.y + Math.sin(angle) * radius;
+          
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        
+        ctx.closePath();
+        
+        const color = palette[Math.floor(time * 0.5 + freq) % palette.length];
+        ctx.strokeStyle = color + '88';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Add glow
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+      }
+      
+      // Draw JaZeR text in the center with oscillating effect
+      drawJaZeRText();
+      
+      ctx.restore();
+    }
+
+    function drawJaZeRText() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Oscillating text effect
+      const text = "JaZeR";
+      const baseFontSize = 40;
+      const oscAmount = Math.sin(time * 2) * 5 + 10;
+      const fontSize = baseFontSize + oscAmount;
+      
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Draw each letter with different colors
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const color = palette[i % palette.length];
+        const charX = center.x - 100 + (i * 50);
+        const charY = center.y + Math.sin(time * 1.5 + i) * 10;
+        
+        // Add glow effect
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        ctx.fillText(char, charX, charY);
+      }
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

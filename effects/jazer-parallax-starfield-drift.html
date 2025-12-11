@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Parallax Starfield Drift</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Parallax Starfield Drift</h1>
+      <p>Parallax starfield where different layers move at different speeds and depths, creating 3D depth illusion with floating JaZeR elements.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Parallax starfield properties
+    const center = { x: width / 2, y: height / 2 };
+    const layers = [];
+    const layerCount = 5;
+    const starsPerLayer = 100;
+    const parallaxMultiplier = 0.1; // How much movement difference between layers
+    const driftSpeed = 0.5; // Base movement speed
+    const jaZerElements = [];
+    const jaZerElementCount = 10;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Initialize star layers
+      initializeStarLayers();
+      initializeJaZeRElements();
+    }
+
+    function initializeStarLayers() {
+      layers.length = 0;
+      for (let i = 0; i < layerCount; i++) {
+        const layer = {
+          id: i,
+          stars: [],
+          speed: (i + 1) * parallaxMultiplier, // Further layers move slower
+          depth: 1 - (i / layerCount), // 1 = furthest, 0 = closest
+          color: palette[i % palette.length],
+          opacity: 0.5 + (i / layerCount) * 0.5 // Closer layers are more opaque
+        };
+        
+        // Create stars for this layer
+        for (let j = 0; j < starsPerLayer; j++) {
+          layer.stars.push({
+            id: j,
+            x: Math.random() * width,
+            y: Math.random() * height,
+            size: 0.5 + Math.random() * (i * 1.5), // Closer layers have bigger stars
+            twinklePhase: Math.random() * Math.PI * 2,
+            twinkleSpeed: 0.5 + Math.random() * 2,
+            brightness: 0.7 + Math.random() * 0.3
+          });
+        }
+        
+        layers.push(layer);
+      }
+    }
+
+    function initializeJaZeRElements() {
+      jaZerElements.length = 0;
+      for (let i = 0; i < jaZerElementCount; i++) {
+        jaZerElements.push({
+          id: i,
+          x: Math.random() * width,
+          y: Math.random() * height,
+          depth: Math.random(), // Distance from viewer (0 = closest, 1 = furthest)
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.02,
+          size: 20 + Math.random() * 40,
+          color: palette[Math.floor(Math.random() * palette.length)],
+          opacity: 0.4 + Math.random() * 0.4,
+          driftOffset: { x: Math.random() * 100 - 50, y: Math.random() * 100 - 50 },
+          driftSpeed: { x: (Math.random() - 0.5) * 0.2, y: (Math.random() - 0.5) * 0.2 }
+        });
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Calculate mouse drift
+      const mouseDriftX = mouse.isInside ? (mouse.x - 0.5) * 3 : 0;
+      const mouseDriftY = mouse.isInside ? (mouse.y - 0.5) * 3 : 0;
+
+      // Clear with deep space background
+      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#000000');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update and draw parallax starfield
+      updateAndDrawStarfield();
+
+      // Draw JaZeR elements floating in space
+      drawJaZeRElements();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function updateAndDrawStarfield() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      for (const layer of layers) {
+        for (const star of layer.stars) {
+          // Apply parallax effect based on mouse position
+          const offsetX = mouseDriftX * layer.speed;
+          const offsetY = mouseDriftY * layer.speed;
+          
+          // Calculate position with parallax
+          const x = (star.x + time * layer.speed * driftSpeed + offsetX) % (width * 1.5);
+          const y = (star.y + time * layer.speed * driftSpeed * 0.7 + offsetY) % (height * 1.5);
+          
+          // Wrap around
+          const wrappedX = (x + width * 0.5) % (width * 1.5) - width * 0.25;
+          const wrappedY = (y + height * 0.5) % (height * 1.5) - height * 0.25;
+          
+          // Calculate twinkling effect
+          const twinkle = (Math.sin(time * star.twinkleSpeed + star.twinklePhase) * 0.3 + 0.7) * star.brightness;
+          const currentOpacity = layer.opacity * twinkle;
+          
+          // Draw star
+          ctx.beginPath();
+          ctx.arc(wrappedX, wrappedY, star.size, 0, Math.PI * 2);
+          
+          // Create gradient for star glow
+          const gradient = ctx.createRadialGradient(
+            wrappedX, wrappedY, 0,
+            wrappedX, wrappedY, star.size * 3
+          );
+          gradient.addColorStop(0, layer.color + 'FF');
+          gradient.addColorStop(0.5, layer.color + Math.floor(currentOpacity * 100).toString(16).padStart(2, '0'));
+          gradient.addColorStop(1, layer.color + '00');
+          
+          ctx.fillStyle = gradient;
+          ctx.shadowColor = layer.color;
+          ctx.shadowBlur = 15 * star.size;
+          ctx.fill();
+        }
+      }
+      
+      ctx.restore();
+    }
+
+    function drawJaZeRElements() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      for (const element of jaZerElements) {
+        // Update position with parallax drift
+        element.x += element.driftSpeed.x * (1 - element.depth);
+        element.y += element.driftSpeed.y * (1 - element.depth);
+        element.rotation += element.rotationSpeed;
+        
+        // Apply mouse parallax effect
+        const offsetX = mouseDriftX * (1 - element.depth);
+        const offsetY = mouseDriftY * (1 - element.depth);
+        const parallaxX = element.x + offsetX;
+        const parallaxY = element.y + offsetY;
+        
+        // Wrap around screen
+        if (parallaxX < -element.size) element.x = width + element.size;
+        if (parallaxX > width + element.size) element.x = -element.size;
+        if (parallaxY < -element.size) element.y = height + element.size;
+        if (parallaxY > height + element.size) element.y = -element.size;
+        
+        // Draw JaZeR element with floating animation
+        ctx.save();
+        ctx.translate(parallaxX, parallaxY);
+        ctx.rotate(element.rotation);
+        
+        // Draw the text with glow
+        ctx.font = `bold ${element.size}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = element.color;
+        ctx.shadowColor = element.color;
+        ctx.shadowBlur = 20 * element.depth + 5;
+        ctx.globalAlpha = element.opacity;
+        
+        // Draw "J" as a representative element (could be "JaZeR" but might be too crowded)
+        ctx.fillText('J', 0, 0);
+        
+        // Draw additional elements occasionally
+        if (Math.floor(time) % 3 === 0) { // Every 3 seconds
+          ctx.font = `${element.size * 0.6}px Arial`;
+          ctx.globalAlpha = element.opacity * 0.6;
+          ctx.fillText('a', element.size * 0.6, 0);
+          ctx.fillText('Z', element.size * 1.2, 0);
+          ctx.fillText('e', element.size * 1.8, 0);
+          ctx.fillText('R', element.size * 2.4, 0);
+        }
+        
+        ctx.restore();
+      }
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

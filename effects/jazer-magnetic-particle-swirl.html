@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Magnetic Particle Swirl</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Magnetic Particle Swirl</h1>
+      <p>Particles swirl around magnetic field lines shaped like the JaZeR logo with attractive and repulsive forces.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Magnetic particle swirl properties
+    const center = { x: width / 2, y: height / 2 };
+    const particles = [];
+    const particleCount = 300;
+    const fieldPoints = []; // Points that define the JaZeR magnetic field
+    const fieldStrength = 200;
+    const fieldRadius = 150;
+    const repulsionRadius = 30;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Initialize particles
+      initializeParticles();
+      
+      // Initialize magnetic field based on JaZeR logo
+      initializeMagneticField();
+    }
+
+    function initializeParticles() {
+      particles.length = 0;
+      for (let i = 0; i < particleCount; i++) {
+        particles.push({
+          id: i,
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 2,
+          size: 1 + Math.random() * 3,
+          color: palette[Math.floor(Math.random() * palette.length)],
+          charge: Math.random() > 0.5 ? 1 : -1, // Positive or negative charge
+          trail: [],
+          trailLength: 10
+        });
+      }
+    }
+
+    function initializeMagneticField() {
+      fieldPoints.length = 0;
+      
+      // Create field points that form the JaZeR logo shape
+      const text = "JaZeR";
+      const fontSize = 100;
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const charX = width * 0.2 + (i * width * 0.15);
+        const charY = height / 2;
+        
+        // Create multiple field points per character to form its shape
+        for (let x = -40; x <= 40; x += 10) {
+          for (let y = -50; y <= 50; y += 10) {
+            // Only add points that would be inside the character (simplified)
+            if (Math.random() > 0.3) { // Randomly skip some to create an organic field
+              fieldPoints.push({
+                x: charX + x + (Math.random() - 0.5) * 5,
+                y: charY + y + (Math.random() - 0.5) * 5,
+                strength: 1.0 + Math.sin(time + i) * 0.5,
+                polarity: Math.random() > 0.5 ? 1 : -1 // Field direction
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Function to calculate magnetic field influence at a point
+    function calculateFieldInfluence(x, y) {
+      let fx = 0;
+      let fy = 0;
+      
+      for (const fieldPoint of fieldPoints) {
+        const dx = x - fieldPoint.x;
+        const dy = y - fieldPoint.y;
+        const distSq = dx * dx + dy * dy;
+        const dist = Math.sqrt(distSq);
+        
+        if (dist > 1) { // Avoid division by zero
+          // Calculate perpendicular force (magnetic fields create circular motion)
+          // For a magnetic field, the force is perpendicular to both velocity and field
+          // Simplified as a rotational force around each field point
+          const perpendicularX = -dy / dist;
+          const perpendicularY = dx / dist;
+          
+          const forceMagnitude = (fieldPoint.strength * fieldStrength) / Math.max(10, distSq);
+          fx += perpendicularX * forceMagnitude * fieldPoint.polarity;
+          fy += perpendicularY * forceMagnitude * fieldPoint.polarity;
+        }
+      }
+      
+      return { fx, fy };
+    }
+
+    // Function to calculate attraction to JaZeR logo points
+    function calculateAttractionForce(x, y) {
+      let fx = 0;
+      let fy = 0;
+      
+      // Find the closest field point to create attraction to the JaZeR shape
+      let closestDist = Infinity;
+      let closestPoint = null;
+      
+      for (const fieldPoint of fieldPoints) {
+        const dx = x - fieldPoint.x;
+        const dy = y - fieldPoint.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < closestDist) {
+          closestDist = dist;
+          closestPoint = fieldPoint;
+        }
+      }
+      
+      if (closestPoint && closestDist < 200) {
+        const dx = closestPoint.x - x;
+        const dy = closestPoint.y - y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist > 1) {
+          const attractionForce = 100 / (dist * dist);
+          fx += (dx / dist) * attractionForce;
+          fy += (dy / dist) * attractionForce;
+        }
+      }
+      
+      return { fx, fy };
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Update magnetic field points (make them pulse)
+      for (let i = 0; i < fieldPoints.length; i++) {
+        const fieldPoint = fieldPoints[i];
+        fieldPoint.strength = 1.0 + Math.sin(time * 2 + i) * 0.3;
+      }
+
+      // Clear with dark background
+      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#000020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update and draw magnetic particle swirl
+      updateAndDrawParticles();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function updateAndDrawParticles() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      for (const particle of particles) {
+        // Calculate magnetic field influence
+        const field = calculateFieldInfluence(particle.x, particle.y);
+        
+        // Calculate attraction to JaZeR logo
+        const attraction = calculateAttractionForce(particle.x, particle.y);
+        
+        // Apply magnetic field forces (perpendicular to direction of motion)
+        particle.vx += field.fx * 0.1 * particle.charge;
+        particle.vy += field.fy * 0.1 * particle.charge;
+        
+        // Apply attraction force
+        particle.vx += attraction.fx * 0.05;
+        particle.vy += attraction.fy * 0.05;
+        
+        // Apply damping to prevent excessive acceleration
+        particle.vx *= 0.98;
+        particle.vy *= 0.98;
+        
+        // Update position
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        
+        // Boundary checks - particles can wrap around
+        if (particle.x < 0) particle.x = width;
+        if (particle.x > width) particle.x = 0;
+        if (particle.y < 0) particle.y = height;
+        if (particle.y > height) particle.y = 0;
+        
+        // Add current position to trail
+        particle.trail.push({x: particle.x, y: particle.y});
+        if (particle.trail.length > particle.trailLength) {
+          particle.trail.shift();
+        }
+        
+        // Draw particle trail
+        for (let i = 1; i < particle.trail.length; i++) {
+          const point = particle.trail[i];
+          const prevPoint = particle.trail[i-1];
+          const trailAlpha = i / particle.trail.length;
+          
+          ctx.beginPath();
+          ctx.moveTo(prevPoint.x, prevPoint.y);
+          ctx.lineTo(point.x, point.y);
+          ctx.strokeStyle = particle.color + Math.floor(trailAlpha * 100).toString(16).padStart(2, '0');
+          ctx.lineWidth = particle.size * 0.5 * trailAlpha;
+          ctx.stroke();
+          
+          // Add glow
+          ctx.shadowColor = particle.color;
+          ctx.shadowBlur = 10 * trailAlpha;
+          ctx.stroke();
+        }
+        
+        // Draw particle
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fillStyle = particle.color;
+        ctx.shadowColor = particle.color;
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        
+        // Draw positive/negative indicator based on charge
+        if (particle.charge > 0) {
+          ctx.font = `bold ${particle.size * 1.5}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText('+', particle.x, particle.y);
+        } else {
+          ctx.font = `bold ${particle.size * 1.5}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillText('-', particle.x, particle.y);
+        }
+      }
+      
+      // Draw field lines representing the magnetic field
+      for (let i = 0; i < fieldPoints.length; i += 5) { // Only draw some field points to avoid clutter
+        const fieldPoint = fieldPoints[i];
+        
+        // Draw field line indicators
+        ctx.beginPath();
+        ctx.arc(fieldPoint.x, fieldPoint.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = palette[0] + '88';
+        ctx.fill();
+        
+        // Draw force direction indicators
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI/2) {
+          const dirX = fieldPoint.x + Math.cos(angle) * 15;
+          const dirY = fieldPoint.y + Math.sin(angle) * 15;
+          
+          ctx.beginPath();
+          ctx.moveTo(fieldPoint.x, fieldPoint.y);
+          ctx.lineTo(dirX, dirY);
+          ctx.strokeStyle = palette[0] + '44';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

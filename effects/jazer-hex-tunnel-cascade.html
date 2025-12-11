@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Hex Tunnel Cascade</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Hex Tunnel Cascade</h1>
+      <p>Infinite tunnel made of hexagonal frames, each edged in neon; "JaZeR" appears as signs on some hex faces.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Hexagon tunnel properties
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const hexSize = 80;
+    const maxDepth = 20;
+    const tunnelSpeed = 2;
+    const hexRings = [];
+    const ringCount = 15;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      centerX = width / 2;
+      centerY = height / 2;
+      
+      // Initialize hex rings
+      initializeHexRings();
+    }
+
+    function initializeHexRings() {
+      hexRings.length = 0;
+      for (let i = 0; i < ringCount; i++) {
+        hexRings.push({
+          id: i,
+          distance: i * 100 + 50, // Start at different distances
+          rotation: 0,
+          rotationSpeed: (Math.random() - 0.5) * 0.05,
+          color: palette[i % palette.length],
+          size: hexSize * (1 - i * 0.05), // Slightly smaller as they go back
+          opacity: 1 - i * 0.05,
+          hasText: i % 4 === 0 // Every 4th ring has text
+        });
+      }
+    }
+
+    // Function to draw a hexagon
+    function drawHexagon(centerX, centerY, size, rotation = 0) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = rotation + i * Math.PI / 3;
+        const x = centerX + Math.cos(angle) * size;
+        const y = centerY + Math.sin(angle) * size;
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.closePath();
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with dark background
+      const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#000005');
+      bgGradient.addColorStop(1, '#000011');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw hexagon tunnel
+      drawHexTunnel();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function drawHexTunnel() {
+      // Update and draw each hex ring
+      for (let i = 0; i < hexRings.length; i++) {
+        const ring = hexRings[i];
+        
+        // Move ring toward viewer (tunnel effect)
+        ring.distance -= tunnelSpeed * (1 + i * 0.1);
+        
+        // Reset ring when it passes the viewer
+        if (ring.distance < 50) {
+          ring.distance = maxDepth * 100 - 50;
+          ring.hasText = Math.random() > 0.7; // Randomly assign text to rings
+        }
+        
+        // Rotate ring
+        ring.rotation += ring.rotationSpeed;
+        
+        // Calculate size and position based on distance
+        const scale = map(ring.distance, 50, maxDepth * 100, 0.1, 2);
+        const currentSize = hexSize * scale;
+        
+        // Only draw if the hexagon is large enough to be visible
+        if (scale > 0.05) {
+          // Calculate screen position based on perspective
+          const screenX = centerX;
+          const screenY = centerY;
+          
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          
+          // Draw with perspective and glow
+          const color = ring.color;
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 3 * scale;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 15 * scale;
+          
+          // Draw the hexagon
+          drawHexagon(screenX, screenY, currentSize, ring.rotation);
+          ctx.stroke();
+          
+          // Draw inner details
+          ctx.strokeStyle = color + '88';
+          ctx.lineWidth = 1 * scale;
+          drawHexagon(screenX, screenY, currentSize * 0.7, ring.rotation);
+          ctx.stroke();
+          
+          // Draw outer glow
+          ctx.strokeStyle = color + '44';
+          ctx.lineWidth = 6 * scale;
+          drawHexagon(screenX, screenY, currentSize * 1.1, ring.rotation);
+          ctx.stroke();
+          
+          // Draw text on some rings
+          if (ring.hasText) {
+            ctx.font = `${Math.max(10, currentSize/3)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = color;
+            ctx.fillText('JaZeR', screenX, screenY);
+          }
+          
+          ctx.restore();
+        }
+      }
+
+      // Draw central focal point
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const centerGradient = ctx.createRadialGradient(
+        centerX, centerY, 0,
+        centerX, centerY, 20
+      );
+      centerGradient.addColorStop(0, palette[0] + 'FF');
+      centerGradient.addColorStop(1, palette[0] + '00');
+      ctx.fillStyle = centerGradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Add glow
+      ctx.shadowColor = palette[0];
+      ctx.shadowBlur = 30;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

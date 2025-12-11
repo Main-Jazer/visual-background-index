@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Binary Star Tunnel</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Binary Star Tunnel</h1>
+      <p>Two bright "star cores" orbit each other in the center while the camera travels through a tunnel of stars.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Binary star tunnel properties
+    const center = { x: width / 2, y: height / 2 };
+    const binaryStars = {};
+    const stars = [];
+    const starCount = 200;
+    const tunnelRadius = 150;
+    const movementSpeed = 2;
+    const orbitRadius = 50;
+    const orbitSpeed = 0.5;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Initialize stars
+      initializeStars();
+      initializeBinaryStars();
+    }
+
+    function initializeStars() {
+      stars.length = 0;
+      for (let i = 0; i < starCount; i++) {
+        // Position stars in a cylindrical tunnel
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * tunnelRadius;
+        const distance = -Math.random() * 1000; // Start at random distance in the tunnel
+        
+        stars.push({
+          id: i,
+          angle: angle,
+          radius: radius,
+          distance: distance,
+          originalDistance: distance,
+          size: 1 + Math.random() * 3,
+          color: palette[Math.floor(Math.random() * palette.length)],
+          speed: 1 + Math.random() * 3, // Different speeds for parallax effect
+          pulsePhase: Math.random() * Math.PI * 2,
+          opacity: 0.7 + Math.random() * 0.3
+        });
+      }
+    }
+    
+    function initializeBinaryStars() {
+      // Initialize two binary stars that orbit each other
+      binaryStars.primary = {
+        id: 0,
+        x: center.x + Math.cos(time * orbitSpeed) * orbitRadius,
+        y: center.y + Math.sin(time * orbitSpeed) * orbitRadius,
+        size: 25,
+        color: palette[0],
+        pulsePhase: 0
+      };
+      
+      binaryStars.secondary = {
+        id: 1,
+        x: center.x + Math.cos(time * orbitSpeed + Math.PI) * orbitRadius, // Opposite phase
+        y: center.y + Math.sin(time * orbitSpeed + Math.PI) * orbitRadius,
+        size: 20,
+        color: palette[1],
+        pulsePhase: Math.PI // Phase shifted
+      };
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =================================== ===================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with dark background
+      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#000020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update and draw binary star tunnel
+      updateAndDrawBinaryTunnel();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function updateAndDrawBinaryTunnel() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Update and draw the star tunnel
+      for (const star of stars) {
+        // Move star toward viewer (simulate forward movement)
+        star.distance += movementSpeed * star.speed;
+        
+        // Reset star if it passes the viewer
+        if (star.distance > 0) {
+          star.distance = -1000;
+          star.angle = Math.random() * Math.PI * 2;
+          star.radius = Math.random() * tunnelRadius;
+        }
+        
+        // Calculate position based on angle, radius and distance
+        const perspective = Math.max(0.1, 1 - Math.abs(star.distance) / 500);
+        const x = center.x + Math.cos(star.angle) * star.radius * perspective;
+        const y = center.y + Math.sin(star.angle) * star.radius * perspective;
+        
+        // Calculate size based on distance
+        const size = star.size * perspective;
+        const opacity = star.opacity * perspective;
+        
+        // Draw the star
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        
+        // Create pulsing effect
+        const pulse = Math.sin(time * 3 + star.pulsePhase) * 0.3 + 0.7;
+        const currentSize = size * pulse;
+        
+        // Create gradient for the star
+        const starGradient = ctx.createRadialGradient(
+          x, y, 0,
+          x, y, currentSize * 3
+        );
+        starGradient.addColorStop(0, star.color + 'FF');
+        starGradient.addColorStop(0.7, star.color + Math.floor(opacity * 150).toString(16).padStart(2, '0'));
+        starGradient.addColorStop(1, star.color + '00');
+        
+        ctx.fillStyle = starGradient;
+        ctx.shadowColor = star.color;
+        ctx.shadowBlur = 15 * perspective;
+        ctx.fill();
+      }
+      
+      // Update binary star positions
+      const primaryAngle = time * orbitSpeed;
+      const secondaryAngle = time * orbitSpeed + Math.PI; // Opposite phase
+      
+      binaryStars.primary.x = center.x + Math.cos(primaryAngle) * orbitRadius;
+      binaryStars.primary.y = center.y + Math.sin(primaryAngle) * orbitRadius;
+      
+      binaryStars.secondary.x = center.x + Math.cos(secondaryAngle) * orbitRadius;
+      binaryStars.secondary.y = center.y + Math.sin(secondaryAngle) * orbitRadius;
+      
+      // Draw binary stars with glow effects
+      for (const star of [binaryStars.primary, binaryStars.secondary]) {
+        // Create pulsing effect
+        const pulse = Math.sin(time * 4 + star.pulsePhase) * 0.2 + 0.8;
+        const currentSize = star.size * pulse;
+        
+        // Draw core
+        const coreGradient = ctx.createRadialGradient(
+          star.x, star.y, 0,
+          star.x, star.y, currentSize
+        );
+        coreGradient.addColorStop(0, '#FFFFFF');
+        coreGradient.addColorStop(0.5, star.color);
+        coreGradient.addColorStop(1, star.color + '00');
+        
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, currentSize, 0, Math.PI * 2);
+        ctx.fillStyle = coreGradient;
+        ctx.fill();
+        
+        // Add glow
+        ctx.shadowColor = star.color;
+        ctx.shadowBlur = 40;
+        ctx.fill();
+        
+        // Draw corona
+        const coronaGradient = ctx.createRadialGradient(
+          star.x, star.y, currentSize,
+          star.x, star.y, currentSize * 3
+        );
+        coronaGradient.addColorStop(0, star.color + '00');
+        coronaGradient.addColorStop(0.3, star.color + '44');
+        coronaGradient.addColorStop(0.7, star.color + '22');
+        coronaGradient.addColorStop(1, star.color + '00');
+        
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, currentSize * 3, 0, Math.PI * 2);
+        ctx.fillStyle = coronaGradient;
+        ctx.fill();
+      }
+      
+      // Draw tunnel ring effect
+      const tunnelPulse = Math.sin(time * 0.8) * 0.1 + 0.9;
+      const tunnelRadiusCurrent = tunnelRadius * tunnelPulse;
+      
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, tunnelRadiusCurrent, 0, Math.PI * 2);
+      ctx.strokeStyle = palette[2] + '22';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Draw connection lines between binary stars occasionally
+      if (Math.floor(time) % 3 === 0) { // Every 3 seconds
+        ctx.beginPath();
+        ctx.moveTo(binaryStars.primary.x, binaryStars.primary.y);
+        ctx.lineTo(binaryStars.secondary.x, binaryStars.secondary.y);
+        ctx.strokeStyle = palette[0] + '66';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Add a glow effect
+        ctx.shadowColor = palette[0];
+        ctx.shadowBlur = 20;
+        ctx.stroke();
+      }
+      
+      // Draw JaZeR text in the center
+      const textPulse = Math.sin(time * 2) * 0.1 + 1;
+      ctx.font = `bold ${40 * textPulse}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = palette[0];
+      ctx.shadowColor = palette[0];
+      ctx.shadowBlur = 30;
+      ctx.fillText('JaZeR', center.x, center.y);
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
