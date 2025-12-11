@@ -65,15 +65,15 @@ All 3 tests must pass:
 
 **Canvas 2D Effects** (~19 effects):
 - Use Canvas 2D API and JaZeR Background Engine
-- Import pattern: `import { noise2D, mouse, hexToRgb, ... } from '../jazer-background-engine.js'`
+- Import pattern: `import { noise2D, mouse, hexToRgb, ... } from '../lib/jazer-background-engine.js'`
 - Examples: Plasma Storm, Hyperspace Tunnel, Matrix Rain, DNA Helix
 
 **Three.js 3D Effects** (~18 effects):
 - Use Three.js for WebGL rendering
 - Import pattern:
   ```javascript
-  import * as THREE from '../Three.js';
-  import { noise3D, mouse, ... } from '../jazer-background-engine.js';
+  import * as THREE from '../lib/Three.js';
+  import { noise3D, mouse, ... } from '../lib/jazer-background-engine.js';
   window.THREE = THREE; // Make available globally if needed
   ```
 - Examples: Neon City, Crystal Cave, Particle Galaxy, Quantum Wormhole
@@ -83,16 +83,17 @@ All 3 tests must pass:
 ```
 /
 ├── index.html                     # Gallery page with all effects
-├── TEST-FIXES.html               # Test suite for verifying setup
-├── jazer-background-engine.js    # Core engine (noise, easing, mouse, colors)
-├── jazer-shaders.js              # GLSL shader utilities
-├── jazer-post-fx.js              # Post-processing effects
-├── jazer-three-fx.js             # Three.js helper functions
-├── jazer-canvas-fx.js            # Canvas 2D helper functions
-├── Three.js                      # Three.js r160 (ES6 module)
-└── effects/                      # 37+ effect files
-    ├── jazer-*.html              # Individual effect files
-    └── (test files)
+├── effect-showcase.html          # Showcase page for effects
+├── lib/                          # Library files
+│   ├── Three.js                  # Three.js r160 (ES6 module)
+│   ├── jazer-background-engine.js    # Core engine (noise, easing, mouse, colors)
+│   ├── jazer-shaders.js          # GLSL shader utilities
+│   ├── jazer-post-fx.js          # Post-processing effects
+│   ├── jazer-three-fx.js         # Three.js helper functions
+│   └── jazer-canvas-fx.js        # Canvas 2D helper functions
+├── effects/                      # 96 effect files
+│   └── jazer-*.html              # Individual effect files
+└── templates/                    # Effect templates
 ```
 
 ## Creating New Effects
@@ -114,7 +115,7 @@ All 3 tests must pass:
 <body>
     <canvas id="c"></canvas>
     <script type="module">
-        import { noise2D, noise3D, mouse, hexToRgb, ColorPalettes } from '../jazer-background-engine.js';
+        import { noise2D, noise3D, mouse, hexToRgb, ColorPalettes } from '../lib/jazer-background-engine.js';
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -163,8 +164,8 @@ All 3 tests must pass:
 <body>
     <canvas id="c"></canvas>
     <script type="module">
-        import * as THREE from '../Three.js';
-        import { noise3D, mouse, hexToRgb } from '../jazer-background-engine.js';
+        import * as THREE from '../lib/Three.js';
+        import { noise3D, mouse, hexToRgb } from '../lib/jazer-background-engine.js';
 
         window.THREE = THREE;
         const canvas = document.getElementById('c');
@@ -205,11 +206,11 @@ All 3 tests must pass:
 All Three.js effects MUST use ES6 module imports:
 ```javascript
 // CORRECT:
-import * as THREE from '../Three.js';
+import * as THREE from '../lib/Three.js';
 window.THREE = THREE;
 
 // WRONG (will fail):
-<script src="../Three.js"></script>
+<script src="../lib/Three.js"></script>
 <script>
     const THREE = window.THREE; // undefined!
 </script>
@@ -219,7 +220,7 @@ window.THREE = THREE;
 
 Use `QualityAutoTuner` for adaptive quality:
 ```javascript
-import { QualityAutoTuner, CONFIG } from '../jazer-background-engine.js';
+import { QualityAutoTuner, CONFIG } from '../lib/jazer-background-engine.js';
 
 const tuner = new QualityAutoTuner(CONFIG);
 
@@ -238,7 +239,7 @@ Tuner auto-adjusts resolution and entity count based on FPS to maintain 60+ FPS 
 ### Mouse Interaction
 
 ```javascript
-import { mouse } from '../jazer-background-engine.js';
+import { mouse } from '../lib/jazer-background-engine.js';
 
 function animate() {
     mouse.update();
@@ -256,7 +257,7 @@ function animate() {
 ### Color Palettes
 
 ```javascript
-import { ColorPalettes, cycleColor } from '../jazer-background-engine.js';
+import { ColorPalettes, cycleColor } from '../lib/jazer-background-engine.js';
 
 // Available palettes:
 // cyberpunk, ocean, sunset, fire, ice, matrix, vapor, galaxy, neon, plasma, etc.

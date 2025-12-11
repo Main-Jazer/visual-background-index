@@ -36,7 +36,6 @@
     <script type="module">
         import { mouse } from '../lib/jazer-background-engine.js';
         import * as THREE from '../lib/Three.js';
-        import { OrbitControls } from '../OrbitControls.js';
 
         window.THREE = THREE;
         const canvas = document.getElementById('c');
@@ -59,17 +58,8 @@
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-        // Orbit Controls
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.enableZoom = true;
-        controls.zoomSpeed = 0.5;
-        controls.enablePan = false;
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 0.3;
-        controls.minDistance = 10;
-        controls.maxDistance = 80;
+        // Auto-rotation speed
+        const autoRotateSpeed = 0.3;
 
         // Neon color palette
         const neonColors = [0xff0055, 0x00f5ff, 0xff2aff, 0xffd700, 0x39ff14, 0xb37cff];
@@ -241,7 +231,12 @@
             requestAnimationFrame(animate);
             time += 0.016;
             mouse.update();
-            controls.update();
+            
+            // Auto-rotate camera
+            const radius = 35;
+            camera.position.x = Math.cos(time * autoRotateSpeed * 0.01) * radius;
+            camera.position.z = Math.sin(time * autoRotateSpeed * 0.01) * radius;
+            camera.lookAt(0, 0, 0);
 
             // Pulse and animate nodes
             nodes.forEach(node => {
