@@ -78,11 +78,11 @@
         // with bloom, chromatic aberration, vignette, tonemapping, and grain.
         // ============================================================================
 
-        import { noise2D, noise3D, mouse, hexToRgb, smoothstep } from '../jazer-background-engine.js';
+        import { noise2D, noise3D, mouse, hexToRgb, smoothstep } from '../lib/jazer-background-engine.js';
 
         // NEW: Import JaZeR Canvas post-processing
-        import { createCanvasPipeline } from '../jazer-canvas-fx.js';
-        import { FX_PRESETS } from '../jazer-post-fx.js';
+        import { createCanvasPipeline } from '../lib/jazer-canvas-fx.js';
+        import { FX_PRESETS } from '../lib/jazer-post-fx.js';
 
         const canvas = document.getElementById('c');
         const debugEl = document.getElementById('debug');

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Galactic Highway - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Galactic Highway
+         * 
+         * Star field with motion blur (warp speed effect) where "JaZeR" text
+         * appears as highway signs/markers passing by. Stars streaking past
+         * on both sides with space highway/road aesthetic. Speed lines and
+         * trails create sense of extreme velocity.
+         * 
+         * Technical approach:
+         * - 3D star field with Z-depth
+         * - Motion blur trails on stars
+         * - Text as highway markers
+         * - Perspective scaling
+         * - High-speed forward motion
+         */
+
+        import {
+            mouse, ColorPalettes, hexToRgb, cycleColor,
+            map, clamp, smoothstep
+        } from '../lib/jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ColorPalettes.neon;
+        const stars = [];
+        const signs = [];
+        const starCount = 500;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Star class for warp effect
+        class Star {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = (Math.random() - 0.5) * 2000;
+                this.y = (Math.random() - 0.5) * 2000;
+                this.z = Math.random() * 2000 + 500;
+                this.brightness = Math.random() * 0.8 + 0.2;
+                this.prevX = null;
+                this.prevY = null;
+            }
+
+            update(speed) {
+                // Save previous position for trail
+                const projected = this.project();
+                if (projected) {
+                    this.prevX = projected.x;
+                    this.prevY = projected.y;
+                }
+
+                // Move toward camera
+                this.z -= speed;
+
+                // Reset when too close
+                if (this.z < 1) {
+                    this.reset();
+                }
+            }
+
+            project() {
+                const perspective = 300;
+                if (this.z <= 0) return null;
+
+                const scale = perspective / this.z;
+                return {
+                    x: cx + this.x * scale,
+                    y: cy + this.y * scale,
+                    scale: scale,
+                    z: this.z
+                };
+            }
+
+            draw() {
+                const pos = this.project();
+                if (!pos) return;
+
+                const alpha = smoothstep(1, 50, pos.z) * smoothstep(2000, 1500, pos.z);
+                if (alpha < 0.01) return;
+
+                const size = Math.max(1, 2 * pos.scale);
+
+                // Draw motion blur trail
+                if (this.prevX !== null && this.prevY !== null) {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    
+                    const gradient = ctx.createLinearGradient(
+                        this.prevX, this.prevY, pos.x, pos.y
+                    );
+                    gradient.addColorStop(0, `rgba(255, 255, 255, 0)`);
+                    gradient.addColorStop(1, `rgba(255, 255, 255, ${alpha * this.brightness})`);
+                    
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = size;
+                    ctx.beginPath();
+                    ctx.moveTo(this.prevX, this.prevY);
+                    ctx.lineTo(pos.x, pos.y);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                // Draw star point
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha * this.brightness})`;
+                ctx.shadowColor = '#fff';
+                ctx.shadowBlur = 5 * pos.scale;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Highway sign class
+        class HighwaySign {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = (Math.random() - 0.5) * 800;
+                this.y = (Math.random() - 0.5) * 400;
+                this.z = Math.random() * 1500 + 1000;
+                this.colorOffset = Math.random();
+            }
+
+            update(speed) {
+                this.z -= speed;
+                if (this.z < 1) {
+                    this.reset();
+                }
+            }
+
+            project() {
+                const perspective = 300;
+                if (this.z <= 0) return null;
+
+                const scale = perspective / this.z;
+                return {
+                    x: cx + this.x * scale,
+                    y: cy + this.y * scale,
+                    scale: scale,
+                    z: this.z
+                };
+            }
+
+            draw() {
+                const pos = this.project();
+                if (!pos) return;
+
+                const alpha = smoothstep(1, 100, pos.z) * smoothstep(1500, 1000, pos.z);
+                if (alpha < 0.01) return;
+
+                const color = cycleColor(palette, time * 0.3 + this.colorOffset);
+                const rgb = hexToRgb(color);
+                const fontSize = Math.max(12, 40 * pos.scale);
+
+                // Draw sign background
+                const padding = 10 * pos.scale;
+                ctx.font = `bold ${fontSize}px monospace`;
+                const textWidth = ctx.measureText('JaZeR').width;
+
+                ctx.save();
+                ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.7})`;
+                ctx.fillRect(
+                    pos.x - textWidth / 2 - padding,
+                    pos.y - fontSize / 2 - padding,
+                    textWidth + padding * 2,
+                    fontSize + padding * 2
+                );
+
+                // Draw border
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.lineWidth = 2 * pos.scale;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 10 * pos.scale;
+                ctx.strokeRect(
+                    pos.x - textWidth / 2 - padding,
+                    pos.y - fontSize / 2 - padding,
+                    textWidth + padding * 2,
+                    fontSize + padding * 2
+                );
+
+                // Draw text
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.shadowBlur = 15 * pos.scale;
+                ctx.fillText('JaZeR', pos.x, pos.y);
+                
+                ctx.restore();
+            }
+        }
+
+        // Initialize
+        function init() {
+            for (let i = 0; i < starCount; i++) {
+                stars.push(new Star());
+            }
+            for (let i = 0; i < 12; i++) {
+                signs.push(new HighwaySign());
+            }
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Warp speed varies
+            const speed = 50 + Math.sin(time * 0.5) * 10;
+
+            // Clear with minimal fade for motion blur
+            ctx.fillStyle = 'rgba(0, 0, 5, 0.3)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Update and draw stars
+            stars.forEach(star => {
+                star.update(speed);
+                star.draw();
+            });
+
+            // Update and draw highway signs
+            signs.forEach(sign => {
+                sign.update(speed * 0.7);
+                sign.draw();
+            });
+
+            // Central glow (hyperspace tunnel effect)
+            const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 200);
+            glow.addColorStop(0, 'rgba(100, 150, 255, 0.1)');
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            // Speed lines from edges
+            if (Math.random() < 0.5) {
+                const isLeft = Math.random() < 0.5;
+                const startX = isLeft ? 0 : W;
+                const startY = Math.random() * H;
+                const length = 100 + Math.random() * 200;
+
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                const gradient = ctx.createLinearGradient(startX, startY, cx, cy);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0.1)');
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(startX + (cx - startX) * 0.3, startY + (cy - startY) * 0.3);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        init();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JaZeR Orbit Rings - Infinite Loop</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        import {
+            noise2D, mouse, Easing,
+            ColorPalettes, cycleColor, hexToRgb,
+            map, clamp, smoothstep, distance
+        } from '../lib/jazer-background-engine.js';
+
+        // =====================================================
+        // CONFIGURATION
+        // =====================================================
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        // Neon color palette
+        const neonPalette = ['#00ffff', '#ff00ff', '#9d00ff', '#00ccff', '#ff1aff'];
+        
+        // Orbit parameters
+        const orbitCount = 8;           // Number of concentric rings
+        const textPerRing = 12;         // "JaZeR" instances per ring
+        
+        // Orbit rings array
+        const orbits = [];
+
+        // =====================================================
+        // RESIZE HANDLER
+        // =====================================================
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // =====================================================
+        // ORBIT RING CLASS
+        // =====================================================
+        /**
+         * OrbitRing represents a circular ring of "JaZeR" text orbiting at a specific radius.
+         * Each ring has its own speed and direction, creating a parallax effect.
+         */
+        class OrbitRing {
+            constructor(index) {
+                this.index = index;
+                this.radius = 80 + index * 60;              // Distance from center
+                this.baseRadius = this.radius;
+                this.angle = Math.random() * Math.PI * 2;   // Current rotation position
+                this.speed = (0.3 + Math.random() * 0.4) * (index % 2 === 0 ? 1 : -1); // Alternate directions
+                this.depthPhase = Math.random() * Math.PI * 2; // For 3D-ish oscillation
+                this.colorOffset = index / orbitCount;      // Color variation
+                this.textCount = textPerRing;
+            }
+
+            /**
+             * Update ring rotation and depth oscillation
+             * @param {number} dt - Delta time in seconds
+             */
+            update(dt) {
+                // Rotate the ring
+                this.angle += this.speed * dt;
+                
+                // Oscillate radius slightly for breathing effect
+                this.radius = this.baseRadius + Math.sin(time * 0.5 + this.depthPhase) * 10;
+            }
+
+            /**
+             * Draw the ring with mouse-reactive 3D tilt
+             */
+            draw() {
+                // Calculate depth scale (simulated Z-axis based on oscillation)
+                const depthOscillation = Math.sin(time * 0.8 + this.depthPhase);
+                const depthScale = 1 + depthOscillation * 0.15;
+                const actualRadius = this.radius * depthScale;
+                
+                // Calculate opacity based on depth (closer = brighter)
+                const alpha = map(depthScale, 0.85, 1.15, 0.4, 1.0);
+                
+                // Get color from palette
+                const colorIndex = Math.floor((time * 0.5 + this.colorOffset * 5) % neonPalette.length);
+                const color = neonPalette[colorIndex];
+                const rgb = hexToRgb(color);
+                
+                // Mouse-reactive tilt - creates 3D perspective shift
+                const tiltX = mouse.centeredX * 100;  // Horizontal tilt
+                const tiltY = mouse.centeredY * 100;  // Vertical tilt
+                
+                // Configure text rendering
+                const fontSize = Math.max(14, 20 + this.index * 2);
+                ctx.font = `bold ${fontSize}px "Arial", sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Draw each "JaZeR" text around the ring
+                for (let i = 0; i < this.textCount; i++) {
+                    const segmentAngle = (i / this.textCount) * Math.PI * 2 + this.angle;
+                    
+                    // Calculate position with 3D perspective tilt
+                    const cosAngle = Math.cos(segmentAngle);
+                    const sinAngle = Math.sin(segmentAngle);
+                    
+                    // Apply perspective transformation (tilt toward mouse)
+                    const x = cx + cosAngle * actualRadius + tiltX * (this.index / orbitCount);
+                    const y = cy + sinAngle * actualRadius * 0.8 + tiltY * (this.index / orbitCount);
+                    
+                    // Calculate depth-based scale (items further away appear smaller)
+                    const depthFactor = 0.5 + sinAngle * 0.3 + depthOscillation * 0.2;
+                    const textScale = map(depthFactor, 0.2, 1.0, 0.6, 1.2);
+                    const textAlpha = alpha * map(depthFactor, 0.2, 1.0, 0.5, 1.0);
+                    
+                    // Skip if too faint
+                    if (textAlpha < 0.1) continue;
+                    
+                    // Add subtle wave using noise
+                    const wave = noise2D(segmentAngle * 2 + this.index, time * 0.3) * 8;
+                    
+                    // Draw text with glow
+                    ctx.save();
+                    ctx.translate(x, y + wave);
+                    ctx.scale(textScale, textScale);
+                    
+                    // Rotate text to face outward from center
+                    ctx.rotate(segmentAngle + Math.PI / 2);
+                    
+                    // Glow effect
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 15 + depthFactor * 10;
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${textAlpha})`;
+                    
+                    // Draw text multiple times for stronger glow
+                    for (let g = 0; g < 2; g++) {
+                        ctx.fillText('JaZeR', 0, 0);
+                    }
+                    
+                    ctx.restore();
+                }
+            }
+        }
+
+        // =====================================================
+        // INITIALIZATION
+        // =====================================================
+        /**
+         * Initialize all orbit rings
+         */
+        function init() {
+            orbits.length = 0;
+            for (let i = 0; i < orbitCount; i++) {
+                orbits.push(new OrbitRing(i));
+            }
+        }
+
+        // =====================================================
+        // ANIMATION LOOP
+        // =====================================================
+        /**
+         * Main render loop - updates and draws all orbiting rings
+         * @param {number} now - Current timestamp in milliseconds
+         */
+        function render(now) {
+            const dt = 1 / 60; // Assume 60fps
+            time += dt;
+            
+            // Update mouse tracking
+            mouse.update();
+            
+            // Clear canvas with slight fade for motion blur
+            ctx.fillStyle = 'rgba(0, 0, 20, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+            
+            // Draw central glow point
+            const centerGlow = cycleColor(neonPalette, time * 0.5);
+            const centerRgb = hexToRgb(centerGlow);
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.shadowColor = centerGlow;
+            ctx.shadowBlur = 50;
+            ctx.fillStyle = `rgba(${centerRgb.r}, ${centerRgb.g}, ${centerRgb.b}, 0.6)`;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            // Update and draw all orbits
+            for (const orbit of orbits) {
+                orbit.update(dt);
+                orbit.draw();
+            }
+            
+            requestAnimationFrame(render);
+        }
+
+        // =====================================================
+        // START THE EFFECT
+        // =====================================================
+        window.addEventListener('resize', resize);
+        resize();
+        init();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

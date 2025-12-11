@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Liquid Neon Ripple - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Liquid Neon Ripple
+         * 
+         * Liquid surface with expanding ripples where "JaZeR" text causes
+         * ripple distortions. Multiple interference patterns overlapping with
+         * neon liquid mercury aesthetic featuring reflections and refractions.
+         * 
+         * Technical approach:
+         * - Ripple sources that expand over time
+         * - Interference patterns from multiple ripples
+         * - Text integrated into ripple waves
+         * - Metallic/liquid color gradients
+         * - Additive blending for glow
+         */
+
+        import {
+            noise2D, mouse, ColorPalettes, hexToRgb, cycleColor,
+            map, clamp, smoothstep
+        } from '../lib/jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ColorPalettes.neon;
+        const ripples = [];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Ripple class
+        class Ripple {
+            constructor(x, y, text = 'JaZeR') {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.age = 0;
+                this.maxAge = 5;
+                this.colorOffset = Math.random();
+            }
+
+            update(dt) {
+                this.age += dt;
+                if (this.age > this.maxAge) {
+                    this.age = 0;
+                    // Reset to random position
+                    this.x = cx + (Math.random() - 0.5) * W * 0.6;
+                    this.y = cy + (Math.random() - 0.5) * H * 0.6;
+                    this.colorOffset = Math.random();
+                }
+            }
+
+            draw() {
+                const progress = this.age / this.maxAge;
+                const radius = progress * 400;
+                const alpha = 1 - progress;
+
+                if (alpha < 0.01) return;
+
+                const color = cycleColor(palette, time * 0.3 + this.colorOffset);
+                const rgb = hexToRgb(color);
+
+                // Draw multiple concentric rings for liquid effect
+                for (let i = 0; i < 5; i++) {
+                    const r = radius - i * 15;
+                    if (r < 0) continue;
+
+                    const ringAlpha = alpha * (1 - i * 0.15);
+
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${ringAlpha * 0.5})`;
+                    ctx.lineWidth = 2;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 15;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                // Draw text with ripple distortion
+                if (progress < 0.7) {
+                    const textAlpha = alpha * smoothstep(0, 0.2, progress);
+                    const fontSize = 16 + progress * 10;
+
+                    // Draw text on each cardinal direction of ripple
+                    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 2) {
+                        const textX = this.x + Math.cos(angle) * radius * 0.5;
+                        const textY = this.y + Math.sin(angle) * radius * 0.5;
+
+                        ctx.save();
+                        ctx.font = `bold ${fontSize}px monospace`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        
+                        // Liquid shimmer effect - split RGB
+                        ctx.globalCompositeOperation = 'lighter';
+                        
+                        ctx.fillStyle = `rgba(${rgb.r}, 50, 50, ${textAlpha})`;
+                        ctx.fillText(this.text, textX + 1, textY);
+                        
+                        ctx.fillStyle = `rgba(50, ${rgb.g}, 50, ${textAlpha})`;
+                        ctx.fillText(this.text, textX, textY);
+                        
+                        ctx.fillStyle = `rgba(50, 50, ${rgb.b}, ${textAlpha})`;
+                        ctx.fillText(this.text, textX - 1, textY);
+                        
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // Get ripple intensity at a point
+            getIntensity(x, y) {
+                const dx = x - this.x;
+                const dy = y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const radius = (this.age / this.maxAge) * 400;
+                
+                // Ripple wave function
+                const wave = Math.sin((dist - radius) * 0.1) * Math.exp(-Math.abs(dist - radius) / 50);
+                return wave * (1 - this.age / this.maxAge);
+            }
+        }
+
+        // Initialize ripples
+        function initRipples() {
+            for (let i = 0; i < 8; i++) {
+                const x = cx + (Math.random() - 0.5) * W * 0.6;
+                const y = cy + (Math.random() - 0.5) * H * 0.6;
+                const ripple = new Ripple(x, y);
+                ripple.age = Math.random() * ripple.maxAge;
+                ripples.push(ripple);
+            }
+        }
+
+        // Draw liquid interference pattern
+        function drawInterference() {
+            const resolution = 8;
+            
+            for (let y = 0; y < H; y += resolution) {
+                for (let x = 0; x < W; x += resolution) {
+                    // Sum all ripple contributions
+                    let intensity = 0;
+                    ripples.forEach(ripple => {
+                        intensity += ripple.getIntensity(x, y);
+                    });
+
+                    if (Math.abs(intensity) < 0.1) continue;
+
+                    // Map intensity to color
+                    const hue = (time * 0.1 + intensity) % 1;
+                    const sat = 0.8;
+                    const light = 0.4 + intensity * 0.3;
+                    
+                    const c = (1 - Math.abs(2 * light - 1)) * sat;
+                    const hMod = hue * 6;
+                    const x1 = c * (1 - Math.abs(hMod % 2 - 1));
+                    const m = light - c / 2;
+                    
+                    let r, g, b;
+                    if (hMod < 1) [r, g, b] = [c, x1, 0];
+                    else if (hMod < 2) [r, g, b] = [x1, c, 0];
+                    else if (hMod < 3) [r, g, b] = [0, c, x1];
+                    else if (hMod < 4) [r, g, b] = [0, x1, c];
+                    else if (hMod < 5) [r, g, b] = [x1, 0, c];
+                    else [r, g, b] = [c, 0, x1];
+
+                    const rgb = {
+                        r: Math.floor((r + m) * 255),
+                        g: Math.floor((g + m) * 255),
+                        b: Math.floor((b + m) * 255)
+                    };
+
+                    const alpha = Math.abs(intensity) * 0.3;
+
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    ctx.fillRect(x, y, resolution, resolution);
+                    ctx.restore();
+                }
+            }
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Clear with fade for trail
+            ctx.fillStyle = 'rgba(0, 0, 10, 0.2)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw interference pattern
+            drawInterference();
+
+            // Update and draw ripples
+            ripples.forEach(ripple => {
+                ripple.update(dt);
+                ripple.draw();
+            });
+
+            // Liquid surface shine
+            const shine = ctx.createRadialGradient(cx, cy * 0.7, 0, cx, cy * 0.7, Math.max(W, H) * 0.5);
+            shine.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+            shine.addColorStop(0.5, 'rgba(100, 200, 255, 0.05)');
+            shine.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = shine;
+            ctx.fillRect(0, 0, W, H);
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        initRipples();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

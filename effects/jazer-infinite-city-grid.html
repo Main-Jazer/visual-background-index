@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Infinite City Grid - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Infinite City Grid
+         * 
+         * Tron-style city grid extending to horizon with buildings/towers
+         * featuring "JaZeR" text rising from the grid. Flying through endless
+         * cyberpunk cityscape with neon grid lines on ground and glowing
+         * skyscrapers. Features perpetual forward motion.
+         * 
+         * Technical approach:
+         * - Perspective grid extending into the distance
+         * - Buildings spawn at grid intersections
+         * - Z-buffer simulation for depth sorting
+         * - Continuous forward motion with position wrapping
+         * - Neon glow effects for cyberpunk aesthetic
+         */
+
+        import {
+            noise2D, mouse, ColorPalettes, hexToRgb, cycleColor,
+            map, clamp, smoothstep
+        } from '../lib/jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ColorPalettes.cyberpunk;
+
+        // Grid and buildings configuration
+        const gridSize = 100;
+        const gridSpacing = 80;
+        const buildings = [];
+        let cameraZ = 0;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Building class
+        class Building {
+            constructor(gridX, gridZ) {
+                this.gridX = gridX;
+                this.gridZ = gridZ;
+                this.x = gridX * gridSpacing;
+                this.z = gridZ * gridSpacing;
+                this.height = 100 + Math.random() * 300;
+                this.width = 30 + Math.random() * 30;
+                this.colorOffset = Math.random();
+                this.pulsePhase = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                // Buildings don't move, camera does
+            }
+
+            project(camZ) {
+                const perspective = 400;
+                const horizon = H * 0.35;
+                const relZ = this.z - camZ;
+
+                if (relZ < 10) return null; // Too close or behind camera
+
+                const scale = perspective / relZ;
+                return {
+                    x: cx + this.x * scale,
+                    y: horizon + 50 * scale, // Ground level
+                    scale: scale,
+                    z: relZ
+                };
+            }
+
+            draw(camZ) {
+                const base = this.project(camZ);
+                if (!base) return;
+
+                const alpha = smoothstep(10, 50, base.z) * smoothstep(2000, 1500, base.z);
+                if (alpha < 0.01) return;
+
+                const buildingWidth = this.width * base.scale;
+                const buildingHeight = this.height * base.scale;
+
+                const color = cycleColor(palette, time * 0.3 + this.colorOffset * 2);
+                const rgb = hexToRgb(color);
+                const pulse = Math.sin(time * 2 + this.pulsePhase) * 0.3 + 0.7;
+
+                // Draw building body
+                ctx.fillStyle = `rgba(${rgb.r * 0.2}, ${rgb.g * 0.2}, ${rgb.b * 0.2}, ${alpha * 0.6})`;
+                ctx.fillRect(
+                    base.x - buildingWidth / 2,
+                    base.y - buildingHeight,
+                    buildingWidth,
+                    buildingHeight
+                );
+
+                // Draw building edges with glow
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * pulse})`;
+                ctx.lineWidth = 2 * base.scale;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 10 * base.scale;
+                ctx.strokeRect(
+                    base.x - buildingWidth / 2,
+                    base.y - buildingHeight,
+                    buildingWidth,
+                    buildingHeight
+                );
+                ctx.shadowBlur = 0;
+
+                // Add JaZeR text on building
+                const fontSize = Math.max(6, 16 * base.scale);
+                ctx.font = `bold ${fontSize}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * pulse})`;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 15;
+                ctx.fillText('JaZeR', base.x, base.y - buildingHeight / 2);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // Initialize buildings on grid
+        function initBuildings() {
+            buildings.length = 0;
+            for (let x = -10; x <= 10; x++) {
+                for (let z = 0; z < 40; z++) {
+                    // Sparse building placement
+                    if (Math.random() < 0.3) {
+                        buildings.push(new Building(x, z));
+                    }
+                }
+            }
+        }
+
+        // Draw the ground grid
+        function drawGrid(camZ) {
+            const perspective = 400;
+            const horizon = H * 0.35;
+            const gridLines = 60;
+
+            ctx.strokeStyle = 'rgba(0, 200, 255, 0.3)';
+            ctx.lineWidth = 1;
+
+            // Horizontal grid lines (parallel to camera)
+            for (let i = 0; i < gridLines; i++) {
+                const z = Math.floor(camZ / gridSpacing) * gridSpacing + i * gridSpacing;
+                const relZ = z - camZ;
+
+                if (relZ < 10 || relZ > 2000) continue;
+
+                const scale = perspective / relZ;
+                const y = horizon + 50 * scale;
+                const alpha = smoothstep(10, 50, relZ) * smoothstep(2000, 1500, relZ);
+
+                ctx.globalAlpha = alpha * 0.5;
+
+                // Glow effect for closer lines
+                if (i < 10) {
+                    ctx.shadowColor = '#00ccff';
+                    ctx.shadowBlur = 5 * scale;
+                }
+
+                ctx.beginPath();
+                const leftX = cx + (-10 * gridSpacing) * scale;
+                const rightX = cx + (10 * gridSpacing) * scale;
+                ctx.moveTo(leftX, y);
+                ctx.lineTo(rightX, y);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+            }
+
+            // Vertical grid lines (perpendicular to camera)
+            ctx.globalAlpha = 0.3;
+            for (let x = -10; x <= 10; x++) {
+                const worldX = x * gridSpacing;
+
+                ctx.beginPath();
+                for (let i = 0; i < gridLines; i++) {
+                    const z = Math.floor(camZ / gridSpacing) * gridSpacing + i * gridSpacing;
+                    const relZ = z - camZ;
+
+                    if (relZ < 10 || relZ > 2000) continue;
+
+                    const scale = perspective / relZ;
+                    const screenX = cx + worldX * scale;
+                    const y = horizon + 50 * scale;
+
+                    if (i === 0) {
+                        ctx.moveTo(screenX, y);
+                    } else {
+                        ctx.lineTo(screenX, y);
+                    }
+                }
+                ctx.stroke();
+            }
+
+            ctx.globalAlpha = 1;
+        }
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            // Move camera forward
+            cameraZ += 5; // Speed of forward motion
+
+            // Spawn new buildings as we move forward
+            const frontZ = Math.floor((cameraZ + 2000) / gridSpacing);
+            for (let x = -10; x <= 10; x++) {
+                const existing = buildings.find(b => b.gridX === x && b.gridZ === frontZ);
+                if (!existing && Math.random() < 0.3) {
+                    buildings.push(new Building(x, frontZ));
+                }
+            }
+
+            // Remove buildings that are behind camera
+            for (let i = buildings.length - 1; i >= 0; i--) {
+                if (buildings[i].z < cameraZ - 200) {
+                    buildings.splice(i, 1);
+                }
+            }
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(0, 0, 10, 0.2)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Sky gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.4);
+            skyGrad.addColorStop(0, 'rgba(10, 0, 30, 1)');
+            skyGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, W, H * 0.4);
+
+            // Draw grid
+            drawGrid(cameraZ);
+
+            // Sort buildings by distance (far to near)
+            buildings.sort((a, b) => b.z - a.z);
+
+            // Draw buildings
+            buildings.forEach(building => {
+                building.draw(cameraZ);
+            });
+
+            // Horizon glow
+            const horizonGlow = ctx.createLinearGradient(0, H * 0.3, 0, H * 0.4);
+            horizonGlow.addColorStop(0, 'rgba(0, 200, 255, 0.1)');
+            horizonGlow.addColorStop(0.5, 'rgba(0, 200, 255, 0.3)');
+            horizonGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = horizonGlow;
+            ctx.fillRect(0, H * 0.3, W, H * 0.1);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        initBuildings();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

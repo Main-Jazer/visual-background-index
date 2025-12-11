@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chromatic Wavefield - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Chromatic Wavefield
+         * 
+         * 3D sine wave surface (like ocean waves) with "JaZeR" text floating
+         * on wave peaks. Waves undulate in multiple directions with chromatic
+         * aberration / RGB split effects and iridescent color shifts.
+         * 
+         * Technical approach:
+         * - Grid of points with sine wave displacement
+         * - Multi-directional wave interference
+         * - Text placed at wave peaks
+         * - RGB color separation for chromatic effect
+         * - Perspective projection for 3D appearance
+         */
+
+        import {
+            noise2D, mouse, hexToRgb,
+            map, clamp, smoothstep
+        } from '../lib/jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const gridSize = 30;
+        const spacing = 25;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // HSL to RGB for iridescent colors
+        function hslToRgb(h, s, l) {
+            h = h % 1;
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+            const m = l - c / 2;
+            let r, g, b;
+
+            if (h < 1/6) [r, g, b] = [c, x, 0];
+            else if (h < 2/6) [r, g, b] = [x, c, 0];
+            else if (h < 3/6) [r, g, b] = [0, c, x];
+            else if (h < 4/6) [r, g, b] = [0, x, c];
+            else if (h < 5/6) [r, g, b] = [x, 0, c];
+            else [r, g, b] = [c, 0, x];
+
+            return {
+                r: Math.floor((r + m) * 255),
+                g: Math.floor((g + m) * 255),
+                b: Math.floor((b + m) * 255)
+            };
+        }
+
+        // Calculate wave height at position
+        function getWaveHeight(x, y, t) {
+            // Multiple wave directions for interference pattern
+            const wave1 = Math.sin(x * 0.05 + t * 2) * 40;
+            const wave2 = Math.sin(y * 0.05 + t * 1.5) * 40;
+            const wave3 = Math.sin((x + y) * 0.03 + t * 1.8) * 30;
+            const wave4 = Math.sin((x - y) * 0.04 + t * 2.2) * 20;
+            
+            return wave1 + wave2 + wave3 + wave4;
+        }
+
+        // Project 3D point to 2D with perspective
+        function project3D(x, y, z) {
+            const perspective = 600;
+            const distance = 400;
+            const zAdj = z + distance;
+
+            if (zAdj <= 0) return null;
+
+            const scale = perspective / zAdj;
+            return {
+                x: cx + x * scale,
+                y: cy + y * scale - z * 0.5, // Move up with height
+                scale: scale,
+                z: zAdj
+            };
+        }
+
+        // Draw wavefield
+        function drawWavefield() {
+            const points = [];
+
+            // Calculate all grid points
+            for (let gy = 0; gy < gridSize; gy++) {
+                for (let gx = 0; gx < gridSize; gx++) {
+                    const x = (gx - gridSize / 2) * spacing;
+                    const y = (gy - gridSize / 2) * spacing;
+                    const z = getWaveHeight(x, y, time);
+                    
+                    const proj = project3D(x, z, y);
+                    if (proj) {
+                        // Iridescent color based on height and position
+                        const hue = (z * 0.005 + time * 0.1 + (gx + gy) * 0.02) % 1;
+                        const rgb = hslToRgb(hue, 0.8, 0.5);
+                        
+                        points.push({
+                            gx, gy, x, y, z, proj, rgb
+                        });
+                    }
+                }
+            }
+
+            // Sort by z for proper depth rendering
+            points.sort((a, b) => b.proj.z - a.proj.z);
+
+            // Draw connections between adjacent points
+            points.forEach(p => {
+                const alpha = smoothstep(100, 200, p.proj.z) * smoothstep(800, 600, p.proj.z);
+                if (alpha < 0.01) return;
+
+                // Draw lines to adjacent points
+                const neighbors = [
+                    points.find(n => n.gx === p.gx + 1 && n.gy === p.gy),
+                    points.find(n => n.gx === p.gx && n.gy === p.gy + 1)
+                ];
+
+                neighbors.forEach((n, idx) => {
+                    if (!n) return;
+
+                    // Chromatic aberration effect - RGB split
+                    const offset = idx === 0 ? 1 : -1;
+                    
+                    // Red channel
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.strokeStyle = `rgba(${p.rgb.r}, 0, 0, ${alpha * 0.3})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(p.proj.x + offset, p.proj.y);
+                    ctx.lineTo(n.proj.x + offset, n.proj.y);
+                    ctx.stroke();
+
+                    // Green channel
+                    ctx.strokeStyle = `rgba(0, ${p.rgb.g}, 0, ${alpha * 0.3})`;
+                    ctx.beginPath();
+                    ctx.moveTo(p.proj.x, p.proj.y);
+                    ctx.lineTo(n.proj.x, n.proj.y);
+                    ctx.stroke();
+
+                    // Blue channel
+                    ctx.strokeStyle = `rgba(0, 0, ${p.rgb.b}, ${alpha * 0.3})`;
+                    ctx.beginPath();
+                    ctx.moveTo(p.proj.x - offset, p.proj.y);
+                    ctx.lineTo(n.proj.x - offset, n.proj.y);
+                    ctx.stroke();
+                    ctx.restore();
+                });
+
+                // Draw point
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = `rgba(${p.rgb.r}, ${p.rgb.g}, ${p.rgb.b}, ${alpha})`;
+                ctx.shadowColor = `rgb(${p.rgb.r}, ${p.rgb.g}, ${p.rgb.b})`;
+                ctx.shadowBlur = 5;
+                ctx.beginPath();
+                ctx.arc(p.proj.x, p.proj.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Draw JaZeR text on wave peaks
+            const peaks = points.filter(p => p.z > 50 && (p.gx + p.gy) % 4 === 0);
+            peaks.forEach(p => {
+                const alpha = smoothstep(100, 200, p.proj.z) * smoothstep(800, 600, p.proj.z);
+                if (alpha < 0.01) return;
+
+                const fontSize = Math.max(8, 14 * p.proj.scale);
+                ctx.font = `bold ${fontSize}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Chromatic text
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                
+                // Red
+                ctx.fillStyle = `rgba(${p.rgb.r}, 0, 0, ${alpha})`;
+                ctx.fillText('JaZeR', p.proj.x + 1, p.proj.y);
+                
+                // Green
+                ctx.fillStyle = `rgba(0, ${p.rgb.g}, 0, ${alpha})`;
+                ctx.fillText('JaZeR', p.proj.x, p.proj.y);
+                
+                // Blue
+                ctx.fillStyle = `rgba(0, 0, ${p.rgb.b}, ${alpha})`;
+                ctx.fillText('JaZeR', p.proj.x - 1, p.proj.y);
+                
+                ctx.restore();
+            });
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw the wavefield
+            drawWavefield();
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

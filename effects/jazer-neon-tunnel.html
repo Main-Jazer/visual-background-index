@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JaZeR Neon Tunnel - Infinite Loop</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        import {
+            noise2D, mouse, Easing,
+            ColorPalettes, cycleColor, hexToRgb,
+            map, clamp, smoothstep
+        } from '../lib/jazer-background-engine.js';
+
+        // =====================================================
+        // CONFIGURATION
+        // =====================================================
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        // Neon color palette: cyan, magenta, purple
+        const neonPalette = ['#00ffff', '#ff00ff', '#9d00ff', '#00ccff', '#ff1aff'];
+        
+        // Tunnel parameters
+        const ringCount = 30;        // Number of text rings in the tunnel
+        const textSegments = 16;     // How many times "JaZeR" appears per ring
+        const tunnelSpeed = 2.5;     // Forward movement speed
+        const twistSpeed = 0.3;      // Rotation speed
+        
+        // Text rings array
+        const rings = [];
+
+        // =====================================================
+        // RESIZE HANDLER
+        // =====================================================
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // =====================================================
+        // TUNNEL RING CLASS
+        // =====================================================
+        /**
+         * TextRing represents a circular ring of "JaZeR" text at a specific depth in the tunnel.
+         * Uses perspective transformation to create fake 3D effect.
+         */
+        class TextRing {
+            constructor(z) {
+                this.z = z;                                    // Depth position (0 = far, high = near)
+                this.rotation = Math.random() * Math.PI * 2;   // Initial rotation angle
+                this.colorOffset = Math.random();              // For color cycling variation
+                this.twistPhase = Math.random() * Math.PI * 2; // For twist effect
+            }
+
+            /**
+             * Update ring position and rotation
+             * @param {number} dt - Delta time in seconds
+             */
+            update(dt) {
+                // Move ring toward camera
+                this.z += dt * tunnelSpeed;
+                
+                // Rotate ring (with slight twist based on depth)
+                this.rotation += twistSpeed * dt * (1 + this.z * 0.05);
+                
+                // Loop back to far distance when ring gets too close
+                if (this.z > ringCount) {
+                    this.z = 0;
+                    this.colorOffset = Math.random();
+                }
+            }
+
+            /**
+             * Draw the ring with perspective transformation
+             */
+            draw() {
+                // Calculate perspective scale (closer = bigger)
+                const scale = 1 + this.z * 0.5;
+                const radius = 200 * scale;
+                
+                // Calculate opacity based on depth (fade in/out)
+                const fadeIn = smoothstep(0, 2, this.z);
+                const fadeOut = smoothstep(ringCount, ringCount - 3, this.z);
+                const alpha = fadeIn * fadeOut;
+                
+                if (alpha < 0.01) return; // Skip if nearly invisible
+                
+                // Get color from palette with cycling
+                const colorIndex = Math.floor((time * 0.3 + this.colorOffset * 5 + this.z * 0.2) % neonPalette.length);
+                const color = neonPalette[colorIndex];
+                const rgb = hexToRgb(color);
+                
+                // Mouse interaction - tilt based on mouse position
+                const mouseOffsetX = mouse.centeredX * 30 * scale;
+                const mouseOffsetY = mouse.centeredY * 30 * scale;
+                
+                // Configure text rendering
+                const fontSize = Math.max(12, 24 * scale);
+                ctx.font = `bold ${fontSize}px "Arial", sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Draw each "JaZeR" text around the ring
+                for (let i = 0; i < textSegments; i++) {
+                    const angle = (i / textSegments) * Math.PI * 2 + this.rotation;
+                    
+                    // Add slight wave/wobble using noise
+                    const wobble = noise2D(angle * 3 + this.z * 0.3, time * 0.5) * 15 * scale;
+                    
+                    // Calculate position on the ring
+                    const x = cx + Math.cos(angle) * (radius + wobble) + mouseOffsetX;
+                    const y = cy + Math.sin(angle) * (radius + wobble) + mouseOffsetY;
+                    
+                    // Calculate text rotation (tangent to circle)
+                    const textAngle = angle + Math.PI / 2;
+                    
+                    // Draw text with glow effect
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(textAngle);
+                    
+                    // Glow effect
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 20 * scale;
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    
+                    // Draw multiple times for stronger glow
+                    for (let g = 0; g < 2; g++) {
+                        ctx.fillText('JaZeR', 0, 0);
+                    }
+                    
+                    ctx.restore();
+                }
+            }
+        }
+
+        // =====================================================
+        // INITIALIZATION
+        // =====================================================
+        /**
+         * Initialize all tunnel rings at evenly spaced depths
+         */
+        function init() {
+            rings.length = 0;
+            for (let i = 0; i < ringCount; i++) {
+                // Distribute rings evenly through the tunnel
+                rings.push(new TextRing(i));
+            }
+        }
+
+        // =====================================================
+        // ANIMATION LOOP
+        // =====================================================
+        /**
+         * Main render loop - updates and draws all rings
+         * @param {number} now - Current timestamp in milliseconds
+         */
+        function render(now) {
+            const dt = 1 / 60; // Assume 60fps for smooth animation
+            time += dt;
+            
+            // Update mouse tracking
+            mouse.update();
+            
+            // Clear canvas with fade trail for motion blur effect
+            ctx.fillStyle = 'rgba(0, 0, 20, 0.2)'; // Deep navy background
+            ctx.fillRect(0, 0, W, H);
+            
+            // Update and draw all rings (back to front for proper layering)
+            rings.sort((a, b) => a.z - b.z); // Sort by depth
+            for (const ring of rings) {
+                ring.update(dt);
+                ring.draw();
+            }
+            
+            requestAnimationFrame(render);
+        }
+
+        // =====================================================
+        // START THE EFFECT
+        // =====================================================
+        window.addEventListener('resize', resize);
+        resize();
+        init();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

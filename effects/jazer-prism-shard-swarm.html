@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prism Shard Swarm - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Prism Shard Swarm
+         * 
+         * Crystalline prism shards floating and rotating with "JaZeR" text
+         * on each faceted shard. Rainbow light refractions from prisms with
+         * swarm moving in synchronized patterns. Geometric crystal aesthetic
+         * with iridescent shimmer.
+         * 
+         * Technical approach:
+         * - 3D prism/crystal shapes
+         * - Rotation and translation in 3D space
+         * - Rainbow color reflections
+         * - Synchronized swarm movement patterns
+         * - Additive blending for light refractions
+         */
+
+        import {
+            noise2D, noise3D, mouse, hexToRgb,
+            map, clamp, smoothstep
+        } from '../lib/jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const shards = [];
+        const shardCount = 40;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // HSL to RGB for rainbow
+        function hslToRgb(h, s, l) {
+            h = h % 1;
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+            const m = l - c / 2;
+            let r, g, b;
+
+            if (h < 1/6) [r, g, b] = [c, x, 0];
+            else if (h < 2/6) [r, g, b] = [x, c, 0];
+            else if (h < 3/6) [r, g, b] = [0, c, x];
+            else if (h < 4/6) [r, g, b] = [0, x, c];
+            else if (h < 5/6) [r, g, b] = [x, 0, c];
+            else [r, g, b] = [c, 0, x];
+
+            return {
+                r: Math.floor((r + m) * 255),
+                g: Math.floor((g + m) * 255),
+                b: Math.floor((b + m) * 255)
+            };
+        }
+
+        // Prism shard class
+        class PrismShard {
+            constructor(index) {
+                this.index = index;
+                this.phase = (index / shardCount) * Math.PI * 2;
+                
+                // Swarm position
+                this.orbitRadius = 200 + Math.random() * 200;
+                this.orbitSpeed = 0.3 + Math.random() * 0.3;
+                this.verticalOffset = Math.sin(this.phase) * 100;
+                
+                // Rotation
+                this.rotX = Math.random() * Math.PI * 2;
+                this.rotY = Math.random() * Math.PI * 2;
+                this.rotZ = Math.random() * Math.PI * 2;
+                this.rotSpeedX = (Math.random() - 0.5) * 2;
+                this.rotSpeedY = (Math.random() - 0.5) * 2;
+                this.rotSpeedZ = (Math.random() - 0.5) * 2;
+
+                // Crystal properties
+                this.size = 30 + Math.random() * 40;
+                this.hueOffset = Math.random();
+            }
+
+            update(dt) {
+                // Swarm orbit
+                this.phase += this.orbitSpeed * dt;
+                
+                // Rotation
+                this.rotX += this.rotSpeedX * dt;
+                this.rotY += this.rotSpeedY * dt;
+                this.rotZ += this.rotSpeedZ * dt;
+            }
+
+            getPosition() {
+                const swarmX = Math.cos(this.phase) * this.orbitRadius;
+                const swarmY = Math.sin(this.phase) * this.orbitRadius;
+                const swarmZ = Math.sin(this.phase * 2) * 100 + this.verticalOffset;
+
+                return { x: swarmX, y: swarmY, z: swarmZ };
+            }
+
+            project(x, y, z) {
+                const perspective = 500;
+                const distance = 600;
+                const zAdj = z + distance;
+
+                if (zAdj <= 0) return null;
+
+                const scale = perspective / zAdj;
+                return {
+                    x: cx + x * scale,
+                    y: cy + y * scale,
+                    scale: scale,
+                    z: zAdj
+                };
+            }
+
+            // Rotate point in 3D
+            rotatePoint(x, y, z) {
+                // Rotate around X
+                let y1 = y * Math.cos(this.rotX) - z * Math.sin(this.rotX);
+                let z1 = y * Math.sin(this.rotX) + z * Math.cos(this.rotX);
+                y = y1;
+                z = z1;
+
+                // Rotate around Y
+                let x1 = x * Math.cos(this.rotY) - z * Math.sin(this.rotY);
+                z1 = x * Math.sin(this.rotY) + z * Math.cos(this.rotY);
+                x = x1;
+                z = z1;
+
+                // Rotate around Z
+                x1 = x * Math.cos(this.rotZ) - y * Math.sin(this.rotZ);
+                y1 = x * Math.sin(this.rotZ) + y * Math.cos(this.rotZ);
+
+                return { x: x1, y: y1, z: z1 };
+            }
+
+            draw() {
+                const pos = this.getPosition();
+                
+                // Define crystal/prism vertices (hexagonal prism)
+                const vertices = [
+                    // Top hexagon
+                    { x: this.size, y: 0, z: -this.size },
+                    { x: this.size * 0.5, y: this.size * 0.866, z: -this.size },
+                    { x: -this.size * 0.5, y: this.size * 0.866, z: -this.size },
+                    { x: -this.size, y: 0, z: -this.size },
+                    { x: -this.size * 0.5, y: -this.size * 0.866, z: -this.size },
+                    { x: this.size * 0.5, y: -this.size * 0.866, z: -this.size },
+                    // Bottom hexagon
+                    { x: this.size, y: 0, z: this.size },
+                    { x: this.size * 0.5, y: this.size * 0.866, z: this.size },
+                    { x: -this.size * 0.5, y: this.size * 0.866, z: this.size },
+                    { x: -this.size, y: 0, z: this.size },
+                    { x: -this.size * 0.5, y: -this.size * 0.866, z: this.size },
+                    { x: this.size * 0.5, y: -this.size * 0.866, z: this.size }
+                ];
+
+                // Rotate and project vertices
+                const projected = vertices.map(v => {
+                    const rotated = this.rotatePoint(v.x, v.y, v.z);
+                    return this.project(
+                        pos.x + rotated.x,
+                        pos.y + rotated.y,
+                        pos.z + rotated.z
+                    );
+                });
+
+                if (projected.some(p => !p)) return;
+
+                const alpha = smoothstep(100, 200, projected[0].z) * smoothstep(1000, 800, projected[0].z);
+                if (alpha < 0.01) return;
+
+                // Rainbow hue based on rotation and time
+                const hue = (this.rotX + this.rotY + time * 0.2 + this.hueOffset) % 1;
+                const rgb = hslToRgb(hue, 0.9, 0.6);
+
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+
+                // Draw edges of prism
+                const edges = [
+                    // Top hex
+                    [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0],
+                    // Bottom hex
+                    [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 6],
+                    // Connecting edges
+                    [0, 6], [1, 7], [2, 8], [3, 9], [4, 10], [5, 11]
+                ];
+
+                edges.forEach(([i, j]) => {
+                    const p1 = projected[i];
+                    const p2 = projected[j];
+                    if (!p1 || !p2) return;
+
+                    // Rainbow refraction effect - draw with RGB split
+                    ctx.strokeStyle = `rgba(${rgb.r}, 0, 0, ${alpha * 0.5})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x + 1, p1.y);
+                    ctx.lineTo(p2.x + 1, p2.y);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = `rgba(0, ${rgb.g}, 0, ${alpha * 0.5})`;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = `rgba(0, 0, ${rgb.b}, ${alpha * 0.5})`;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x - 1, p1.y);
+                    ctx.lineTo(p2.x - 1, p2.y);
+                    ctx.stroke();
+                });
+
+                // Draw JaZeR text on shard
+                const center = projected[0];
+                const fontSize = Math.max(6, 10 * center.scale);
+                ctx.font = `bold ${fontSize}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.shadowColor = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+                ctx.shadowBlur = 15;
+                ctx.fillText('JaZeR', center.x, center.y);
+
+                ctx.restore();
+            }
+        }
+
+        // Initialize shards
+        function initShards() {
+            for (let i = 0; i < shardCount; i++) {
+                shards.push(new PrismShard(i));
+            }
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Sort shards by depth
+            shards.sort((a, b) => {
+                const posA = a.getPosition();
+                const posB = b.getPosition();
+                return posB.z - posA.z;
+            });
+
+            // Update and draw shards
+            shards.forEach(shard => {
+                shard.update(dt);
+                shard.draw();
+            });
+
+            // Central glow
+            const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 300);
+            glow.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        initShards();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

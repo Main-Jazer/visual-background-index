@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hologram Echoes - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Hologram Echoes
+         * 
+         * Main "JaZeR" text in center with holographic scan lines and echo/
+         * ghost copies that fade out in multiple directions. Features glitch
+         * effects and digital artifacts with hologram flicker and instability.
+         * Sci-fi holographic projection feel with cyan/blue palette.
+         * 
+         * Technical approach:
+         * - Central text with scan lines
+         * - Multiple echo copies with offset and fade
+         * - Random glitch distortions
+         * - Flicker effect
+         * - RGB color separation for hologram effect
+         */
+
+        import {
+            noise2D, mouse, ColorPalettes, hexToRgb,
+            map, clamp, smoothstep
+        } from '../lib/jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const holoColor = '#00ffff'; // Cyan hologram
+        const echoCount = 8;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Draw text with hologram effect
+        function drawHologramText(x, y, text, size, alpha, glitchAmount = 0) {
+            ctx.font = `bold ${size}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // RGB split for hologram effect
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+
+            // Red channel (shifted)
+            ctx.fillStyle = `rgba(255, 0, 0, ${alpha * 0.3})`;
+            ctx.fillText(text, x - 2 + glitchAmount, y);
+
+            // Green channel (shifted opposite)
+            ctx.fillStyle = `rgba(0, 255, 0, ${alpha * 0.3})`;
+            ctx.fillText(text, x + 2 - glitchAmount, y);
+
+            // Blue/Cyan channel (main)
+            ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+            ctx.shadowColor = holoColor;
+            ctx.shadowBlur = 20;
+            ctx.fillText(text, x, y);
+
+            ctx.restore();
+        }
+
+        // Draw scan lines
+        function drawScanLines() {
+            const lineSpeed = time * 100;
+            ctx.globalAlpha = 0.1;
+            
+            for (let y = 0; y < H; y += 3) {
+                const offset = (y + lineSpeed) % 6;
+                if (offset < 3) {
+                    ctx.fillStyle = '#00ffff';
+                    ctx.fillRect(0, y, W, 1);
+                }
+            }
+
+            ctx.globalAlpha = 1;
+
+            // Moving scan line
+            const scanY = (time * 100) % H;
+            const scanGrad = ctx.createLinearGradient(0, scanY - 50, 0, scanY + 50);
+            scanGrad.addColorStop(0, 'rgba(0, 255, 255, 0)');
+            scanGrad.addColorStop(0.5, 'rgba(0, 255, 255, 0.3)');
+            scanGrad.addColorStop(1, 'rgba(0, 255, 255, 0)');
+            ctx.fillStyle = scanGrad;
+            ctx.fillRect(0, scanY - 50, W, 100);
+        }
+
+        // Draw echo copies
+        function drawEchoes() {
+            const directions = [
+                { x: 1, y: 0 },    // Right
+                { x: -1, y: 0 },   // Left
+                { x: 0, y: 1 },    // Down
+                { x: 0, y: -1 },   // Up
+                { x: 0.707, y: 0.707 },   // Diagonal BR
+                { x: -0.707, y: 0.707 },  // Diagonal BL
+                { x: 0.707, y: -0.707 },  // Diagonal TR
+                { x: -0.707, y: -0.707 }  // Diagonal TL
+            ];
+
+            for (let i = 0; i < echoCount; i++) {
+                const dir = directions[i % directions.length];
+                const distance = (i + 1) * 30 + Math.sin(time * 2 + i) * 10;
+                const alpha = Math.max(0, 1 - i / echoCount) * 0.5;
+                
+                const x = cx + dir.x * distance;
+                const y = cy + dir.y * distance;
+                const size = 60 - i * 3;
+
+                drawHologramText(x, y, 'JaZeR', size, alpha, 0);
+            }
+        }
+
+        // Draw glitch artifacts
+        function drawGlitches() {
+            if (Math.random() < 0.05) {
+                const glitchCount = Math.floor(Math.random() * 5) + 1;
+                
+                for (let i = 0; i < glitchCount; i++) {
+                    const x = Math.random() * W;
+                    const y = Math.random() * H;
+                    const width = Math.random() * 200 + 50;
+                    const height = 5 + Math.random() * 10;
+
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.fillStyle = `rgba(0, 255, 255, ${Math.random() * 0.5})`;
+                    ctx.fillRect(x, y, width, height);
+
+                    // RGB split glitch
+                    ctx.fillStyle = `rgba(255, 0, 255, ${Math.random() * 0.3})`;
+                    ctx.fillRect(x + 5, y, width, height);
+                    ctx.restore();
+                }
+            }
+        }
+
+        // Draw grid background
+        function drawGrid() {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+
+            const gridSize = 50;
+            
+            // Vertical lines
+            for (let x = 0; x < W; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, H);
+                ctx.stroke();
+            }
+
+            // Horizontal lines
+            for (let y = 0; y < H; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(W, y);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        // Draw corner brackets (hologram UI)
+        function drawUIBrackets() {
+            const bracketSize = 40;
+            const offset = 50;
+
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = holoColor;
+            ctx.shadowBlur = 10;
+
+            // Top-left
+            ctx.beginPath();
+            ctx.moveTo(offset + bracketSize, offset);
+            ctx.lineTo(offset, offset);
+            ctx.lineTo(offset, offset + bracketSize);
+            ctx.stroke();
+
+            // Top-right
+            ctx.beginPath();
+            ctx.moveTo(W - offset - bracketSize, offset);
+            ctx.lineTo(W - offset, offset);
+            ctx.lineTo(W - offset, offset + bracketSize);
+            ctx.stroke();
+
+            // Bottom-left
+            ctx.beginPath();
+            ctx.moveTo(offset, H - offset - bracketSize);
+            ctx.lineTo(offset, H - offset);
+            ctx.lineTo(offset + bracketSize, H - offset);
+            ctx.stroke();
+
+            // Bottom-right
+            ctx.beginPath();
+            ctx.moveTo(W - offset, H - offset - bracketSize);
+            ctx.lineTo(W - offset, H - offset);
+            ctx.lineTo(W - offset - bracketSize, H - offset);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Hologram flicker
+            const flicker = Math.random() < 0.05 ? Math.random() * 0.5 + 0.5 : 1;
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(0, 0, 5, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw grid background
+            drawGrid();
+
+            // Draw scan lines
+            drawScanLines();
+
+            // Draw echo copies first (background)
+            ctx.globalAlpha = flicker * 0.8;
+            drawEchoes();
+            ctx.globalAlpha = 1;
+
+            // Main hologram text
+            const mainSize = 80;
+            const glitchAmount = Math.random() < 0.1 ? (Math.random() - 0.5) * 10 : 0;
+            const mainAlpha = flicker;
+
+            ctx.globalAlpha = mainAlpha;
+            drawHologramText(cx, cy, 'JaZeR', mainSize, 1, glitchAmount);
+            ctx.globalAlpha = 1;
+
+            // Draw glitch artifacts
+            drawGlitches();
+
+            // Draw UI brackets
+            drawUIBrackets();
+
+            // Add info text
+            ctx.font = 'bold 12px monospace';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
+            ctx.fillText('HOLOGRAPHIC PROJECTION', 60, 60);
+            ctx.fillText(`STATUS: ${flicker < 1 ? 'UNSTABLE' : 'ACTIVE'}`, 60, 80);
+            ctx.fillText(`SIGNAL: ${Math.floor(flicker * 100)}%`, 60, H - 60);
+
+            // Random screen tear
+            if (Math.random() < 0.02) {
+                const tearY = Math.random() * H;
+                const tearHeight = Math.random() * 100;
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
+                ctx.fillRect(0, tearY, W, tearHeight);
+                ctx.restore();
+            }
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

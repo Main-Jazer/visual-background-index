@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cosmic Laser Beams - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Cosmic Laser Beams
+         * 
+         * Laser beams shooting from center outward in all directions with
+         * "JaZeR" text traveling along the laser paths. Beams rotate slowly
+         * creating spiral patterns with bright neon colors and bloom/glow
+         * effects against a space/cosmic background.
+         * 
+         * Technical approach:
+         * - Radial beam system emanating from center
+         * - Text particles travel along beam paths
+         * - Rotation for spiral effect
+         * - Additive blending for glow/bloom
+         * - Star field background for cosmic atmosphere
+         */
+
+        import {
+            noise2D, mouse, ColorPalettes, hexToRgb, cycleColor,
+            map, clamp, smoothstep
+        } from '../lib/jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ColorPalettes.neon;
+        const beamCount = 32;
+        const beams = [];
+        const stars = [];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Star background
+        class Star {
+            constructor() {
+                this.x = Math.random() * W;
+                this.y = Math.random() * H;
+                this.brightness = Math.random();
+                this.twinkleSpeed = 0.5 + Math.random() * 1.5;
+            }
+
+            draw() {
+                const brightness = (Math.sin(time * this.twinkleSpeed + this.brightness * 10) * 0.5 + 0.5) * 0.5;
+                ctx.fillStyle = `rgba(255, 255, 255, ${brightness})`;
+                ctx.fillRect(this.x, this.y, 1, 1);
+            }
+        }
+
+        // Laser beam with traveling text
+        class LaserBeam {
+            constructor(angle, colorOffset) {
+                this.angle = angle;
+                this.colorOffset = colorOffset;
+                this.rotationSpeed = 0.1;
+                this.particles = [];
+                this.spawnTimer = 0;
+            }
+
+            update(dt) {
+                this.angle += this.rotationSpeed * dt;
+                this.spawnTimer += dt;
+
+                // Spawn new particles
+                if (this.spawnTimer > 0.3) {
+                    this.spawnTimer = 0;
+                    this.particles.push({
+                        distance: 0,
+                        life: 1,
+                        char: 'JaZeR'[Math.floor(Math.random() * 5)]
+                    });
+                }
+
+                // Update particles
+                this.particles.forEach(p => {
+                    p.distance += 300 * dt;
+                    p.life = 1 - (p.distance / Math.max(W, H));
+                });
+
+                // Remove dead particles
+                this.particles = this.particles.filter(p => p.life > 0);
+            }
+
+            draw() {
+                const endX = cx + Math.cos(this.angle) * Math.max(W, H);
+                const endY = cy + Math.sin(this.angle) * Math.max(W, H);
+
+                const color = cycleColor(palette, time * 0.5 + this.colorOffset);
+                const rgb = hexToRgb(color);
+
+                // Draw beam core
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+
+                const gradient = ctx.createLinearGradient(cx, cy, endX, endY);
+                gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`);
+                gradient.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`);
+                gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
+
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 3;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+
+                // Draw outer glow
+                ctx.lineWidth = 8;
+                ctx.shadowBlur = 30;
+                ctx.globalAlpha = 0.3;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+
+                ctx.restore();
+
+                // Draw particles (JaZeR text) along beam
+                this.particles.forEach(p => {
+                    if (p.life <= 0) return;
+
+                    const x = cx + Math.cos(this.angle) * p.distance;
+                    const y = cy + Math.sin(this.angle) * p.distance;
+
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+
+                    const fontSize = 16 + p.distance * 0.02;
+                    ctx.font = `bold ${fontSize}px monospace`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    const alpha = p.life * smoothstep(0, 50, p.distance);
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 20;
+                    ctx.fillText(p.char, x, y);
+
+                    ctx.restore();
+                });
+            }
+        }
+
+        // Initialize
+        function init() {
+            // Create stars
+            for (let i = 0; i < 200; i++) {
+                stars.push(new Star());
+            }
+
+            // Create beams
+            for (let i = 0; i < beamCount; i++) {
+                const angle = (i / beamCount) * Math.PI * 2;
+                beams.push(new LaserBeam(angle, i / beamCount));
+            }
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Clear with dark space background
+            ctx.fillStyle = 'rgba(0, 0, 5, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw stars
+            stars.forEach(star => star.draw());
+
+            // Update and draw beams
+            beams.forEach(beam => {
+                beam.update(dt);
+                beam.draw();
+            });
+
+            // Central core glow
+            const coreGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 150);
+            coreGlow.addColorStop(0, 'rgba(255, 100, 255, 0.4)');
+            coreGlow.addColorStop(0.5, 'rgba(100, 100, 255, 0.2)');
+            coreGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = coreGlow;
+            ctx.fillRect(cx - 150, cy - 150, 300, 300);
+
+            // Central bright point
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.shadowColor = '#fff';
+            ctx.shadowBlur = 30;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', () => {
+            resize();
+            // Reinit stars with new dimensions
+            stars.length = 0;
+            for (let i = 0; i < 200; i++) {
+                stars.push(new Star());
+            }
+        });
+
+        resize();
+        init();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

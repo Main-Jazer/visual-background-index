@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rainbow Wireframe Tunnel - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Rainbow Wireframe Tunnel
+         * 
+         * Wireframe tunnel with geometric cross-sections where each ring
+         * cycles through rainbow colors. "JaZeR" text appears on tunnel walls
+         * with high-speed flight through the tunnel. Retro vector graphics
+         * aesthetic with neon glow.
+         * 
+         * Technical approach:
+         * - Rings of polygons moving toward camera
+         * - Each ring has different color from rainbow spectrum
+         * - 3D to 2D projection with perspective
+         * - Text placed on ring segments
+         * - Rapid Z-axis movement for speed
+         */
+
+        import {
+            mouse, hexToRgb,
+            map, clamp, smoothstep
+        } from '../lib/jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const rings = [];
+        const ringCount = 50;
+        const segments = 8; // Octagon shape
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // HSL to RGB for rainbow colors
+        function hslToRgb(h, s, l) {
+            h = h % 1;
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+            const m = l - c / 2;
+            let r, g, b;
+
+            if (h < 1/6) [r, g, b] = [c, x, 0];
+            else if (h < 2/6) [r, g, b] = [x, c, 0];
+            else if (h < 3/6) [r, g, b] = [0, c, x];
+            else if (h < 4/6) [r, g, b] = [0, x, c];
+            else if (h < 5/6) [r, g, b] = [x, 0, c];
+            else [r, g, b] = [c, 0, x];
+
+            return {
+                r: Math.floor((r + m) * 255),
+                g: Math.floor((g + m) * 255),
+                b: Math.floor((b + m) * 255)
+            };
+        }
+
+        // Tunnel ring class
+        class TunnelRing {
+            constructor(z, index) {
+                this.z = z;
+                this.index = index;
+                this.radius = 200;
+                this.rotation = 0;
+                this.rotationSpeed = 0.5;
+            }
+
+            update(dt, speed) {
+                this.z -= speed * dt;
+                this.rotation += this.rotationSpeed * dt;
+
+                // Wrap around when too close
+                if (this.z < -50) {
+                    this.z += ringCount * 50;
+                }
+            }
+
+            project(angle) {
+                const perspective = 400;
+                const distance = 200;
+                
+                const x = Math.cos(angle + this.rotation) * this.radius;
+                const y = Math.sin(angle + this.rotation) * this.radius;
+                const z = this.z + distance;
+
+                if (z <= 0) return null;
+
+                const scale = perspective / z;
+                return {
+                    x: cx + x * scale,
+                    y: cy + y * scale,
+                    scale: scale,
+                    z: z
+                };
+            }
+
+            draw() {
+                const alpha = smoothstep(-50, 50, this.z) * smoothstep(2500, 2000, this.z);
+                if (alpha < 0.01) return;
+
+                // Rainbow color based on z position
+                const hue = ((this.z / 100) + time * 0.3) % 1;
+                const rgb = hslToRgb(hue, 0.9, 0.5);
+                const color = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+
+                // Draw ring segments
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.lineWidth = 2;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 10;
+
+                // Draw the octagon
+                ctx.beginPath();
+                for (let i = 0; i <= segments; i++) {
+                    const angle = (i / segments) * Math.PI * 2;
+                    const point = this.project(angle);
+                    
+                    if (!point) continue;
+
+                    if (i === 0) {
+                        ctx.moveTo(point.x, point.y);
+                    } else {
+                        ctx.lineTo(point.x, point.y);
+                    }
+                }
+                ctx.stroke();
+                ctx.restore();
+
+                // Draw JaZeR text on some segments
+                if (this.index % 5 === 0) {
+                    for (let i = 0; i < segments; i++) {
+                        const angle = (i / segments) * Math.PI * 2;
+                        const point = this.project(angle);
+                        
+                        if (!point) continue;
+
+                        const fontSize = Math.max(6, 12 * point.scale);
+                        ctx.save();
+                        ctx.font = `bold ${fontSize}px monospace`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 15;
+                        ctx.fillText('JaZeR', point.x, point.y);
+                        ctx.restore();
+                    }
+                }
+
+                // Connect to next ring for tunnel effect
+                const nextRing = rings.find(r => Math.abs(r.z - this.z - 50) < 25);
+                if (nextRing) {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.5})`;
+                    ctx.lineWidth = 1;
+                    ctx.shadowBlur = 5;
+
+                    for (let i = 0; i < segments; i++) {
+                        const angle = (i / segments) * Math.PI * 2;
+                        const p1 = this.project(angle);
+                        const p2 = nextRing.project(angle);
+
+                        if (p1 && p2) {
+                            ctx.beginPath();
+                            ctx.moveTo(p1.x, p1.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.stroke();
+                        }
+                    }
+                    ctx.restore();
+                }
+            }
+        }
+
+        // Initialize rings
+        function initRings() {
+            rings.length = 0;
+            for (let i = 0; i < ringCount; i++) {
+                rings.push(new TunnelRing(i * 50, i));
+            }
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            // High-speed flight
+            const speed = 300 + Math.sin(time * 0.5) * 50;
+
+            // Update and draw rings (back to front)
+            rings.sort((a, b) => b.z - a.z);
+            rings.forEach(ring => {
+                ring.update(dt, speed);
+                ring.draw();
+            });
+
+            // Central vanishing point glow
+            const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 150);
+            const glowHue = (time * 0.2) % 1;
+            const glowRgb = hslToRgb(glowHue, 0.9, 0.5);
+            glow.addColorStop(0, `rgba(${glowRgb.r}, ${glowRgb.g}, ${glowRgb.b}, 0.3)`);
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            // Speed lines
+            if (Math.random() < 0.3) {
+                const lineX = Math.random() * W;
+                const lineY = Math.random() * H;
+                const dx = lineX - cx;
+                const dy = lineY - cy;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 100) {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(lineX, lineY);
+                    ctx.lineTo(lineX + dx * 0.2, lineY + dy * 0.2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        initRings();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

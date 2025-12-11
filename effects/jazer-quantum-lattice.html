@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quantum Lattice - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Quantum Lattice
+         * 
+         * Creates a 3D lattice/grid structure of interconnected nodes in space.
+         * "JaZeR" text appears at intersection points, nodes pulse and connect
+         * with animated lines. Features quantum/sci-fi aesthetic with glowing
+         * connections. The lattice slowly rotates in 3D space.
+         * 
+         * Technical approach:
+         * - 3D grid of nodes positioned in a cube formation
+         * - Project 3D coordinates to 2D screen space
+         * - Draw connections between nearby nodes
+         * - Render "JaZeR" text at each node with depth-based scaling
+         * - Smooth rotation on multiple axes
+         * - Pulse animation for quantum effect
+         */
+
+        import {
+            noise3D, mouse, ColorPalettes, hexToRgb,
+            map, clamp, smoothstep
+        } from '../lib/jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ColorPalettes.cyberpunk;
+
+        // Lattice configuration
+        const gridSize = 7; // 7x7x7 grid
+        const spacing = 120;
+        const nodes = [];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // 3D Node class
+        class Node {
+            constructor(x, y, z, index) {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+                this.index = index;
+                this.phase = Math.random() * Math.PI * 2;
+            }
+
+            // Rotate point around origin
+            rotate(rx, ry, rz) {
+                let x = this.x, y = this.y, z = this.z;
+
+                // Rotate around X axis
+                let y1 = y * Math.cos(rx) - z * Math.sin(rx);
+                let z1 = y * Math.sin(rx) + z * Math.cos(rx);
+                y = y1;
+                z = z1;
+
+                // Rotate around Y axis
+                let x1 = x * Math.cos(ry) - z * Math.sin(ry);
+                z1 = x * Math.sin(ry) + z * Math.cos(ry);
+                x = x1;
+                z = z1;
+
+                // Rotate around Z axis
+                x1 = x * Math.cos(rz) - y * Math.sin(rz);
+                y1 = x * Math.sin(rz) + y * Math.cos(rz);
+
+                return { x: x1, y: y1, z: z1 };
+            }
+
+            // Project 3D to 2D
+            project(rotated) {
+                const perspective = 800;
+                const distance = 600;
+                const z = rotated.z + distance;
+
+                if (z <= 0) return null;
+
+                const scale = perspective / z;
+                return {
+                    x: cx + rotated.x * scale,
+                    y: cy + rotated.y * scale,
+                    scale: scale,
+                    z: z
+                };
+            }
+        }
+
+        // Initialize lattice nodes
+        function initNodes() {
+            nodes.length = 0;
+            let index = 0;
+            for (let x = 0; x < gridSize; x++) {
+                for (let y = 0; y < gridSize; y++) {
+                    for (let z = 0; z < gridSize; z++) {
+                        const px = (x - gridSize / 2) * spacing;
+                        const py = (y - gridSize / 2) * spacing;
+                        const pz = (z - gridSize / 2) * spacing;
+                        nodes.push(new Node(px, py, pz, index++));
+                    }
+                }
+            }
+        }
+
+        // Draw connection line between two nodes
+        function drawConnection(proj1, proj2, alpha) {
+            if (!proj1 || !proj2) return;
+
+            const colorIdx = Math.floor(time * 2) % palette.length;
+            const color = palette[colorIdx];
+            const rgb = hexToRgb(color);
+
+            ctx.beginPath();
+            ctx.moveTo(proj1.x, proj1.y);
+            ctx.lineTo(proj2.x, proj2.y);
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.3})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Draw node with JaZeR text
+        function drawNode(node, rotated, proj, pulse) {
+            if (!proj) return;
+
+            const alpha = smoothstep(0.1, 0.5, proj.scale) * smoothstep(2, 1, proj.scale);
+            if (alpha < 0.01) return;
+
+            const colorIdx = Math.floor((node.index / nodes.length) * palette.length);
+            const color = palette[colorIdx];
+            const rgb = hexToRgb(color);
+
+            // Draw glow
+            const glowSize = (8 + pulse * 4) * proj.scale;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 20 * proj.scale;
+            ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.6})`;
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, glowSize, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Draw JaZeR text
+            const fontSize = Math.max(8, 12 * proj.scale);
+            ctx.font = `bold ${fontSize}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+            ctx.fillText('JaZeR', proj.x, proj.y);
+        }
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Rotation angles (slow continuous rotation)
+            const rx = time * 0.2 + mouse.centeredY * 0.3;
+            const ry = time * 0.15 + mouse.centeredX * 0.3;
+            const rz = time * 0.1;
+
+            // Quantum pulse effect
+            const pulse = Math.sin(time * 3) * 0.5 + 0.5;
+
+            // Rotate and project all nodes
+            const projected = nodes.map(node => {
+                const rotated = node.rotate(rx, ry, rz);
+                return {
+                    node: node,
+                    rotated: rotated,
+                    proj: node.project(rotated),
+                    pulse: Math.sin(time * 3 + node.phase) * 0.5 + 0.5
+                };
+            }).filter(p => p.proj !== null);
+
+            // Sort by depth (far to near)
+            projected.sort((a, b) => b.proj.z - a.proj.z);
+
+            // Draw connections first (background layer)
+            projected.forEach((p1, i) => {
+                projected.forEach((p2, j) => {
+                    if (i >= j) return;
+
+                    const dx = p1.rotated.x - p2.rotated.x;
+                    const dy = p1.rotated.y - p2.rotated.y;
+                    const dz = p1.rotated.z - p2.rotated.z;
+                    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+                    // Connect nearby nodes
+                    if (dist < spacing * 1.5) {
+                        const alpha = 1 - (dist / (spacing * 1.5));
+                        drawConnection(p1.proj, p2.proj, alpha);
+                    }
+                });
+            });
+
+            // Draw nodes on top
+            projected.forEach(p => {
+                drawNode(p.node, p.rotated, p.proj, p.pulse);
+            });
+
+            // Center glow effect
+            const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.4);
+            glow.addColorStop(0, 'rgba(80, 0, 120, 0.1)');
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        initNodes();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>
