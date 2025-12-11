@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hypercube Drift - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Hypercube Drift
+         * 
+         * Rotating 4D hypercube (tesseract) wireframe projection with "JaZeR"
+         * text on each face/edge. Features slow drift rotation through multiple
+         * dimensions with perspective shifts creating impossible geometry feel.
+         * 
+         * Technical approach:
+         * - Define 16 vertices of a 4D hypercube (tesseract)
+         * - Rotate in 4D space (6 planes of rotation: XY, XZ, XW, YZ, YW, ZW)
+         * - Project from 4D to 3D, then 3D to 2D screen space
+         * - Connect vertices to form wireframe edges
+         * - Display "JaZeR" text along edges
+         * - Neon color cycling for extra visual appeal
+         */
+
+        import {
+            mouse, ColorPalettes, hexToRgb, cycleColor,
+            map, clamp, smoothstep
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const palette = ColorPalettes.cyberpunk;
+
+        // Hypercube vertices in 4D space
+        const vertices4D = [];
+        const edges = [];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Initialize 4D hypercube vertices (-1 to 1 on each axis)
+        function initHypercube() {
+            vertices4D.length = 0;
+            edges.length = 0;
+
+            // Generate all 16 vertices (2^4 combinations)
+            for (let i = 0; i < 16; i++) {
+                vertices4D.push([
+                    (i & 1) ? 1 : -1,
+                    (i & 2) ? 1 : -1,
+                    (i & 4) ? 1 : -1,
+                    (i & 8) ? 1 : -1
+                ]);
+            }
+
+            // Connect vertices that differ by exactly one dimension
+            for (let i = 0; i < 16; i++) {
+                for (let j = i + 1; j < 16; j++) {
+                    let diff = 0;
+                    for (let k = 0; k < 4; k++) {
+                        if (vertices4D[i][k] !== vertices4D[j][k]) diff++;
+                    }
+                    if (diff === 1) {
+                        edges.push([i, j]);
+                    }
+                }
+            }
+        }
+
+        // 4D rotation matrix multiplication
+        function rotate4D(v, angleXY, angleXZ, angleXW, angleYZ, angleYW, angleZW) {
+            let [x, y, z, w] = v;
+
+            // XY plane rotation
+            let x1 = x * Math.cos(angleXY) - y * Math.sin(angleXY);
+            let y1 = x * Math.sin(angleXY) + y * Math.cos(angleXY);
+            x = x1; y = y1;
+
+            // XZ plane rotation
+            x1 = x * Math.cos(angleXZ) - z * Math.sin(angleXZ);
+            let z1 = x * Math.sin(angleXZ) + z * Math.cos(angleXZ);
+            x = x1; z = z1;
+
+            // XW plane rotation
+            x1 = x * Math.cos(angleXW) - w * Math.sin(angleXW);
+            let w1 = x * Math.sin(angleXW) + w * Math.cos(angleXW);
+            x = x1; w = w1;
+
+            // YZ plane rotation
+            y1 = y * Math.cos(angleYZ) - z * Math.sin(angleYZ);
+            z1 = y * Math.sin(angleYZ) + z * Math.cos(angleYZ);
+            y = y1; z = z1;
+
+            // YW plane rotation
+            y1 = y * Math.cos(angleYW) - w * Math.sin(angleYW);
+            w1 = y * Math.sin(angleYW) + w * Math.cos(angleYW);
+            y = y1; w = w1;
+
+            // ZW plane rotation
+            z1 = z * Math.cos(angleZW) - w * Math.sin(angleZW);
+            w1 = z * Math.sin(angleZW) + w * Math.cos(angleZW);
+            z = z1; w = w1;
+
+            return [x, y, z, w];
+        }
+
+        // Project 4D to 3D using perspective
+        function project4Dto3D(v) {
+            const distance4D = 3;
+            const w = v[3] + distance4D;
+            const scale = 1 / w;
+            return [v[0] * scale, v[1] * scale, v[2] * scale];
+        }
+
+        // Project 3D to 2D screen space
+        function project3Dto2D(v) {
+            const distance3D = 5;
+            const perspective = 400;
+            const z = v[2] + distance3D;
+
+            if (z <= 0) return null;
+
+            const scale = perspective / z;
+            return {
+                x: cx + v[0] * scale * 100,
+                y: cy + v[1] * scale * 100,
+                scale: scale,
+                z: z
+            };
+        }
+
+        function render() {
+            time += 1 / 60;
+            mouse.update();
+
+            // Clear with fade
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Slow drift rotations through 4D space
+            const angleXY = time * 0.15;
+            const angleXZ = time * 0.12;
+            const angleXW = time * 0.08 + mouse.centeredX * 0.5;
+            const angleYZ = time * 0.1;
+            const angleYW = time * 0.09 + mouse.centeredY * 0.5;
+            const angleZW = time * 0.11;
+
+            // Rotate and project all vertices
+            const projected = vertices4D.map((v, i) => {
+                const rotated4D = rotate4D(v, angleXY, angleXZ, angleXW, angleYZ, angleYW, angleZW);
+                const proj3D = project4Dto3D(rotated4D);
+                return project3Dto2D(proj3D);
+            });
+
+            // Draw edges with neon glow
+            edges.forEach(([i, j], edgeIdx) => {
+                const p1 = projected[i];
+                const p2 = projected[j];
+
+                if (!p1 || !p2) return;
+
+                const color = cycleColor(palette, time * 0.5 + edgeIdx * 0.1);
+                const rgb = hexToRgb(color);
+                const avgScale = (p1.scale + p2.scale) / 2;
+                const alpha = smoothstep(0.1, 0.3, avgScale) * smoothstep(1.5, 0.8, avgScale);
+
+                // Draw glowing line
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.lineWidth = 2;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 15;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Add JaZeR text on some edges
+                if (edgeIdx % 3 === 0) {
+                    const midX = (p1.x + p2.x) / 2;
+                    const midY = (p1.y + p2.y) / 2;
+                    const fontSize = Math.max(8, 10 * avgScale);
+
+                    ctx.save();
+                    ctx.font = `bold ${fontSize}px monospace`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.8})`;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 10;
+                    ctx.fillText('JaZeR', midX, midY);
+                    ctx.restore();
+                }
+            });
+
+            // Draw vertices as bright points
+            projected.forEach((p, i) => {
+                if (!p) return;
+
+                const color = cycleColor(palette, time * 0.5 + i * 0.05);
+                const rgb = hexToRgb(color);
+                const alpha = smoothstep(0.1, 0.3, p.scale) * smoothstep(1.5, 0.8, p.scale);
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3 * p.scale, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 10;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            // Vignette effect
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        initHypercube();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

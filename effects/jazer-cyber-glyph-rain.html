@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cyber Glyph Rain - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Cyber Glyph Rain
+         * 
+         * Matrix-style falling code/characters with "JaZeR" text highlighted
+         * among the falling glyphs. Vertical rain of neon characters with
+         * random glyph variations and cyberpunk/hacker aesthetic with
+         * trailing effects.
+         * 
+         * Technical approach:
+         * - Columns of falling characters
+         * - Mix of random glyphs and JaZeR text
+         * - Neon green/cyan colors
+         * - Trail fade effect
+         * - Variable falling speeds
+         * - Bright heads with fading trails
+         */
+
+        import {
+            noise2D, mouse, ColorPalettes, hexToRgb, cycleColor,
+            map, clamp, smoothstep
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        // Character sets
+        const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+-=[]{}|;:,.<>?';
+        const jazerChars = 'JaZeR';
+
+        const palette = ['#00ff00', '#00ffff', '#00ff88', '#88ff00'];
+        const columns = [];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Glyph column class
+        class GlyphColumn {
+            constructor(x, index) {
+                this.x = x;
+                this.index = index;
+                this.reset();
+            }
+
+            reset() {
+                this.y = -Math.random() * H;
+                this.speed = 100 + Math.random() * 200;
+                this.length = 10 + Math.floor(Math.random() * 30);
+                this.glyphs = [];
+                this.isJazerColumn = Math.random() < 0.2; // 20% chance to be JaZeR column
+                this.colorIndex = Math.floor(Math.random() * palette.length);
+                this.generateGlyphs();
+            }
+
+            generateGlyphs() {
+                this.glyphs = [];
+                for (let i = 0; i < this.length; i++) {
+                    if (this.isJazerColumn && i % 6 === 0) {
+                        // Insert JaZeR text
+                        this.glyphs.push({
+                            char: jazerChars[Math.floor(i / 6) % jazerChars.length],
+                            isJazer: true
+                        });
+                    } else {
+                        this.glyphs.push({
+                            char: chars[Math.floor(Math.random() * chars.length)],
+                            isJazer: false
+                        });
+                    }
+                }
+            }
+
+            update(dt) {
+                this.y += this.speed * dt;
+
+                // Randomly change some characters
+                if (Math.random() < 0.1) {
+                    const idx = Math.floor(Math.random() * this.length);
+                    if (!this.glyphs[idx].isJazer) {
+                        this.glyphs[idx].char = chars[Math.floor(Math.random() * chars.length)];
+                    }
+                }
+
+                // Reset when column is off screen
+                if (this.y - this.length * 20 > H) {
+                    this.reset();
+                }
+            }
+
+            draw() {
+                const fontSize = 16;
+                const charSpacing = 20;
+
+                ctx.font = `${fontSize}px "Courier New", monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                for (let i = 0; i < this.length; i++) {
+                    const charY = this.y - i * charSpacing;
+
+                    // Skip if off screen
+                    if (charY < -charSpacing || charY > H + charSpacing) continue;
+
+                    const glyph = this.glyphs[i];
+                    const isHead = i === 0;
+                    const trailProgress = i / this.length;
+
+                    let color, alpha;
+
+                    if (glyph.isJazer) {
+                        // JaZeR text - brighter and different color
+                        const jazerColor = cycleColor(palette, time * 0.5 + this.index * 0.1);
+                        const rgb = hexToRgb(jazerColor);
+                        color = rgb;
+                        alpha = 1 - trailProgress * 0.5;
+
+                        // Extra glow for JaZeR
+                        ctx.save();
+                        ctx.shadowColor = jazerColor;
+                        ctx.shadowBlur = 20;
+                        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                        ctx.fillText(glyph.char, this.x, charY);
+                        ctx.restore();
+                    } else {
+                        // Regular glyphs
+                        const baseColor = palette[this.colorIndex];
+                        const rgb = hexToRgb(baseColor);
+                        color = rgb;
+
+                        if (isHead) {
+                            // Bright white head
+                            alpha = 1;
+                            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                            ctx.shadowColor = baseColor;
+                            ctx.shadowBlur = 15;
+                        } else {
+                            // Fading trail
+                            alpha = (1 - trailProgress) * 0.7;
+                            ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                            ctx.shadowBlur = 5;
+                        }
+
+                        ctx.fillText(glyph.char, this.x, charY);
+                    }
+
+                    ctx.shadowBlur = 0;
+                }
+            }
+        }
+
+        // Initialize columns
+        function initColumns() {
+            const columnWidth = 20;
+            const columnCount = Math.ceil(W / columnWidth) + 1;
+
+            for (let i = 0; i < columnCount; i++) {
+                const col = new GlyphColumn(i * columnWidth, i);
+                // Stagger initial positions
+                col.y = Math.random() * H;
+                columns.push(col);
+            }
+        }
+
+        // Draw scanlines
+        function drawScanlines() {
+            ctx.globalAlpha = 0.05;
+            for (let y = 0; y < H; y += 2) {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, y, W, 1);
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // Draw floating JaZeR text (additional decoration)
+        function drawFloatingJazer() {
+            const count = 5;
+            for (let i = 0; i < count; i++) {
+                const x = W * (0.2 + (i / count) * 0.6);
+                const y = cy + Math.sin(time * 2 + i) * 100;
+                const alpha = (Math.sin(time * 3 + i * 2) * 0.5 + 0.5) * 0.3;
+
+                const color = cycleColor(palette, time * 0.3 + i * 0.2);
+                const rgb = hexToRgb(color);
+
+                ctx.save();
+                ctx.font = 'bold 40px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 25;
+                ctx.fillText('JaZeR', x, y);
+                ctx.restore();
+            }
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Clear with dark green fade for trail effect
+            ctx.fillStyle = 'rgba(0, 5, 0, 0.15)';
+            ctx.fillRect(0, 0, W, H);
+
+            // Update and draw columns
+            columns.forEach(col => {
+                col.update(dt);
+                col.draw();
+            });
+
+            // Draw floating JaZeR text
+            drawFloatingJazer();
+
+            // Add scanlines
+            drawScanlines();
+
+            // Screen flicker
+            if (Math.random() < 0.02) {
+                ctx.fillStyle = `rgba(0, 255, 0, ${Math.random() * 0.05})`;
+                ctx.fillRect(0, 0, W, H);
+            }
+
+            // Center glow
+            const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.4);
+            glow.addColorStop(0, 'rgba(0, 50, 0, 0.1)');
+            glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, W, H);
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', () => {
+            resize();
+            // Reinitialize columns on resize
+            columns.length = 0;
+            initColumns();
+        });
+
+        resize();
+        initColumns();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>

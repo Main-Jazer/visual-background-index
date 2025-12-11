@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nebula Pulse - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <script type="module">
+        /**
+         * JaZeR Nebula Pulse
+         * 
+         * Organic nebula cloud effect with color gradients where "JaZeR" text
+         * emerges from and dissolves into nebula clouds. Features pulsing/
+         * breathing animation synced across entire canvas with deep space
+         * colors (purples, blues, magentas) and particle effects for stars.
+         * 
+         * Technical approach:
+         * - Multi-octave noise for organic nebula shapes
+         * - Color mixing based on noise values
+         * - Synchronized pulse animation
+         * - Text that fades in/out with nebula density
+         * - Star particles with depth
+         */
+
+        import {
+            noise2D, noise3D, mouse, ColorPalettes, hexToRgb, lerpColor,
+            map, clamp, smoothstep
+        } from '../jazer-background-engine.js';
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let W, H, cx, cy;
+        let time = 0;
+
+        const nebulaColors = [
+            '#1a0033', // Deep purple
+            '#4a0080', // Purple
+            '#8000ff', // Bright purple
+            '#ff00ff', // Magenta
+            '#0066ff', // Blue
+            '#00ccff'  // Cyan
+        ];
+
+        const stars = [];
+        const textParticles = [];
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Star particle
+        class Star {
+            constructor() {
+                this.x = Math.random() * W;
+                this.y = Math.random() * H;
+                this.brightness = Math.random();
+                this.size = Math.random() * 2;
+                this.twinkleSpeed = 0.5 + Math.random() * 2;
+            }
+
+            draw() {
+                const twinkle = Math.sin(time * this.twinkleSpeed + this.brightness * 10) * 0.5 + 0.5;
+                const alpha = this.brightness * twinkle;
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // JaZeR text particle
+        class TextParticle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = cx + (Math.random() - 0.5) * W * 0.8;
+                this.y = cy + (Math.random() - 0.5) * H * 0.8;
+                this.life = 0;
+                this.maxLife = 3 + Math.random() * 2;
+                this.char = 'JaZeR'[Math.floor(Math.random() * 5)];
+                this.phase = Math.random() * Math.PI * 2;
+            }
+
+            update(dt) {
+                this.life += dt;
+                if (this.life > this.maxLife) {
+                    this.reset();
+                }
+            }
+
+            draw(pulse) {
+                const progress = this.life / this.maxLife;
+                
+                // Fade in and out
+                let alpha = progress < 0.3 ? progress / 0.3 : 
+                           progress > 0.7 ? (1 - progress) / 0.3 : 1;
+                
+                // Sync with pulse
+                alpha *= pulse;
+
+                if (alpha < 0.01) return;
+
+                // Get nebula color at this position
+                const noiseVal = noise3D(this.x * 0.003, this.y * 0.003, time * 0.2);
+                const colorIdx = Math.floor((noiseVal * 0.5 + 0.5) * (nebulaColors.length - 1));
+                const color = nebulaColors[colorIdx];
+                const rgb = hexToRgb(color);
+
+                const fontSize = 20 + Math.sin(time * 2 + this.phase) * 5;
+                ctx.font = `bold ${fontSize}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                ctx.shadowColor = color;
+                ctx.shadowBlur = 20;
+                ctx.fillText(this.char, this.x, this.y);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // Draw nebula using layered noise
+        function drawNebula(pulse) {
+            const resolution = 4; // Lower = more detail, but slower
+
+            for (let y = 0; y < H; y += resolution) {
+                for (let x = 0; x < W; x += resolution) {
+                    // Multi-octave noise for organic shapes
+                    const n1 = noise3D(x * 0.001, y * 0.001, time * 0.1);
+                    const n2 = noise3D(x * 0.002, y * 0.002, time * 0.15) * 0.5;
+                    const n3 = noise3D(x * 0.004, y * 0.004, time * 0.2) * 0.25;
+                    
+                    let noiseVal = (n1 + n2 + n3) / 1.75;
+                    noiseVal = (noiseVal * 0.5 + 0.5); // Normalize to 0-1
+
+                    // Apply pulse breathing effect
+                    noiseVal = noiseVal * (0.7 + pulse * 0.3);
+
+                    // Distance from center affects intensity
+                    const dx = (x - cx) / W;
+                    const dy = (y - cy) / H;
+                    const distFromCenter = Math.sqrt(dx * dx + dy * dy);
+                    noiseVal *= (1 - distFromCenter * 0.5);
+
+                    if (noiseVal < 0.1) continue; // Skip very dark areas
+
+                    // Map noise to color
+                    const colorIndex = noiseVal * (nebulaColors.length - 1);
+                    const idx1 = Math.floor(colorIndex);
+                    const idx2 = Math.min(idx1 + 1, nebulaColors.length - 1);
+                    const blend = colorIndex - idx1;
+
+                    const color1 = hexToRgb(nebulaColors[idx1]);
+                    const color2 = hexToRgb(nebulaColors[idx2]);
+
+                    const r = Math.floor(color1.r * (1 - blend) + color2.r * blend);
+                    const g = Math.floor(color1.g * (1 - blend) + color2.g * blend);
+                    const b = Math.floor(color1.b * (1 - blend) + color2.b * blend);
+
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${noiseVal * 0.6})`;
+                    ctx.fillRect(x, y, resolution, resolution);
+                }
+            }
+        }
+
+        // Initialize
+        function init() {
+            // Create stars
+            for (let i = 0; i < 300; i++) {
+                stars.push(new Star());
+            }
+
+            // Create text particles
+            for (let i = 0; i < 50; i++) {
+                textParticles.push(new TextParticle());
+            }
+        }
+
+        function render() {
+            const dt = 1 / 60;
+            time += dt;
+            mouse.update();
+
+            // Synchronized pulse (breathing effect)
+            const pulse = Math.sin(time * 1.5) * 0.3 + 0.7;
+
+            // Clear to black
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw stars in background
+            stars.forEach(star => star.draw());
+
+            // Draw nebula clouds
+            drawNebula(pulse);
+
+            // Update and draw text particles
+            textParticles.forEach(particle => {
+                particle.update(dt);
+                particle.draw(pulse);
+            });
+
+            // Add subtle scanlines for effect
+            ctx.globalAlpha = 0.05;
+            for (let y = 0; y < H; y += 2) {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, y, W, 1);
+            }
+            ctx.globalAlpha = 1;
+
+            // Vignette
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
+            requestAnimationFrame(render);
+        }
+
+        window.addEventListener('resize', () => {
+            resize();
+            // Reinit stars with new dimensions
+            stars.length = 0;
+            for (let i = 0; i < 300; i++) {
+                stars.push(new Star());
+            }
+        });
+
+        resize();
+        init();
+        requestAnimationFrame(render);
+    </script>
+</body>
+
+</html>
