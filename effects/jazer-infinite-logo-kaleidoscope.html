@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Infinite Logo Kaleidoscope</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Infinite Logo Kaleidoscope</h1>
+      <p>Symmetric kaleidoscope built from mirrored tiles of the JaZeR logo and neon shapes.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Kaleidoscope properties
+    const center = { x: width / 2, y: height / 2 };
+    const segments = 12; // Number of kaleidoscope segments
+    const logoSize = 40;
+    const rotationSpeed = 0.1;
+    const scaleOscillation = 0.5;
+    const logoCount = 50;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+    }
+
+    // Function to draw a kaleidoscope segment
+    function drawKaleidoscopeSegment(angle, rotation, scale) {
+      ctx.save();
+      
+      // Translate to center
+      ctx.translate(center.x, center.y);
+      
+      // Rotate to the segment's position
+      ctx.rotate(angle);
+      
+      // Apply additional rotation and scale
+      ctx.rotate(rotation);
+      ctx.scale(scale, scale);
+      
+      // Draw a JaZeR logo representation
+      ctx.font = `bold ${logoSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = palette[Math.floor(time * 2) % palette.length];
+      ctx.shadowColor = palette[Math.floor(time * 2) % palette.length];
+      ctx.shadowBlur = 15;
+      ctx.fillText('J', 0, 0);
+      
+      // Draw additional elements
+      ctx.beginPath();
+      ctx.arc(logoSize/2, 0, logoSize/4, 0, Math.PI * 2);
+      ctx.fillStyle = palette[(Math.floor(time * 2) + 1) % palette.length];
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(-logoSize/2, 0, logoSize/4, 0, Math.PI * 2);
+      ctx.fillStyle = palette[(Math.floor(time * 2) + 2) % palette.length];
+      ctx.fill();
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with dark background
+      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#100020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw kaleidoscope effect
+      drawKaleidoscope();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function drawKaleidoscope() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Get rotation and scale based on time
+      const rotation = time * rotationSpeed;
+      const scale = 1 + Math.sin(time * scaleOscillation) * 0.2;
+      
+      // Draw each segment of the kaleidoscope
+      for (let i = 0; i < segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        
+        // Calculate additional rotation for each segment to create the kaleidoscope effect
+        const segmentRotation = rotation + (i * Math.PI / segments);
+        const segmentScale = scale * (0.8 + Math.sin(time + i) * 0.2);
+        
+        drawKaleidoscopeSegment(angle, segmentRotation, segmentScale);
+      }
+      
+      // Draw additional random logos that form part of the kaleidoscope pattern
+      for (let i = 0; i < logoCount; i++) {
+        const angle = (i / logoCount) * Math.PI * 2;
+        const distance = 100 + Math.sin(time * 0.5 + i) * 50;
+        const x = center.x + Math.cos(angle) * distance;
+        const y = center.y + Math.sin(angle) * distance;
+        
+        // Calculate which kaleidoscope segment this point would be in
+        const segmentIndex = Math.floor((angle / (Math.PI * 2)) * segments) % segments;
+        const segmentAngle = (segmentIndex / segments) * Math.PI * 2;
+        
+        ctx.save();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(segmentAngle);
+        
+        // Apply mirrored transformation
+        const localX = x - center.x;
+        const localY = y - center.y;
+        const mirroredX = Math.abs(localX);
+        const mirroredY = Math.abs(localY);
+        
+        ctx.translate(mirroredX, mirroredY);
+        ctx.rotate(rotation + i * 0.1);
+        
+        // Draw a small logo
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const color = palette[i % palette.length];
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+        ctx.fillText('J', 0, 0);
+        
+        ctx.restore();
+      }
+      
+      // Draw central core
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, 20, 0, Math.PI * 2);
+      const coreGradient = ctx.createRadialGradient(
+        center.x, center.y, 0,
+        center.x, center.y, 20
+      );
+      coreGradient.addColorStop(0, palette[0] + 'FF');
+      coreGradient.addColorStop(1, palette[0] + '00');
+      ctx.fillStyle = coreGradient;
+      ctx.fill();
+      
+      // Add glow
+      ctx.shadowColor = palette[0];
+      ctx.shadowBlur = 30;
+      ctx.fill();
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Laser Lattice Cage</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Laser Lattice Cage</h1>
+      <p>Intersecting laser beams forming a 3D cage that rotates around the viewer, with JaZeR labels.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Laser lattice cage properties
+    const center = { x: width / 2, y: height / 2 };
+    const cagePoints = [];
+    const cageLines = [];
+    const cageSize = 150;
+    const rotationSpeed = 0.2;
+    const rotationX = 0;
+    const rotationY = 0;
+    const rotationZ = 0;
+    const pulseSpeed = 2;
+    const textLabels = [];
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Initialize the cage structure
+      initializeLaserCage();
+    }
+
+    function initializeLaserCage() {
+      // Define the 8 corners of a cube
+      cagePoints.length = 0;
+      cagePoints.push({ id: 0, x: -cageSize, y: -cageSize, z: -cageSize }); // Front bottom left
+      cagePoints.push({ id: 1, x: cageSize, y: -cageSize, z: -cageSize });  // Front bottom right
+      cagePoints.push({ id: 2, x: cageSize, y: cageSize, z: -cageSize });   // Front top right
+      cagePoints.push({ id: 3, x: -cageSize, y: cageSize, z: -cageSize });  // Front top left
+      cagePoints.push({ id: 4, x: -cageSize, y: -cageSize, z: cageSize });  // Back bottom left
+      cagePoints.push({ id: 5, x: cageSize, y: -cageSize, z: cageSize });   // Back bottom right
+      cagePoints.push({ id: 6, x: cageSize, y: cageSize, z: cageSize });    // Back top right
+      cagePoints.push({ id: 7, x: -cageSize, y: cageSize, z: cageSize });   // Back top left
+      
+      // Define the 12 edges of the cube
+      cageLines.length = 0;
+      cageLines.push({ from: 0, to: 1 }); // Bottom front
+      cageLines.push({ from: 1, to: 2 }); // Right front
+      cageLines.push({ from: 2, to: 3 }); // Top front
+      cageLines.push({ from: 3, to: 0 }); // Left front
+      
+      cageLines.push({ from: 4, to: 5 }); // Bottom back
+      cageLines.push({ from: 5, to: 6 }); // Right back
+      cageLines.push({ from: 6, to: 7 }); // Top back
+      cageLines.push({ from: 7, to: 4 }); // Left back
+      
+      cageLines.push({ from: 0, to: 4 }); // Front bottom to back bottom
+      cageLines.push({ from: 1, to: 5 }); // Front right to back right
+      cageLines.push({ from: 2, to: 6 }); // Front top to back top
+      cageLines.push({ from: 3, to: 7 }); // Front left to back left
+      
+      // Create text labels at each vertex
+      textLabels.length = 0;
+      for (let i = 0; i < cagePoints.length; i++) {
+        textLabels.push({
+          id: i,
+          pointId: i,
+          char: 'JaZeR'[i % 5], // Cycle through characters in JaZeR
+          color: palette[i % palette.length]
+        });
+      }
+    }
+
+    // Function to rotate a 3D point around X, Y, and Z axes
+    function rotatePoint(point, rotX, rotY, rotZ) {
+      let x = point.x;
+      let y = point.y;
+      let z = point.z;
+      
+      // Rotate around Y axis
+      let x1 = x * Math.cos(rotY) - z * Math.sin(rotY);
+      let z1 = x * Math.sin(rotY) + z * Math.cos(rotY);
+      
+      // Rotate around X axis
+      let y1 = y * Math.cos(rotX) - z1 * Math.sin(rotX);
+      let z2 = y * Math.sin(rotX) + z1 * Math.cos(rotX);
+      
+      // Rotate around Z axis
+      let x2 = x1 * Math.cos(rotZ) - y1 * Math.sin(rotZ);
+      let y2 = x1 * Math.sin(rotZ) + y1 * Math.cos(rotZ);
+      
+      return { x: x2, y: y2, z: z2 };
+    }
+
+    // Function to project 3D point to 2D screen space
+    function project3D(point) {
+      // For orthographic projection (simple)
+      const screenX = center.x + point.x;
+      const screenY = center.y + point.y;
+      
+      // Calculate perspective if needed
+      const distance = 400;
+      const scale = distance / (distance + point.z);
+      
+      return {
+        x: center.x + point.x * scale,
+        y: center.y + point.y * scale,
+        scale: scale
+      };
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with dark background
+      const bgGradient = ctx.createLinearGradient(0, 0, width, height);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#000020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update and draw laser lattice cage
+      updateAndDrawLaserCage();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function updateAndDrawLaserCage() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Update rotation angles
+      rotationX += rotationSpeed * 0.3 * dt;
+      rotationY += rotationSpeed * 0.5 * dt;
+      rotationZ += rotationSpeed * 0.2 * dt;
+      
+      // Transform 3D points to 2D screen space
+      const projectedPoints = [];
+      for (const point of cagePoints) {
+        const rotated = rotatePoint(point, rotationX, rotationY, rotationZ);
+        const projected = project3D(rotated);
+        projectedPoints.push(projected);
+      }
+      
+      // Draw the connecting lines (laser beams)
+      for (const line of cageLines) {
+        const from = projectedPoints[line.from];
+        const to = projectedPoints[line.to];
+        
+        // Calculate pulse effect
+        const pulse = Math.sin(time * pulseSpeed + line.id) * 0.3 + 0.7;
+        
+        // Create gradient for the laser beam
+        const gradient = ctx.createLinearGradient(from.x, from.y, to.x, to.y);
+        gradient.addColorStop(0, palette[0] + '00');
+        gradient.addColorStop(0.4, palette[0] + Math.floor(200 * pulse).toString(16).padStart(2, '0'));
+        gradient.addColorStop(0.6, palette[0] + Math.floor(200 * pulse).toString(16).padStart(2, '0'));
+        gradient.addColorStop(1, palette[0] + '00');
+        
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 3 * pulse;
+        
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+        
+        // Add glow effect
+        ctx.shadowColor = palette[0];
+        ctx.shadowBlur = 20 * pulse;
+        ctx.stroke();
+      }
+      
+      // Draw the vertices/corners of the cage
+      for (let i = 0; i < projectedPoints.length; i++) {
+        const point = projectedPoints[i];
+        const color = palette[i % palette.length];
+        
+        // Calculate pulse effect for vertex
+        const pulse = Math.sin(time * pulseSpeed * 2 + i) * 0.3 + 0.7;
+        const size = 5 * pulse;
+        
+        // Draw vertex with glow effect
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+        ctx.fillStyle = color + 'FF';
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        ctx.fill();
+        
+        // Draw text label (JaZeR character) at each vertex
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(textLabels[i].char, point.x, point.y);
+      }
+      
+      // Draw JaZeR text in the center that rotates with the cage
+      ctx.save();
+      ctx.translate(center.x, center.y);
+      ctx.rotate(rotationY);
+      
+      const textPulse = Math.sin(time * 1.5) * 0.2 + 0.8;
+      const textSize = 40 * textPulse;
+      
+      ctx.font = `bold ${textSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = palette[0];
+      ctx.shadowColor = palette[0];
+      ctx.shadowBlur = 30;
+      ctx.fillText('JaZeR', 0, 0);
+      
+      ctx.restore();
+      
+      // Draw connection details
+      for (let i = 0; i < projectedPoints.length; i++) {
+        for (let j = i + 1; j < projectedPoints.length; j++) {
+          const p1 = projectedPoints[i];
+          const p2 = projectedPoints[j];
+          const dist = distance(p1.x, p1.y, p2.x, p2.y);
+          
+          // Draw additional connections for a more complex lattice
+          if (dist > cageSize * 1.2 && dist < cageSize * 2.5) {
+            const alpha = (cageSize * 2.5 - dist) / (cageSize * 1.3);
+            if (alpha > 0) {
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.strokeStyle = palette[Math.floor(time) % palette.length] + Math.floor(alpha * 100).toString(16).padStart(2, '0');
+              ctx.lineWidth = 1 * alpha;
+              ctx.stroke();
+            }
+          }
+        }
+      }
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

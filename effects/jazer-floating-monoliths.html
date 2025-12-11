@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Floating Monoliths</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Floating Monoliths</h1>
+      <p>Tall rectangular monoliths floating in a dark void, each with a glowing JaZeR glyph carved into it.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Floating monoliths properties
+    const center = { x: width / 2, y: height / 2 };
+    const monoliths = [];
+    const monolithCount = 8;
+    const baseWidth = 30;
+    const baseHeight = 200;
+    const depthOffset = 50; // Offset for depth perception
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Initialize monoliths
+      initializeMonoliths();
+    }
+
+    function initializeMonoliths() {
+      monoliths.length = 0;
+      for (let i = 0; i < monolithCount; i++) {
+        // Position monoliths in a circle around the center
+        const angle = (i / monolithCount) * Math.PI * 2;
+        const distance = 150 + Math.random() * 100;
+        
+        monoliths.push({
+          id: i,
+          x: center.x + Math.cos(angle) * distance,
+          y: center.y + Math.sin(angle) * distance,
+          z: Math.random() * 200, // Depth position
+          width: baseWidth + Math.random() * 20,
+          height: baseHeight + Math.random() * 100,
+          rotation: 0,
+          rotationSpeed: (Math.random() - 0.5) * 0.05,
+          floatOffset: Math.random() * Math.PI * 2, // For floating animation
+          floatSpeed: 0.5 + Math.random() * 0.5,
+          floatAmplitude: 10 + Math.random() * 20,
+          color: palette[i % palette.length],
+          glowIntensity: 0.5 + Math.random() * 0.5,
+          text: "JaZeR"[i % 5], // Cycle through the letters in "JaZeR"
+          textOpacity: 0.7 + Math.random() * 0.3,
+          edgeGlow: 0,
+          edgeGlowTarget: 0
+        });
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Randomly activate edge glow on monoliths
+      if (Math.random() < 0.05) {
+        const randomMonolith = monoliths[Math.floor(Math.random() * monoliths.length)];
+        randomMonolith.edgeGlowTarget = 1;
+      }
+
+      // Clear with dark background
+      const bgGradient = ctx.createLinearGradient(0, 0, width, height);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#100020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update and draw floating monoliths
+      updateAndDrawMonoliths();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function updateAndDrawMonoliths() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Sort monoliths by z-depth (back to front) for proper rendering
+      const sortedMonoliths = [...monoliths].sort((a, b) => a.z - b.z);
+      
+      for (const mono of sortedMonoliths) {
+        // Update monolith position and state
+        mono.rotation += mono.rotationSpeed;
+        mono.y = center.y + Math.sin(time * mono.floatSpeed + mono.floatOffset) * mono.floatAmplitude;
+        
+        // Update edge glow effect
+        if (mono.edgeGlow < mono.edgeGlowTarget) {
+          mono.edgeGlow += 0.1;
+        } else if (mono.edgeGlow > 0) {
+          mono.edgeGlow -= 0.05;
+        }
+        
+        // Move monolith toward/away from viewer
+        mono.z += Math.sin(time * 0.2 + mono.id) * 0.5;
+        if (mono.z > 300) mono.z = 0;
+        if (mono.z < 0) mono.z = 300;
+        
+        // Calculate perspective scaling based on z-depth
+        const scale = map(mono.z, 0, 300, 0.5, 1.5);
+        const currentWidth = mono.width * scale;
+        const currentHeight = mono.height * scale;
+        
+        // Calculate position based on perspective
+        const perspectiveX = map(mono.z, 0, 300, center.x, mono.x);
+        const perspectiveY = map(mono.z, 0, 300, center.y, mono.y);
+        
+        // Draw the monolith
+        ctx.save();
+        ctx.translate(perspectiveX, perspectiveY);
+        ctx.rotate(mono.rotation);
+        
+        // Create monolith with gradient and glow
+        const monolithGradient = ctx.createLinearGradient(
+          -currentWidth/2, -currentHeight/2,
+          currentWidth/2, currentHeight/2
+        );
+        monolithGradient.addColorStop(0, mono.color + '44');
+        monolithGradient.addColorStop(0.5, mono.color + '88');
+        monolithGradient.addColorStop(1, mono.color + '44');
+        
+        // Draw main monolith body
+        ctx.fillStyle = monolithGradient;
+        ctx.shadowColor = mono.color;
+        ctx.shadowBlur = 10 * mono.glowIntensity * scale;
+        ctx.fillRect(-currentWidth/2, -currentHeight/2, currentWidth, currentHeight);
+        
+        // Draw the glowing JaZeR symbol on the monolith
+        ctx.save();
+        ctx.font = `bold ${Math.max(10, currentHeight/5)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.shadowColor = mono.color;
+        ctx.shadowBlur = 15 * scale;
+        ctx.globalAlpha = mono.textOpacity;
+        ctx.fillText(mono.text, 0, 0);
+        ctx.restore();
+        
+        // Draw additional symbols
+        ctx.font = `bold ${Math.max(8, currentHeight/8)}px Arial`;
+        ctx.fillStyle = mono.color;
+        ctx.globalAlpha = mono.textOpacity * 0.6;
+        ctx.fillText('JZR', 0, currentHeight/4);
+        
+        // Draw edge highlights
+        if (mono.edgeGlow > 0) {
+          ctx.strokeStyle = mono.color + Math.floor(mono.edgeGlow * 200).toString(16).padStart(2, '0');
+          ctx.lineWidth = 3 * scale;
+          ctx.shadowBlur = 20 * scale;
+          ctx.strokeRect(-currentWidth/2, -currentHeight/2, currentWidth, currentHeight);
+        }
+        
+        ctx.restore();
+      }
+      
+      // Draw distant stars in background
+      drawBackgroundStars();
+      
+      ctx.restore();
+    }
+
+    function drawBackgroundStars() {
+      // Draw some stars in the background to enhance the depth perception
+      for (let i = 0; i < 100; i++) {
+        const x = (i * 37) % width; // Deterministic positioning
+        const y = (i * 57) % height; // Deterministic positioning
+        const size = Math.sin(time + i) * 0.5 + 1;
+        const alpha = (Math.sin(time * 2 + i) * 0.3 + 0.7);
+        
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fillStyle = palette[i % palette.length] + Math.floor(alpha * 100).toString(16).padStart(2, '0');
+        ctx.shadowColor = palette[i % palette.length];
+        ctx.shadowBlur = 5;
+        ctx.fill();
+      }
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

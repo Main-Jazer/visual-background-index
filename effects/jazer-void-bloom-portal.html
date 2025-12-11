@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Void Bloom Portal</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Void Bloom Portal</h1>
+      <p>Central portal that blooms open and closed, with petals/rings of neon light revealing the word "JaZeR" inside.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Portal properties
+    const centerX = width / 2;
+    const centerY = height / 2;
+    let currentPhase = 0; // 0 to 1, represents the phase in the bloom cycle
+    const cycleDuration = 4; // seconds per full cycle
+    let phaseTimer = 0;
+    const rings = [];
+    const ringCount = 8;
+    const particles = [];
+    const particleCount = 100;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      centerX = width / 2;
+      centerY = height / 2;
+      
+      // Initialize rings
+      initializeRings();
+      initializeParticles();
+    }
+
+    function initializeRings() {
+      rings.length = 0;
+      for (let i = 0; i < ringCount; i++) {
+        rings.push({
+          id: i,
+          baseRadius: 80 + i * 30,
+          currentRadius: 80 + i * 30,
+          rotation: 0,
+          rotationSpeed: 0.1 + Math.random() * 0.3,
+          color: palette[i % palette.length],
+          opacity: 0.7
+        });
+      }
+    }
+
+    function initializeParticles() {
+      particles.length = 0;
+      for (let i = 0; i < particleCount; i++) {
+        particles.push({
+          x: 0,
+          y: 0,
+          angle: Math.random() * Math.PI * 2,
+          distance: 50 + Math.random() * 200,
+          speed: 0.5 + Math.random() * 1.5,
+          size: 1 + Math.random() * 2,
+          color: palette[Math.floor(Math.random() * palette.length)],
+          life: Math.random() * 100,
+          opacity: Math.random() * 0.7 + 0.3
+        });
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Update portal phase
+      updatePortalPhase();
+
+      // Clear with dark background
+      const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#000011');
+      bgGradient.addColorStop(1, '#000000');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw portal effect
+      drawPortal();
+
+      // Draw JaZeR text when portal is open
+      if (currentPhase > 0.4 && currentPhase < 0.8) {
+        drawJaZeRText();
+      }
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function updatePortalPhase() {
+      phaseTimer += 1/60;
+      currentPhase = (phaseTimer % cycleDuration) / cycleDuration;
+      
+      // Update rings based on phase
+      rings.forEach(ring => {
+        // Scale radius based on portal phase
+        const pulse = Math.sin(currentPhase * Math.PI * 2) * 0.5 + 0.5;
+        const variation = Math.sin(time * 2 + ring.id) * 0.2 + 0.8;
+        ring.currentRadius = ring.baseRadius * (0.5 + pulse * 0.8) * variation;
+        
+        // Rotate rings
+        ring.rotation += ring.rotationSpeed * (0.5 + pulse * 0.5) * (1/60);
+      });
+    }
+
+    function drawPortal() {
+      // Draw central void (black hole effect)
+      const voidRadius = map(currentPhase, 0, 1, 20, 120);
+      const voidGradient = ctx.createRadialGradient(
+        centerX, centerY, 0,
+        centerX, centerY, voidRadius
+      );
+      voidGradient.addColorStop(0, '#000000');
+      voidGradient.addColorStop(1, '#000011');
+      ctx.fillStyle = voidGradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, voidRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw rings
+      for (let i = 0; i < rings.length; i++) {
+        const ring = rings[i];
+        
+        // Draw with glow effect
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        
+        const gradient = ctx.createRadialGradient(
+          centerX, centerY, ring.currentRadius - 10,
+          centerX, centerY, ring.currentRadius + 20
+        );
+        gradient.addColorStop(0, ring.color + '00');
+        gradient.addColorStop(0.5, ring.color + 'AA');
+        gradient.addColorStop(1, ring.color + '00');
+        
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        
+        // Draw ring with rotation
+        ctx.arc(
+          centerX, 
+          centerY, 
+          ring.currentRadius, 
+          0 + ring.rotation, 
+          Math.PI * 2 + ring.rotation
+        );
+        
+        ctx.stroke();
+        
+        // Add glow effect
+        ctx.shadowColor = ring.color;
+        ctx.shadowBlur = 20;
+        ctx.stroke();
+        
+        ctx.restore();
+      }
+
+      // Draw particles swirling around the portal
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        
+        // Calculate position based on portal phase
+        const phaseRadius = voidRadius + p.distance * (0.5 + Math.sin(currentPhase * Math.PI) * 0.5);
+        const angle = p.angle + time * p.speed * (0.5 + currentPhase * 0.5);
+        
+        // Add noise for organic movement
+        const noiseX = noise2D(p.x * 0.01, time * 2 + p.life) * 5;
+        const noiseY = noise2D(p.y * 0.01, time * 2 + p.life + 1000) * 5;
+        
+        p.x = centerX + Math.cos(angle) * phaseRadius + noiseX;
+        p.y = centerY + Math.sin(angle) * phaseRadius + noiseY;
+        
+        // Draw particle
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + Math.floor(p.opacity * 150).toString(16).padStart(2, '0');
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 10;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Draw energy beams when portal is opening/closing
+      if (currentPhase < 0.3 || currentPhase > 0.7) {
+        drawEnergyBeams();
+      }
+    }
+
+    function drawEnergyBeams() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2 + time * 0.5;
+        const length = 200 + Math.sin(time * 3 + i) * 50;
+        
+        const startX = centerX + Math.cos(angle) * 30;
+        const startY = centerY + Math.sin(angle) * 30;
+        const endX = centerX + Math.cos(angle) * (30 + length);
+        const endY = centerY + Math.sin(angle) * (30 + length);
+        
+        const gradient = ctx.createLinearGradient(startX, startY, endX, endY);
+        const color = palette[i % palette.length];
+        gradient.addColorStop(0, color + 'FF');
+        gradient.addColorStop(1, color + '00');
+        
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        
+        // Add glow
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.stroke();
+      }
+      
+      ctx.restore();
+    }
+
+    function drawJaZeRText() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Draw "JaZeR" text in the center of the portal
+      const fontSize = map(currentPhase, 0.4, 0.8, 20, 80);
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Cycle colors
+      const colorIndex = Math.floor(time * 4) % palette.length;
+      ctx.fillStyle = palette[colorIndex];
+      ctx.shadowColor = palette[colorIndex];
+      ctx.shadowBlur = 30;
+      
+      ctx.fillText('JaZeR', centerX, centerY);
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cosmic Nebula Voyage - JaZeR [Enhanced]</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Debug overlay */
+        #debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: #00f5ff;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 4px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #debug.visible {
+            opacity: 1;
+        }
+
+        /* Controls hint */
+        #controls {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <div id="debug"></div>
+    <div id="controls">
+        [B] Toggle Post-FX | [P] Cycle Presets | [D] Debug Info | [1-4] Quality
+    </div>
+
+    <script type="module">
+        // ============================================================================
+        // COSMIC NEBULA VOYAGE - ENHANCED WITH POST-PROCESSING
+        // ============================================================================
+        // This effect demonstrates the JaZeR Three.js post-processing pipeline
+        // with multi-pass bloom, chromatic aberration, vignette, and grain.
+        // ============================================================================
+
+        import { noise3D, mouse } from '../jazer-background-engine.js';
+        import * as THREE from '../Three.js';
+        
+        // NEW: Import JaZeR post-processing
+        import { createJazerComposer } from '../jazer-three-fx.js';
+        import { FX_PRESETS } from '../jazer-post-fx.js';
+
+        window.THREE = THREE;
+        const canvas = document.getElementById('c');
+        const debugEl = document.getElementById('debug');
+
+        // ============================================================================
+        // SCENE SETUP
+        // ============================================================================
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 50;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // ============================================================================
+        // NEW: CREATE POST-PROCESSING COMPOSER
+        // ============================================================================
+        // This is the key integration - wrap all rendering with the JaZeR composer
+        // Default preset is 'neon' for that punchy JaZeR brand look
+        
+        const composer = createJazerComposer(THREE, renderer, {
+            preset: 'neon',     // 'subtle', 'neon', 'cinematic', 'extreme'
+            quality: 'high',    // 'low', 'medium', 'high', 'ultra'
+            enabled: true
+        });
+
+        // ============================================================================
+        // NEBULA COLORS
+        // ============================================================================
+
+        const nebulaColors = [
+            { color: new THREE.Color(0xff0055), name: 'magenta' },
+            { color: new THREE.Color(0x00f5ff), name: 'cyan' },
+            { color: new THREE.Color(0xff2aff), name: 'pink' },
+            { color: new THREE.Color(0xffd700), name: 'gold' },
+            { color: new THREE.Color(0xb37cff), name: 'purple' },
+            { color: new THREE.Color(0x39ff14), name: 'lime' }
+        ];
+
+        // ============================================================================
+        // VOLUMETRIC NEBULA CLOUDS
+        // ============================================================================
+
+        const cloudLayers = [];
+        const layerCount = 8;
+
+        for (let layer = 0; layer < layerCount; layer++) {
+            const cloudParticleCount = 5000;
+            const cloudGeo = new THREE.BufferGeometry();
+            const positions = new Float32Array(cloudParticleCount * 3);
+            const colors = new Float32Array(cloudParticleCount * 3);
+            const sizes = new Float32Array(cloudParticleCount);
+
+            const layerColor = nebulaColors[layer % nebulaColors.length].color;
+
+            for (let i = 0; i < cloudParticleCount; i++) {
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                const r = 10 + Math.random() * 30;
+
+                positions[i * 3] = Math.cos(theta) * Math.sin(phi) * r;
+                positions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * r;
+                positions[i * 3 + 2] = Math.cos(phi) * r - layer * 30 - 50;
+
+                const colorVariation = 0.3;
+                colors[i * 3] = layerColor.r + (Math.random() - 0.5) * colorVariation;
+                colors[i * 3 + 1] = layerColor.g + (Math.random() - 0.5) * colorVariation;
+                colors[i * 3 + 2] = layerColor.b + (Math.random() - 0.5) * colorVariation;
+
+                sizes[i] = 1 + Math.random() * 3;
+            }
+
+            cloudGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            cloudGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            cloudGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+            const cloudMat = new THREE.PointsMaterial({
+                size: 4,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.4,
+                blending: THREE.AdditiveBlending,
+                sizeAttenuation: true,
+                depthWrite: false
+            });
+
+            const cloud = new THREE.Points(cloudGeo, cloudMat);
+            cloud.userData = {
+                layer: layer,
+                speed: 0.05 + layer * 0.02,
+                rotationSpeed: 0.0001 + layer * 0.0001
+            };
+
+            scene.add(cloud);
+            cloudLayers.push(cloud);
+        }
+
+        // ============================================================================
+        // BRIGHT STARS
+        // ============================================================================
+
+        const starCount = 3000;
+        const starGeo = new THREE.BufferGeometry();
+        const starPositions = new Float32Array(starCount * 3);
+        const starColors = new Float32Array(starCount * 3);
+        const starSizes = new Float32Array(starCount);
+
+        for (let i = 0; i < starCount; i++) {
+            starPositions[i * 3] = (Math.random() - 0.5) * 300;
+            starPositions[i * 3 + 1] = (Math.random() - 0.5) * 300;
+            starPositions[i * 3 + 2] = -Math.random() * 300 - 50;
+
+            const starColor = nebulaColors[Math.floor(Math.random() * nebulaColors.length)].color;
+            starColors[i * 3] = starColor.r;
+            starColors[i * 3 + 1] = starColor.g;
+            starColors[i * 3 + 2] = starColor.b;
+
+            starSizes[i] = 0.5 + Math.random() * 2;
+        }
+
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        starGeo.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+        starGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+
+        const starMat = new THREE.PointsMaterial({
+            size: 2,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.9,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const stars = new THREE.Points(starGeo, starMat);
+        scene.add(stars);
+
+        // ============================================================================
+        // COSMIC DUST RIBBONS
+        // ============================================================================
+
+        const ribbonCount = 15;
+        const ribbons = [];
+
+        for (let i = 0; i < ribbonCount; i++) {
+            const curve = new THREE.CatmullRomCurve3([
+                new THREE.Vector3(-40 + Math.random() * 80, -30 + Math.random() * 60, -50 - i * 20),
+                new THREE.Vector3(-20 + Math.random() * 40, -15 + Math.random() * 30, -70 - i * 20),
+                new THREE.Vector3(20 + Math.random() * 40, 15 + Math.random() * 30, -90 - i * 20),
+                new THREE.Vector3(-40 + Math.random() * 80, -30 + Math.random() * 60, -110 - i * 20)
+            ]);
+
+            const tubeGeo = new THREE.TubeGeometry(curve, 100, 0.5, 8, false);
+            const tubeMat = new THREE.MeshBasicMaterial({
+                color: nebulaColors[i % nebulaColors.length].color,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide
+            });
+
+            const ribbon = new THREE.Mesh(tubeGeo, tubeMat);
+            ribbon.userData = {
+                speed: 0.1 + Math.random() * 0.1,
+                originalZ: ribbon.position.z
+            };
+
+            scene.add(ribbon);
+            ribbons.push(ribbon);
+        }
+
+        // ============================================================================
+        // ENERGY PLASMA SPHERES
+        // ============================================================================
+
+        const plasmaSpheres = [];
+        for (let i = 0; i < 20; i++) {
+            const sphereGeo = new THREE.SphereGeometry(1 + Math.random() * 3, 32, 32);
+            const sphereMat = new THREE.ShaderMaterial({
+                uniforms: {
+                    time: { value: 0 },
+                    color: { value: nebulaColors[i % nebulaColors.length].color }
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+                    uniform float time;
+
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        vPosition = position;
+
+                        vec3 pos = position;
+                        float distortion = sin(pos.x * 3.0 + time) *
+                                          sin(pos.y * 3.0 + time * 1.3) *
+                                          sin(pos.z * 3.0 + time * 0.7) * 0.2;
+                        pos += normal * distortion;
+
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float time;
+                    uniform vec3 color;
+                    varying vec3 vNormal;
+                    varying vec3 vPosition;
+
+                    void main() {
+                        float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.0);
+                        float pulse = sin(time * 2.0) * 0.3 + 0.7;
+                        vec3 glowColor = color * (fresnel * pulse);
+                        gl_FragColor = vec4(glowColor, fresnel * 0.6);
+                    }
+                `,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide
+            });
+
+            const plasma = new THREE.Mesh(sphereGeo, sphereMat);
+            plasma.position.set(
+                (Math.random() - 0.5) * 60,
+                (Math.random() - 0.5) * 60,
+                -Math.random() * 200 - 50
+            );
+            plasma.userData = {
+                speed: 0.05 + Math.random() * 0.1,
+                rotationSpeed: (Math.random() - 0.5) * 0.02
+            };
+
+            scene.add(plasma);
+            plasmaSpheres.push(plasma);
+        }
+
+        // ============================================================================
+        // COSMIC RAYS
+        // ============================================================================
+
+        const rays = [];
+        for (let i = 0; i < 30; i++) {
+            const rayGeo = new THREE.CylinderGeometry(0.05, 0.05, 50, 8);
+            const rayMat = new THREE.MeshBasicMaterial({
+                color: nebulaColors[Math.floor(Math.random() * nebulaColors.length)].color,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            const ray = new THREE.Mesh(rayGeo, rayMat);
+            ray.position.set(
+                (Math.random() - 0.5) * 100,
+                (Math.random() - 0.5) * 100,
+                -Math.random() * 300
+            );
+            ray.rotation.x = Math.random() * Math.PI;
+            ray.rotation.y = Math.random() * Math.PI;
+            ray.rotation.z = Math.random() * Math.PI;
+
+            ray.userData = {
+                speed: 1 + Math.random() * 2,
+                fadeSpeed: 0.01 + Math.random() * 0.02
+            };
+
+            scene.add(ray);
+            rays.push(ray);
+        }
+
+        // ============================================================================
+        // KEYBOARD CONTROLS
+        // ============================================================================
+
+        const presetNames = ['subtle', 'neon', 'cinematic', 'extreme'];
+        let currentPresetIndex = 1; // Start with 'neon'
+        let showDebug = false;
+
+        document.addEventListener('keydown', (e) => {
+            switch (e.key.toLowerCase()) {
+                case 'b':
+                    // Toggle post-processing
+                    const enabled = composer.toggle();
+                    console.log(`Post-FX: ${enabled ? 'ON' : 'OFF'}`);
+                    break;
+                case 'p':
+                    // Cycle presets
+                    currentPresetIndex = (currentPresetIndex + 1) % presetNames.length;
+                    const preset = presetNames[currentPresetIndex];
+                    composer.setPreset(preset);
+                    console.log(`Preset: ${preset}`);
+                    break;
+                case 'd':
+                    // Toggle debug overlay
+                    showDebug = !showDebug;
+                    debugEl.classList.toggle('visible', showDebug);
+                    break;
+                case '1':
+                    composer.setQuality('low');
+                    console.log('Quality: low');
+                    break;
+                case '2':
+                    composer.setQuality('medium');
+                    console.log('Quality: medium');
+                    break;
+                case '3':
+                    composer.setQuality('high');
+                    console.log('Quality: high');
+                    break;
+                case '4':
+                    composer.setQuality('ultra');
+                    console.log('Quality: ultra');
+                    break;
+            }
+        });
+
+        // ============================================================================
+        // ANIMATION LOOP
+        // ============================================================================
+
+        let time = 0;
+        let lastTime = performance.now();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const now = performance.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+            
+            time += deltaTime;
+            mouse.update();
+
+            // Move camera forward through nebula
+            camera.position.z -= 0.1;
+
+            // Animate nebula cloud layers
+            cloudLayers.forEach(cloud => {
+                cloud.rotation.y += cloud.userData.rotationSpeed;
+                cloud.rotation.z += cloud.userData.rotationSpeed * 0.5;
+
+                const pos = cloud.geometry.attributes.position.array;
+                for (let i = 0; i < pos.length / 3; i++) {
+                    const idx = i * 3;
+                    const noiseVal = noise3D(
+                        pos[idx] * 0.05,
+                        pos[idx + 1] * 0.05,
+                        time * 0.1 + cloud.userData.layer
+                    );
+
+                    pos[idx] += Math.sin(noiseVal + time) * 0.02;
+                    pos[idx + 1] += Math.cos(noiseVal + time) * 0.02;
+                }
+                cloud.geometry.attributes.position.needsUpdate = true;
+
+                if (camera.position.z < cloud.position.z - 100) {
+                    cloud.position.z = camera.position.z - 300;
+                }
+            });
+
+            // Twinkle stars
+            const starSizeArray = stars.geometry.attributes.size.array;
+            for (let i = 0; i < starSizeArray.length; i++) {
+                starSizeArray[i] = (0.5 + Math.random() * 2) * (1 + Math.sin(time * 5 + i) * 0.3);
+            }
+            stars.geometry.attributes.size.needsUpdate = true;
+
+            // Move ribbons
+            ribbons.forEach(ribbon => {
+                ribbon.position.z += ribbon.userData.speed;
+                if (ribbon.position.z > camera.position.z + 50) {
+                    ribbon.position.z = camera.position.z - 300;
+                }
+            });
+
+            // Animate plasma spheres
+            plasmaSpheres.forEach(plasma => {
+                plasma.rotation.y += plasma.userData.rotationSpeed;
+                plasma.material.uniforms.time.value = time;
+                plasma.position.z += plasma.userData.speed;
+
+                if (plasma.position.z > camera.position.z + 50) {
+                    plasma.position.z = camera.position.z - 300;
+                    plasma.position.x = (Math.random() - 0.5) * 60;
+                    plasma.position.y = (Math.random() - 0.5) * 60;
+                }
+            });
+
+            // Animate cosmic rays
+            rays.forEach(ray => {
+                ray.position.z += ray.userData.speed;
+
+                if (ray.position.z > camera.position.z + 100) {
+                    ray.position.z = camera.position.z - 300;
+                    ray.position.x = (Math.random() - 0.5) * 100;
+                    ray.position.y = (Math.random() - 0.5) * 100;
+                    ray.material.opacity = 0.6;
+                }
+
+                const dist = ray.position.z - camera.position.z;
+                if (dist > 0) {
+                    ray.material.opacity = Math.max(0, 0.6 - (dist / 100) * 0.6);
+                }
+            });
+
+            // Camera sway with mouse
+            camera.position.x = mouse.centeredX * 10;
+            camera.position.y = mouse.centeredY * 10;
+            camera.lookAt(camera.position.x * 0.1, camera.position.y * 0.1, camera.position.z - 100);
+
+            // ================================================================
+            // RENDER WITH POST-PROCESSING
+            // ================================================================
+            // OLD: renderer.render(scene, camera);
+            // NEW: Use composer which applies bloom, chromatic, vignette, etc.
+            composer.render(scene, camera, deltaTime);
+
+            // Update debug overlay
+            if (showDebug) {
+                const info = composer.getDebugInfo();
+                debugEl.innerHTML = `
+                    Preset: ${info.preset}<br>
+                    Quality: ${info.quality}<br>
+                    Refresh: ${info.refreshRate}Hz<br>
+                    FX: ${info.enabled ? 'ON' : 'OFF'}<br>
+                    Time: ${info.time}s
+                `;
+            }
+        }
+
+        // ============================================================================
+        // RESIZE HANDLER
+        // ============================================================================
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ============================================================================
+        // START ANIMATION
+        // ============================================================================
+
+        animate();
+    </script>
+</body>
+
+</html>

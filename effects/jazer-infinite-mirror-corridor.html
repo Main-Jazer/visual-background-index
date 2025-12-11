@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Infinite Mirror Corridor</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Infinite Mirror Corridor</h1>
+      <p>Corridor of mirrors reflecting the JaZeR logo infinitely in both directions.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Infinite mirror corridor properties
+    const corridor = {
+      x: width / 2,
+      y: height / 2,
+      width: 300,
+      height: 500,
+      depth: 20
+    };
+    const mirrors = [];
+    const mirrorCount = 10;
+    const movementSpeed = 2; // Movement speed for the corridor effect
+    const logoSize = 60;
+    const reflections = [];
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update corridor
+      corridor.x = width / 2;
+      corridor.y = height / 2;
+    }
+
+    // Function to initialize the mirror corridor
+    function initializeMirrorCorridor() {
+      mirrors.length = 0;
+      reflections.length = 0;
+      
+      // Create mirrored surfaces at different depths
+      for (let i = 0; i < mirrorCount; i++) {
+        mirrors.push({
+          id: i,
+          x: corridor.x,
+          y: corridor.y,
+          z: i * 60, // Position in depth
+          width: corridor.width * (1 - i * 0.05),
+          height: corridor.height * (1 - i * 0.05),
+          rotation: (Math.random() - 0.5) * 0.1, // Slight rotation variations
+          opacity: 1 - i * 0.08,
+          color: palette[i % palette.length],
+          text: "JaZeR",
+          textScale: 0.8 - i * 0.05
+        });
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with dark background
+      const bgGradient = ctx.createLinearGradient(0, 0, width, height);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#100020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update and draw infinite mirror corridor
+      updateAndDrawMirrorCorridor();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function updateAndDrawMirrorCorridor() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Draw side walls of the corridor (left and right)
+      const wallGradient = ctx.createLinearGradient(0, 0, width, 0);
+      wallGradient.addColorStop(0, palette[0] + '22');
+      wallGradient.addColorStop(0.5, palette[1] + '22');
+      wallGradient.addColorStop(1, palette[0] + '22');
+      
+      // Left wall
+      ctx.fillStyle = wallGradient;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(corridor.x - corridor.width/2, 0);
+      ctx.lineTo(corridor.x - corridor.width/2, height);
+      ctx.lineTo(0, height);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Right wall
+      ctx.beginPath();
+      ctx.moveTo(width, 0);
+      ctx.lineTo(corridor.x + corridor.width/2, 0);
+      ctx.lineTo(corridor.x + corridor.width/2, height);
+      ctx.lineTo(width, height);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Draw mirrors and reflections
+      for (let i = mirrors.length - 1; i >= 0; i--) {
+        const mirror = mirrors[i];
+        
+        // Calculate perspective scaling
+        const scale = 1 / (1 + mirror.z / 100);
+        const currentWidth = mirror.width * scale;
+        const currentHeight = mirror.height * scale;
+        
+        // Calculate position with perspective
+        const posX = corridor.x;
+        const posY = corridor.y + (mirror.z / mirrors.length) * 0.5; // Slight vertical offset
+        
+        // Draw mirror frame
+        ctx.strokeStyle = mirror.color + Math.floor(mirror.opacity * 200).toString(16).padStart(2, '0');
+        ctx.lineWidth = 4 * scale;
+        
+        // Create frame glow
+        ctx.shadowColor = mirror.color;
+        ctx.shadowBlur = 20 * scale;
+        ctx.strokeRect(posX - currentWidth/2, posY - currentHeight/2, currentWidth, currentHeight);
+        
+        // Draw mirror reflection with JaZeR logo
+        ctx.save();
+        ctx.clip();
+        
+        // Create mirror surface effect
+        const mirrorGradient = ctx.createLinearGradient(
+          posX - currentWidth/2, posY,
+          posX + currentWidth/2, posY
+        );
+        mirrorGradient.addColorStop(0, mirror.color + '00');
+        mirrorGradient.addColorStop(0.5, mirror.color + Math.floor(mirror.opacity * 100).toString(16).padStart(2, '0'));
+        mirrorGradient.addColorStop(1, mirror.color + '00');
+        
+        ctx.fillStyle = mirrorGradient;
+        ctx.fillRect(posX - currentWidth/2, posY - currentHeight/2, currentWidth, currentHeight);
+        
+        // Draw JaZeR logo/text in the mirror
+        const textGradient = ctx.createLinearGradient(
+          posX - currentWidth/2, posY,
+          posX + currentWidth/2, posY
+        );
+        textGradient.addColorStop(0, palette[i % palette.length]);
+        textGradient.addColorStop(1, palette[(i + 1) % palette.length]);
+        
+        ctx.font = `bold ${logoSize * mirror.textScale}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = textGradient;
+        ctx.shadowColor = palette[i % palette.length];
+        ctx.shadowBlur = 20 * mirror.opacity;
+        ctx.fillText(mirror.text, posX, posY);
+        
+        // Draw smaller reflections
+        for (let j = 0; j < 3; j++) {
+          const reflectionSize = logoSize * mirror.textScale * (0.5 - j * 0.1);
+          ctx.font = `bold ${reflectionSize}px Arial`;
+          ctx.globalAlpha = mirror.opacity * (0.3 - j * 0.1);
+          ctx.fillText(mirror.text, posX - currentWidth/4 + j * 20, posY - currentHeight/4 + j * 20);
+        }
+        
+        ctx.globalAlpha = 1.0;
+        ctx.restore();
+      }
+      
+      // Draw center pathway effect
+      const pathGradient = ctx.createLinearGradient(0, 0, 0, height);
+      pathGradient.addColorStop(0, '#00000000');
+      pathGradient.addColorStop(0.5, '#00f5ff22');
+      pathGradient.addColorStop(1, '#00000000');
+      
+      ctx.fillStyle = pathGradient;
+      ctx.fillRect(
+        corridor.x - corridor.width/2 + 20, 
+        0, 
+        corridor.width - 40, 
+        height
+      );
+      
+      // Draw JaZeR text in the center with pulsing effect
+      const pulse = Math.sin(time * 2) * 0.2 + 0.8;
+      ctx.font = `bold ${logoSize * pulse}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = palette[0];
+      ctx.shadowColor = palette[0];
+      ctx.shadowBlur = 30;
+      ctx.fillText('JaZeR', corridor.x, corridor.y);
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    initializeMirrorCorridor();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

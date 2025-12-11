@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Neon Circuit Maze</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Neon Circuit Maze</h1>
+      <p>Top-down view of a glowing circuit/maze; paths pulse like flowing power, occasionally tracing out the letters J-A-Z-E-R.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Circuit maze properties
+    const nodeSize = 20;
+    const nodeSpacing = 30;
+    const cols = Math.ceil(width / nodeSpacing);
+    const rows = Math.ceil(height / nodeSpacing);
+    const nodes = [];
+    const paths = [];
+    const pulses = [];
+    let lastPulseTime = 0;
+    const pulseInterval = 1.5; // seconds between pulses
+    let jazerSequence = [];
+    let sequenceIndex = 0;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Recalculate dimensions
+      const cols = Math.ceil(width / nodeSpacing);
+      const rows = Math.ceil(height / nodeSpacing);
+      
+      // Initialize nodes and paths
+      initializeNodes(cols, rows);
+      initializePaths();
+      initializeJazerSequence();
+    }
+
+    function initializeNodes(cols, rows) {
+      nodes.length = 0;
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          nodes.push({
+            id: y * cols + x,
+            x: x * nodeSpacing + nodeSpacing/2,
+            y: y * nodeSpacing + nodeSpacing/2,
+            connections: [],
+            powered: false,
+            pulseTime: 0,
+            color: palette[Math.floor(Math.random() * palette.length)]
+          });
+        }
+      }
+    }
+
+    function initializePaths() {
+      paths.length = 0;
+      
+      // Create random maze-like connections
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        
+        // Connect to right neighbor (with some randomness)
+        if (i % cols < cols - 1 && Math.random() > 0.3) {
+          const rightNode = nodes[i + 1];
+          paths.push({
+            start: node,
+            end: rightNode
+          });
+          node.connections.push(rightNode.id);
+          rightNode.connections.push(node.id);
+        }
+        
+        // Connect to bottom neighbor (with some randomness)
+        if (i < (rows - 1) * cols && Math.random() > 0.3) {
+          const bottomNode = nodes[i + cols];
+          paths.push({
+            start: node,
+            end: bottomNode
+          });
+          node.connections.push(bottomNode.id);
+          bottomNode.connections.push(node.id);
+        }
+      }
+    }
+
+    function initializeJazerSequence() {
+      jazerSequence = [];
+      
+      // Create positions for each letter in "JaZeR"
+      const text = "JaZeR";
+      for (let i = 0; i < text.length; i++) {
+        const letter = text[i];
+        // Position each letter at a different area of the screen
+        const letterX = map(i, 0, text.length - 1, 0.2, 0.8);
+        const letterY = 0.5;
+        
+        // Find nodes in that area
+        const centerX = letterX * width;
+        const centerY = letterY * height;
+        
+        // Find the closest 5 nodes to this position
+        const closestNodes = [...nodes]
+          .sort((a, b) => distance(a.x, a.y, centerX, centerY) - distance(b.x, b.y, centerX, centerY))
+          .slice(0, 5);
+        
+        jazerSequence.push({
+          letter: letter,
+          nodes: closestNodes,
+          startTime: i * 0.4, // Stagger start times
+          duration: 1.0
+        });
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Check for pulse creation
+      if (time - lastPulseTime > pulseInterval) {
+        createPulse();
+        lastPulseTime = time;
+      }
+
+      // Check for JaZeR sequence activation
+      if (time % 8 < 0.016) { // Activate every 8 seconds
+        activateJazerSequence();
+      }
+
+      // Clear with dark background
+      ctx.fillStyle = '#000011';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw the circuit maze
+      drawCircuitMaze();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function createPulse() {
+      // Find a random start node that has connections
+      const startNodes = nodes.filter(n => n.connections.length > 0);
+      if (startNodes.length === 0) return;
+      
+      const startNode = startNodes[Math.floor(Math.random() * startNodes.length)];
+      
+      pulses.push({
+        current: startNode,
+        path: [startNode],
+        time: 0,
+        duration: 2 + Math.random() * 3, // 2-5 seconds
+        color: palette[Math.floor(Math.random() * palette.length)],
+        speed: 0.5 + Math.random() * 1.0
+      });
+    }
+
+    function activateJazerSequence() {
+      sequenceIndex = 0;
+      
+      // Activate each letter in sequence
+      for (let i = 0; i < jazerSequence.length; i++) {
+        const seq = jazerSequence[i];
+        
+        // Schedule activation for each letter
+        setTimeout(() => {
+          seq.nodes.forEach(node => {
+            node.pulseTime = time + i * 0.1; // Stagger within each letter
+            node.powered = true;
+          });
+        }, (i * 400)); // 400ms delay between letters
+      }
+    }
+
+    function drawCircuitMaze() {
+      // Draw paths first (background)
+      for (const path of paths) {
+        ctx.beginPath();
+        ctx.moveTo(path.start.x, path.start.y);
+        ctx.lineTo(path.end.x, path.end.y);
+        
+        // Base path color (dim)
+        ctx.strokeStyle = '#222244';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Draw nodes
+      for (const node of nodes) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        
+        // Determine if node is active (part of JaZeR sequence or pulse)
+        const isActive = node.powered && (time - node.pulseTime < 1.0);
+        const isPulseNode = pulses.some(pulse => pulse.current.id === node.id);
+        
+        if (isActive || isPulseNode) {
+          // Active node - brighter
+          ctx.fillStyle = node.color || palette[0];
+          ctx.shadowColor = node.color || palette[0];
+          ctx.shadowBlur = 20;
+        } else {
+          // Inactive node
+          ctx.fillStyle = '#333366';
+          ctx.shadowBlur = 0;
+        }
+        
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, nodeSize/2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+      }
+
+      // Draw paths again with active pulses
+      for (const path of paths) {
+        // Check if this path is currently being traversed by a pulse
+        const activePulse = pulses.find(pulse => 
+          pulse.path.length > 1 && 
+          pulse.path.includes(path.start) && 
+          pulse.path.includes(path.end)
+        );
+        
+        if (activePulse) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          
+          // Calculate position along the path based on pulse timing
+          const progress = (time - activePulse.time) / activePulse.duration;
+          if (progress < 1) {
+            const pathGradient = ctx.createLinearGradient(
+              path.start.x, path.start.y,
+              path.end.x, path.end.y
+            );
+            pathGradient.addColorStop(0, activePulse.color + '00');
+            pathGradient.addColorStop(0.5, activePulse.color + 'FF');
+            pathGradient.addColorStop(1, activePulse.color + '00');
+            
+            ctx.strokeStyle = pathGradient;
+            ctx.lineWidth = 5;
+            ctx.shadowColor = activePulse.color;
+            ctx.shadowBlur = 15;
+            
+            ctx.beginPath();
+            ctx.moveTo(path.start.x, path.start.y);
+            ctx.lineTo(path.end.x, path.end.y);
+            ctx.stroke();
+          }
+          
+          ctx.restore();
+        }
+      }
+
+      // Draw JaZeR text connections periodically
+      if (time % 8 < 3) { // Draw JaZeR text for 3 seconds every 8 seconds
+        drawJaZeRText();
+      }
+
+      // Update and remove finished pulses
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const pulse = pulses[i];
+        pulse.time += 1/60;
+        
+        // Move pulse to next random connection
+        if (time - pulse.time > pulse.speed && pulse.current.connections.length > 0) {
+          // Reset pulse if it's been going too long
+          if (pulse.path.length > 15 || time - pulse.time > pulse.duration) {
+            pulses.splice(i, 1);
+            continue;
+          }
+          
+          // Move to a random connected node
+          const nextId = pulse.current.connections[
+            Math.floor(Math.random() * pulse.current.connections.length)
+          ];
+          const nextNode = nodes.find(n => n.id === nextId);
+          
+          if (nextNode) {
+            pulse.current = nextNode;
+            pulse.path.push(nextNode);
+            
+            // Mark node as powered
+            nextNode.pulseTime = time;
+            nextNode.powered = true;
+            
+            // Dim previous nodes in the path after 0.5 seconds
+            setTimeout(() => {
+              nextNode.powered = false;
+            }, 500);
+          }
+        }
+        
+        // Remove pulse if it's finished
+        if (time - pulse.time > pulse.duration) {
+          pulses.splice(i, 1);
+        }
+      }
+    }
+
+    function drawJaZeRText() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      // Draw "JaZeR" text with circuit styling
+      const text = "JaZeR";
+      const fontSize = 80;
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Calculate text position
+      const textY = height * 0.3;
+      
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const textX = width * 0.2 + (i * width * 0.15);
+        
+        // Draw with glow effect
+        const color = palette[i % palette.length];
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 30;
+        ctx.fillText(char, textX, textY);
+      }
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

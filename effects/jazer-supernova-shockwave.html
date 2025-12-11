@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Supernova Shockwave</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Supernova Shockwave</h1>
+      <p>Repeating supernova burst: center "JaZeR core" explodes into expanding rings and particles that fade out, then restart.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Supernova shockwave properties
+    const center = { x: width / 2, y: height / 2 };
+    const particles = [];
+    const particleCount = 300;
+    const rings = [];
+    const ringCount = 5;
+    const cycleDuration = 6; // seconds per supernova cycle
+    let cycleTime = 0;
+    let currentCyclePhase = 'expand'; // 'expand', 'fade', 'reset'
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Initialize particles and rings
+      initializeParticles();
+      initializeRings();
+    }
+
+    function initializeParticles() {
+      particles.length = 0;
+      for (let i = 0; i < particleCount; i++) {
+        particles.push({
+          id: i,
+          x: center.x,
+          y: center.y,
+          originalX: center.x,
+          originalY: center.y,
+          angle: Math.random() * Math.PI * 2,
+          speed: 50 + Math.random() * 150,
+          size: 1 + Math.random() * 3,
+          color: palette[Math.floor(Math.random() * palette.length)],
+          life: 0,
+          maxLife: 2 + Math.random() * 2,
+          distance: 0,
+          trail: [],
+          trailLength: 5
+        });
+      }
+    }
+    
+    function initializeRings() {
+      rings.length = 0;
+      for (let i = 0; i < ringCount; i++) {
+        rings.push({
+          id: i,
+          radius: 0,
+          maxRadius: Math.min(width, height) * 0.5,
+          thickness: 8 - i * 1.5,
+          color: palette[i % palette.length],
+          opacity: 1,
+          phase: 0,
+          expansionPhase: 0
+        });
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+      cycleTime += dt;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Manage cycle phases
+      if (cycleTime > cycleDuration) {
+        cycleTime = 0;
+        currentCyclePhase = 'expand';
+      } else if (cycleTime > cycleDuration * 0.5) {
+        currentCyclePhase = 'fade';
+      } else if (cycleTime > cycleDuration * 0.2) {
+        currentCyclePhase = 'expand';
+      }
+
+      // Clear with dark background
+      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#000020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update and draw supernova shockwave
+      updateAndDrawSupernova();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function updateAndDrawSupernova() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      if (currentCyclePhase === 'expand') {
+        const expansionProgress = (cycleTime % (cycleDuration * 0.2)) / (cycleDuration * 0.2);
+        
+        // Update rings
+        for (const ring of rings) {
+          ring.radius = ring.maxRadius * expansionProgress * (0.8 + ring.id * 0.2);
+          ring.expansionPhase = expansionProgress;
+        }
+        
+        // Update particles
+        for (const particle of particles) {
+          particle.distance = particle.speed * expansionProgress * 0.1;
+          particle.x = center.x + Math.cos(particle.angle) * particle.distance;
+          particle.y = center.y + Math.sin(particle.angle) * particle.distance;
+          
+          // Add noise for organic movement
+          particle.x += noise2D(particle.x * 0.01, particle.y * 0.01, time) * 5;
+          particle.y += noise2D(particle.x * 0.01, particle.y * 0.01, time + 1000) * 5;
+          
+          // Add to trail
+          particle.trail.push({x: particle.x, y: particle.y});
+          if (particle.trail.length > particle.trailLength) {
+            particle.trail.shift();
+          }
+        }
+      } 
+      else if (currentCyclePhase === 'fade') {
+        const fadeProgress = ((cycleTime % cycleDuration) - cycleDuration * 0.2) / (cycleDuration * 0.3);
+        
+        for (const ring of rings) {
+          // Keep rings at max size but fade them
+          ring.opacity = 1 - fadeProgress;
+        }
+        
+        for (const particle of particles) {
+          // Hold particles but fade them
+          particle.life += 1/60;
+          
+          // Add to trail
+          particle.trail.push({x: particle.x, y: particle.y});
+          if (particle.trail.length > particle.trailLength) {
+            particle.trail.shift();
+          }
+        }
+      }
+      else if (currentCyclePhase === 'reset') {
+        const resetProgress = ((cycleTime % cycleDuration) - cycleDuration * 0.5) / (cycleDuration * 0.5);
+        
+        // Reset rings
+        for (const ring of rings) {
+          ring.radius = ring.maxRadius * (1 - resetProgress);
+          ring.opacity = 1 - resetProgress;
+        }
+        
+        // Reset particles
+        for (const particle of particles) {
+          const returnFactor = 1 - resetProgress;
+          particle.x = center.x + (particle.x - center.x) * returnFactor;
+          particle.y = center.y + (particle.y - center.y) * returnFactor;
+          particle.distance = particle.distance * returnFactor;
+          particle.life = 0;
+        }
+      }
+      
+      // Draw rings
+      for (const ring of rings) {
+        if (ring.radius > 0 && ring.opacity > 0) {
+          const ringGradient = ctx.createRadialGradient(
+            center.x, center.y, ring.radius - ring.thickness / 2,
+            center.x, center.y, ring.radius + ring.thickness / 2
+          );
+          ringGradient.addColorStop(0, ring.color + Math.floor(ring.opacity * 255).toString(16).padStart(2, '0'));
+          ringGradient.addColorStop(0.5, ring.color + Math.floor(ring.opacity * 150).toString(16).padStart(2, '0'));
+          ringGradient.addColorStop(1, ring.color + '00');
+          
+          ctx.strokeStyle = ringGradient;
+          ctx.lineWidth = ring.thickness;
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, ring.radius, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          // Add glow
+          ctx.shadowColor = ring.color;
+          ctx.shadowBlur = 30;
+          ctx.stroke();
+        }
+      }
+      
+      // Draw particles and trails
+      for (const particle of particles) {
+        // Draw trail
+        for (let i = 1; i < particle.trail.length; i++) {
+          const point = particle.trail[i];
+          const prevPoint = particle.trail[i-1];
+          const trailAlpha = i / particle.trail.length * particle.opacity;
+          
+          ctx.beginPath();
+          ctx.moveTo(prevPoint.x, prevPoint.y);
+          ctx.lineTo(point.x, point.y);
+          ctx.strokeStyle = particle.color + Math.floor(trailAlpha * 150).toString(16).padStart(2, '0');
+          ctx.lineWidth = particle.size * 0.5;
+          ctx.stroke();
+          
+          // Add glow
+          ctx.shadowColor = particle.color;
+          ctx.shadowBlur = 10;
+          ctx.stroke();
+        }
+        
+        // Draw particle
+        const alpha = expansionProgress > 0 ? 1 : (1 - particle.life / particle.maxLife);
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fillStyle = particle.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+        ctx.shadowColor = particle.color;
+        ctx.shadowBlur = 15;
+        ctx.fill();
+      }
+      
+      // Draw JaZeR text during explosion
+      if (currentCyclePhase === 'expand') {
+        const textAlpha = map(expansionProgress, 0, 1, 0.3, 1);
+        ctx.font = 'bold 80px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Draw each letter with different colors
+        const text = "JaZeR";
+        for (let i = 0; i < text.length; i++) {
+          const char = text[i];
+          const color = palette[i % palette.length];
+          ctx.fillStyle = color + Math.floor(textAlpha * 255).toString(16).padStart(2, '0');
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 30;
+          ctx.fillText(char, center.x - 100 + i * 50, center.y);
+        }
+      }
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

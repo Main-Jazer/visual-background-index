@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Crystal Shard Tunnel</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Crystal Shard Tunnel</h1>
+      <p>Traveling through a tunnel lined with refractive crystal shards that reflect JaZeR colors and text.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Crystal shard tunnel properties
+    const center = { x: width / 2, y: height / 2 };
+    const shards = [];
+    const shardCount = 50;
+    const tunnelDepth = 20;
+    const movementSpeed = 1.5;
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Initialize shards
+      initializeShards();
+    }
+
+    function initializeShards() {
+      shards.length = 0;
+      for (let i = 0; i < shardCount; i++) {
+        shards.push({
+          id: i,
+          x: Math.random() * width,
+          y: Math.random() * height,
+          z: Math.random() * tunnelDepth, // Depth position
+          size: 20 + Math.random() * 60,
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.1,
+          color: palette[Math.floor(Math.random() * palette.length)],
+          opacity: 0.3 + Math.random() * 0.7,
+          points: generateCrystalPoints(5 + Math.floor(Math.random() * 4)),
+          hasText: Math.random() > 0.7 // Some shards have text
+        });
+      }
+    }
+
+    function generateCrystalPoints(vertexCount) {
+      const points = [];
+      for (let i = 0; i < vertexCount; i++) {
+        const angle = (i / vertexCount) * Math.PI * 2;
+        const distance = 0.7 + Math.random() * 0.3; // Random distance from center
+        points.push({
+          angle: angle,
+          distance: distance
+        });
+      }
+      return points;
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with dark background
+      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
+      bgGradient.addColorStop(0, '#050515');
+      bgGradient.addColorStop(1, '#000000');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw crystal shard tunnel
+      drawCrystalTunnel();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function drawCrystalTunnel() {
+      // Sort shards by z-depth (back to front)
+      const sortedShards = [...shards].sort((a, b) => b.z - a.z);
+      
+      for (const shard of sortedShards) {
+        // Update position (move toward viewer)
+        shard.z -= movementSpeed;
+        
+        // Reset shard if it passes the viewer
+        if (shard.z < 0) {
+          shard.z = tunnelDepth;
+          shard.x = Math.random() * width;
+          shard.y = Math.random() * height;
+          shard.hasText = Math.random() > 0.8;
+        }
+        
+        // Update rotation
+        shard.rotation += shard.rotationSpeed;
+        
+        // Calculate scale based on depth (z)
+        const scale = map(shard.z, 0, tunnelDepth, 0.1, 2);
+        const currentSize = shard.size * scale;
+        
+        // Only draw if the shard is large enough to be visible
+        if (scale > 0.05) {
+          // Calculate screen position based on perspective
+          const screenX = map(shard.z, 0, tunnelDepth, center.x, shard.x);
+          const screenY = map(shard.z, 0, tunnelDepth, center.y, shard.y);
+          
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          
+          // Draw crystal with refraction effect
+          const gradient = ctx.createRadialGradient(
+            screenX, screenY, 0,
+            screenX, screenY, currentSize
+          );
+          gradient.addColorStop(0, shard.color + Math.floor(shard.opacity * 255).toString(16).padStart(2, '0'));
+          gradient.addColorStop(0.5, shard.color + Math.floor(shard.opacity * 150).toString(16).padStart(2, '0'));
+          gradient.addColorStop(1, shard.color + '00');
+          
+          ctx.fillStyle = gradient;
+          ctx.strokeStyle = shard.color + Math.floor(shard.opacity * 200).toString(16).padStart(2, '0');
+          ctx.lineWidth = 2 * scale;
+          
+          // Draw the crystal shape
+          ctx.beginPath();
+          for (let i = 0; i < shard.points.length; i++) {
+            const point = shard.points[i];
+            const x = screenX + Math.cos(point.angle + shard.rotation) * currentSize * point.distance;
+            const y = screenY + Math.sin(point.angle + shard.rotation) * currentSize * point.distance;
+            
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          
+          // Add inner details
+          ctx.strokeStyle = shard.color + '88';
+          ctx.lineWidth = 1 * scale;
+          ctx.beginPath();
+          for (let i = 0; i < shard.points.length; i++) {
+            const point = shard.points[i];
+            const x = screenX + Math.cos(point.angle + shard.rotation + Math.PI/4) * currentSize * point.distance * 0.6;
+            const y = screenY + Math.sin(point.angle + shard.rotation + Math.PI/4) * currentSize * point.distance * 0.6;
+            
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          }
+          ctx.closePath();
+          ctx.stroke();
+          
+          // Add glow effect
+          ctx.shadowColor = shard.color;
+          ctx.shadowBlur = 20 * scale;
+          ctx.fill();
+          
+          // Draw text on some shards
+          if (shard.hasText && scale > 0.3) {
+            ctx.font = `${Math.max(10, currentSize/4)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = 0.7;
+            ctx.fillText('JaZeR', screenX, screenY);
+          }
+          
+          ctx.restore();
+        }
+      }
+      
+      // Draw central perspective effect
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const coreGradient = ctx.createRadialGradient(
+        center.x, center.y, 0,
+        center.x, center.y, 50
+      );
+      coreGradient.addColorStop(0, palette[0] + '44');
+      coreGradient.addColorStop(1, palette[0] + '00');
+      
+      ctx.fillStyle = coreGradient;
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, 50, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Add glow
+      ctx.shadowColor = palette[0];
+      ctx.shadowBlur = 30;
+      ctx.fill();
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

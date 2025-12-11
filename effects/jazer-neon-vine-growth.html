@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Neon Vine Growth</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Neon Vine Growth</h1>
+      <p>Procedural growth of glowing vines that follow a path and occasionally form "JaZeR" shapes.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Neon vine growth properties
+    const center = { x: width / 2, y: height / 2 };
+    const vines = [];
+    const maxVines = 5;
+    const segments = [];
+    const maxSegments = 1000;
+    const growthSpeed = 2;
+    const splitProbability = 0.01; // Chance to split at each segment
+    const jaZeRFormProbability = 0.005; // Chance to form JaZeR at each step
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Initialize vines
+      initializeVines();
+    }
+
+    function initializeVines() {
+      vines.length = 0;
+      segments.length = 0;
+      
+      // Start with a few vines from different positions
+      for (let i = 0; i < 3; i++) {
+        const angle = (i / 3) * Math.PI * 2; // Evenly spaced angles
+        vines.push({
+          id: i,
+          x: center.x + Math.cos(angle) * 50,
+          y: center.y + Math.sin(angle) * 50,
+          angle: angle,
+          speed: 1 + Math.random() * 1,
+          color: palette[i % palette.length],
+          parent: null,
+          length: 0,
+          alive: true,
+          lastSplit: 0,
+          jaZeRAttempt: 0
+        });
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Occasionally grow new vines
+      if (vines.length < maxVines && Math.random() < 0.005) {
+        const parent = vines[Math.floor(Math.random() * vines.length)];
+        if (parent && parent.length > 50) { // Only spawn from sufficiently grown vines
+          const newAngle = parent.angle + (Math.random() - 0.5) * Math.PI / 2;
+          vines.push({
+            id: vines.length,
+            x: parent.x,
+            y: parent.y,
+            angle: newAngle,
+            speed: 0.5 + Math.random() * 1.5,
+            color: palette[vines.length % palette.length],
+            parent: parent.id,
+            length: 0,
+            alive: true,
+            lastSplit: 0,
+            jaZeRAttempt: 0
+          });
+        }
+      }
+
+      // Clear with dark background
+      const bgGradient = ctx.createLinearGradient(0, 0, width, height);
+      bgGradient.addColorStop(0, '#000010');
+      bgGradient.addColorStop(1, '#000020');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update and draw neon vine growth
+      updateAndDrawVines();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function updateAndDrawVines() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      for (let i = vines.length - 1; i >= 0; i--) {
+        const vine = vines[i];
+        
+        if (!vine.alive) {
+          vines.splice(i, 1);
+          continue;
+        }
+        
+        // Update vine position
+        const prevX = vine.x;
+        const prevY = vine.y;
+        
+        // Add some noise to the movement for organic feel
+        const noiseAngle = noise2D(vine.x * 0.01, vine.y * 0.01, time * 0.2) * 0.5;
+        vine.angle += noiseAngle * 0.1;
+        
+        // Also add some random direction change
+        if (Math.random() < 0.05) {
+          vine.angle += (Math.random() - 0.5) * 0.2;
+        }
+        
+        vine.x += Math.cos(vine.angle) * vine.speed;
+        vine.y += Math.sin(vine.angle) * vine.speed;
+        vine.length += vine.speed;
+        
+        // Boundary checks - vines die if they go too far
+        if (vine.x < -50 || vine.x > width + 50 || vine.y < -50 || vine.y > height + 50) {
+          vine.alive = false;
+          continue;
+        }
+        
+        // Increment JaZeR formation attempts
+        vine.jaZeRAttempt++;
+        
+        // Try to form JaZeR shapes occasionally
+        if (vine.jaZeRAttempt > 100 && Math.random() < jaZeRFormProbability) {
+          // Attempt to form JaZeR shape
+          formJaZeRShape(vine);
+          vine.jaZeRAttempt = 0; // Reset attempt counter
+        }
+        
+        // Add segment to drawing queue
+        segments.push({
+          fromX: prevX,
+          fromY: prevY,
+          toX: vine.x,
+          toY: vine.y,
+          color: vine.color,
+          size: 2,
+          life: 1.0,
+          maxLength: 3 + Math.random() * 2
+        });
+        
+        // Occasionally create a split
+        vine.lastSplit++;
+        if (vine.lastSplit > 20 && Math.random() < splitProbability) {
+          const splitAngle = vine.angle + (Math.random() - 0.5) * Math.PI;
+          vines.push({
+            id: vines.length,
+            x: vine.x,
+            y: vine.y,
+            angle: splitAngle,
+            speed: vine.speed * (0.8 + Math.random() * 0.4),
+            color: palette[vines.length % palette.length],
+            parent: vine.id,
+            length: vine.length,
+            alive: true,
+            lastSplit: 0,
+            jaZeRAttempt: 0
+          });
+          
+          vine.lastSplit = 0; // Reset split timer
+        }
+        
+        // Draw the vine tip
+        ctx.beginPath();
+        ctx.arc(vine.x, vine.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = vine.color;
+        ctx.shadowColor = vine.color;
+        ctx.shadowBlur = 15;
+        ctx.fill();
+      }
+      
+      // Update and draw segments
+      for (let i = segments.length - 1; i >= 0; i--) {
+        const seg = segments[i];
+        seg.life -= 0.01; // Gradually fade out
+        
+        if (seg.life <= 0) {
+          segments.splice(i, 1);
+          continue;
+        }
+        
+        // Draw the segment with glow
+        const alpha = seg.life;
+        ctx.beginPath();
+        ctx.moveTo(seg.fromX, seg.fromY);
+        ctx.lineTo(seg.toX, seg.toY);
+        ctx.strokeStyle = seg.color + Math.floor(alpha * 200).toString(16).padStart(2, '0');
+        ctx.lineWidth = seg.size;
+        ctx.shadowColor = seg.color;
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+      }
+      
+      // Draw JaZeR text occasionally
+      if (time % 8 < 0.1) { // Draw JaZeR text every 8 seconds for 0.1 seconds
+        drawJaZeRText();
+      }
+      
+      ctx.restore();
+    }
+
+    function formJaZeRShape(vine) {
+      // Create a JaZeR shape at the current vine position
+      const text = "JaZeR";
+      const fontSize = 60;
+      const textX = vine.x;
+      const textY = vine.y;
+      
+      // Draw the text with vine-like properties
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const charX = textX - 100 + (i * 50);
+        const color = palette[i % palette.length];
+        
+        // Draw character with glow effect
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        ctx.fillText(char, charX, textY);
+      }
+    }
+
+    function drawJaZeRText() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      const text = "JaZeR";
+      const fontSize = 80;
+      const textX = width / 2;
+      const textY = height / 2;
+      
+      // Draw with pulsing effect
+      const pulse = Math.sin(time * 3) * 0.2 + 0.8;
+      const currentSize = fontSize * pulse;
+      
+      ctx.font = `bold ${currentSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const color = palette[i % palette.length];
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 30;
+        ctx.fillText(char, textX - 150 + (i * 75), textY);
+      }
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>

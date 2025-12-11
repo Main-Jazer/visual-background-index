@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JaZeR Synthwave Sun Grid</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      color: #f5f5ff;
+    }
+
+    canvas#effectCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Optional overlay content - delete if not needed */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .overlay .card {
+      text-align: center;
+      padding: 2rem 3rem;
+      border-radius: 20px;
+      background: rgba(6, 10, 24, 0.75);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(150, 190, 255, 0.25);
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
+      pointer-events: auto;
+    }
+
+    .overlay h1 {
+      font-size: 2.4rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+      background: linear-gradient(135deg, #00f5ff, #ff2aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .overlay p {
+      opacity: 0.82;
+      max-width: 36rem;
+      margin: 0 auto;
+    }
+
+    /* FPS counter - optional */
+    .fps-counter {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 12px;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.5);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+
+  <!-- Optional: Overlay content (delete if not needed) -->
+  <div class="overlay">
+    <div class="card">
+      <h1>JaZeR Synthwave Sun Grid</h1>
+      <p>Big retro sun with horizontal scanlines and a grid floor leading toward it - JaZeR text sits in front, synced with subtle pulsing.</p>
+    </div>
+  </div>
+
+  <!-- Optional: FPS counter (delete if not needed) -->
+  <div class="fps-counter" id="fps"></div>
+
+  <!-- Load Three.js if using WebGL effects -->
+  <script src="Three.js"></script>
+
+  <script type="module">
+    // Import JaZeR engine utilities
+    import {
+      // Core
+      initJazerBackground,
+      CONFIG,
+      QualityAutoTuner,
+
+      // Noise (for procedural effects)
+      SimplexNoise,
+      noise2D,
+      noise3D,
+      noise4D,
+      fbm2D,
+      fbm3D,
+
+      // Animation
+      Easing,
+
+      // Interactivity
+      mouse,
+      MouseTracker,
+
+      // Colors
+      ColorPalettes,
+      getRandomPalette,
+      getPaletteColor,
+      lerpColor,
+      cycleColor,
+      hexToRgb,
+      rgbToHex,
+      hslToRgb,
+      rgbToHsl,
+
+      // Math utilities
+      map,
+      clamp,
+      smoothstep,
+      smootherstep,
+      fract,
+      mod,
+      mix,
+      step,
+      pulse,
+      inverseLerp,
+      remap,
+      wrap,
+      pingPong,
+      degToRad,
+      radToDeg,
+      distance,
+      distance3D,
+      normalize2D,
+      normalize3D,
+      dot2D,
+      dot3D
+    } from '../jazer-background-engine.js';
+
+    // Optional: Import shader utilities for custom WebGL effects
+    // import { createShaderEffect, NOISE_FUNCTIONS } from '../jazer-shaders.js';
+
+    // =====================================================
+    // CONFIGURATION
+    // =====================================================
+    const canvas = document.getElementById('effectCanvas');
+    const fpsEl = document.getElementById('fps');
+
+    // Choose your palette
+    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+
+    // =====================================================
+    // CANVAS SETUP
+    // =====================================================
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let width, height;
+    let time = 0;
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    // Synthwave sun grid properties
+    const center = { x: width / 2, y: height / 2 };
+    const sun = {
+      x: width * 0.8,
+      y: height * 0.3,
+      radius: 100
+    };
+    const gridLines = [];
+    const gridSpacing = 40;
+    const horizonY = height * 0.6;
+    const scanlines = [];
+    const scanlineCount = Math.floor(height / 3);
+
+    // Simplex noise instance
+    const simplex = new SimplexNoise();
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      
+      // Update center
+      center.x = width / 2;
+      center.y = height / 2;
+      
+      // Update sun position
+      sun.x = width * 0.8;
+      sun.y = height * 0.3;
+      horizonY = height * 0.6;
+      
+      // Initialize grid lines
+      initializeGrid();
+      
+      // Initialize scanlines
+      initializeScanlines();
+    }
+
+    function initializeGrid() {
+      gridLines.length = 0;
+      
+      // Create perspective grid - converging to a vanishing point
+      const vanishingX = width * 0.5;
+      const vanishingY = horizonY;
+      
+      // Vertical grid lines
+      for (let x = -width; x < width * 2; x += gridSpacing) {
+        const line = {
+          type: 'vertical',
+          x: x,
+          vanishingX: vanishingX,
+          vanishingY: vanishingY,
+          points: []
+        };
+        
+        // Calculate points for this line with perspective
+        for (let y = horizonY; y < height; y += gridSpacing) {
+          // Perspective calculation - lines should converge to the vanishing point
+          const perspectiveFactor = map(y, horizonY, height, 0.1, 1);
+          const adjustedX = vanishingX + (x - vanishingX) * perspectiveFactor;
+          
+          line.points.push({
+            x: adjustedX,
+            y: y,
+            perspective: perspectiveFactor
+          });
+        }
+        
+        gridLines.push(line);
+      }
+    }
+
+    function initializeScanlines() {
+      scanlines.length = 0;
+      for (let y = 0; y < height; y += 3) {
+        scanlines.push({
+          y: y,
+          offset: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    // =====================================================
+    // EFFECT IMPLEMENTATION
+    // =====================================================
+    function render(now) {
+      const dt = 1/60; // Assume 60fps for calculations
+      time += dt;
+      frameCount++;
+
+      // Update mouse (for interactive effects)
+      mouse.update();
+
+      // Clear with gradient sunset background
+      const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
+      bgGradient.addColorStop(0, '#8B4513'); // Dark brown at top
+      bgGradient.addColorStop(0.2, '#0000FF'); // Pure blue
+      bgGradient.addColorStop(0.5, '#8A2BE2'); // Blue violet
+      bgGradient.addColorStop(1, '#FF69B4'); // Hot pink at bottom
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw the grid floor
+      drawGrid();
+
+      // Draw scanlines
+      drawScanlines();
+
+      // Draw the synthwave sun
+      drawSun();
+
+      // Draw JaZeR text with pulsing effect
+      drawJaZeRText();
+
+      // FPS counter
+      if (now - lastFpsUpdate > 1000) {
+        fpsEl.textContent = `${frameCount} FPS`;
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function drawGrid() {
+      ctx.save();
+      
+      // Draw grid lines with perspective
+      ctx.strokeStyle = 'rgba(135, 206, 235, 0.3)'; // Sky blue
+      ctx.lineWidth = 1;
+      
+      for (const line of gridLines) {
+        ctx.beginPath();
+        
+        for (let i = 0; i < line.points.length; i++) {
+          const point = line.points[i];
+          
+          if (i === 0) {
+            ctx.moveTo(point.x, point.y);
+          } else {
+            // Create a smoother perspective effect
+            ctx.lineTo(point.x, point.y);
+          }
+        }
+        
+        ctx.stroke();
+      }
+      
+      // Draw horizontal lines
+      for (let y = horizonY; y < height; y += gridSpacing) {
+        ctx.beginPath();
+        const perspectiveFactor = map(y, horizonY, height, 0.1, 1);
+        const lineStartX = width * 0.1;
+        const lineEndX = width * 0.9;
+        
+        ctx.moveTo(lineStartX, y);
+        ctx.lineTo(lineEndX, y);
+        ctx.strokeStyle = `rgba(135, 206, 235, ${0.3 * perspectiveFactor})`;
+        ctx.lineWidth = perspectiveFactor;
+        ctx.stroke();
+      }
+      
+      ctx.restore();
+    }
+
+    function drawScanlines() {
+      // Draw retro scanlines effect
+      for (const scanline of scanlines) {
+        const offset = Math.sin(time * 2 + scanline.offset) * 0.5 + 0.5;
+        ctx.fillStyle = `rgba(0, 255, 255, ${0.05 + offset * 0.05})`;
+        ctx.fillRect(0, scanline.y, width, 2);
+      }
+    }
+
+    function drawSun() {
+      // Create pulsing effect for the sun
+      const pulse = Math.sin(time * 2) * 0.1 + 1;
+      const currentRadius = sun.radius * pulse;
+      
+      // Draw the sun with radial gradient for glow
+      const sunGradient = ctx.createRadialGradient(
+        sun.x, sun.y, 0,
+        sun.x, sun.y, currentRadius
+      );
+      sunGradient.addColorStop(0, '#FF00FF'); // Magenta center
+      sunGradient.addColorStop(0.5, '#00FFFF'); // Cyan middle
+      sunGradient.addColorStop(1, '#FF6EC7'); // Pink edge
+      
+      ctx.fillStyle = sunGradient;
+      ctx.beginPath();
+      ctx.arc(sun.x, sun.y, currentRadius, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Add extra glow
+      ctx.shadowColor = '#FF00FF';
+      ctx.shadowBlur = 50;
+      ctx.fill();
+      
+      // Draw sun rays
+      ctx.save();
+      ctx.globalCompositeOperation = 'soft-light';
+      ctx.strokeStyle = '#00FFFF';
+      ctx.lineWidth = 2;
+      
+      for (let i = 0; i < 24; i++) {
+        const angle = (i / 24) * Math.PI * 2;
+        const rayLength = currentRadius * (1.5 + Math.sin(time * 1 + i) * 0.3);
+        
+        ctx.beginPath();
+        ctx.moveTo(
+          sun.x + Math.cos(angle) * currentRadius * 0.7,
+          sun.y + Math.sin(angle) * currentRadius * 0.7
+        );
+        ctx.lineTo(
+          sun.x + Math.cos(angle) * rayLength,
+          sun.y + Math.sin(angle) * rayLength
+        );
+        ctx.stroke();
+      }
+      
+      ctx.restore();
+    }
+
+    function drawJaZeRText() {
+      // Draw JaZeR text in front of the sun with pulsing effect
+      ctx.save();
+      
+      // Calculate position for text - between viewer and sun
+      const textX = width * 0.6;
+      const textY = height * 0.45;
+      const textPulse = Math.sin(time * 3) * 0.1 + 1;
+      
+      ctx.font = `bold ${60 * textPulse}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Create vibrant text that fits the synthwave theme
+      const textGradient = ctx.createLinearGradient(
+        textX - 100, textY,
+        textX + 100, textY
+      );
+      textGradient.addColorStop(0, '#FF00FF'); // Magenta
+      textGradient.addColorStop(0.5, '#00FFFF'); // Cyan
+      textGradient.addColorStop(1, '#FF6EC7'); // Pink
+      
+      ctx.fillStyle = textGradient;
+      ctx.shadowColor = '#FF00FF';
+      ctx.shadowBlur = 20;
+      ctx.fillText('JaZeR', textX, textY);
+      
+      // Draw outline
+      ctx.strokeStyle = '#00FFFF';
+      ctx.lineWidth = 2;
+      ctx.strokeText('JaZeR', textX, textY);
+      
+      ctx.restore();
+    }
+
+    // =====================================================
+    // INITIALIZATION
+    // =====================================================
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
