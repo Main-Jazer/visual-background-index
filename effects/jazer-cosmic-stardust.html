@@ -149,7 +149,7 @@
             }
         }
 
-        const particles = Array.from({ length: particleCount }, () => new Particle());
+        let particles = [];
 
         function render() {
             time += 1 / 60;
@@ -208,6 +208,7 @@
 
         window.addEventListener('resize', resize);
         resize();
+        particles = Array.from({ length: particleCount }, () => new Particle());
         requestAnimationFrame(render);
     </script>
 </body>

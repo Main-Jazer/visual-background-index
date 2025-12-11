@@ -11,11 +11,11 @@
 </head>
 <body>
     <canvas id="c"></canvas>
-    <script src="../Three.js"></script>
     <script type="module">
         import { mouse } from '../jazer-background-engine.js';
 
-        const THREE = window.THREE;
+        import * as THREE from '../Three.js';
+        window.THREE = THREE;
         const canvas = document.getElementById('c');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);

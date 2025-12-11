@@ -48,7 +48,6 @@
 <body>
     <canvas id="c"></canvas>
     <div class="jazer-text">JaZeR</div>
-    <script src="../Three.js"></script>
     <script type="module">
         import {
             noise3D, mouse,
@@ -56,7 +55,8 @@
             smoothstep
         } from '../jazer-background-engine.js';
 
-        const THREE = window.THREE;
+        import * as THREE from '../Three.js';
+        window.THREE = THREE;
         const canvas = document.getElementById('c');
 
         const scene = new THREE.Scene();

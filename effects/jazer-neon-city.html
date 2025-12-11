@@ -32,11 +32,11 @@
 
 <body>
     <canvas id="c"></canvas>
-    <script src="../Three.js"></script>
     <script type="module">
+        import * as THREE from '../Three.js';
         import { noise2D, noise3D, mouse, hexToRgb, smoothstep } from '../jazer-background-engine.js';
 
-        const THREE = window.THREE;
+        window.THREE = THREE;
         const canvas = document.getElementById('c');
 
         const scene = new THREE.Scene();

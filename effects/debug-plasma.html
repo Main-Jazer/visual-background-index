@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Debug Plasma Storm</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: #0f0;
+            font-family: monospace;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+        }
+
+        .error {
+            color: #f00;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="debug"></div>
+    <canvas id="c"></canvas>
+    <script type="module">
+        const debugEl = document.getElementById('debug');
+        function log(msg, isError = false) {
+            const p = document.createElement('div');
+            p.className = isError ? 'error' : '';
+            p.textContent = msg;
+            debugEl.appendChild(p);
+            console.log(msg);
+        }
+
+        window.onerror = function (msg, url, line, col, error) {
+            log(`ERROR: ${msg} at line ${line}`, true);
+            return false;
+        };
+
+        try {
+            log('Step 1: Starting script...');
+
+            const { noise2D, noise3D, mouse, hexToRgb, smoothstep } = await import('../jazer-background-engine.js');
+            log('Step 2: Module imported successfully');
+
+            const canvas = document.getElementById('c');
+            log('Step 3: Canvas found: ' + !!canvas);
+
+            const ctx = canvas.getContext('2d');
+            log('Step 4: Context created: ' + !!ctx);
+
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            let W, H;
+            let time = 0;
+
+            const plasmaColors = ['#ff0055', '#ff2aff', '#00f5ff', '#39ff14', '#ffd700', '#ff6b00'];
+
+            function resize() {
+                W = window.innerWidth;
+                H = window.innerHeight;
+                canvas.width = W * dpr;
+                canvas.height = H * dpr;
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                log('Step 5: Resized - W=' + W + ', H=' + H);
+            }
+
+            resize();
+            log('Step 6: Resize completed');
+
+            // Draw a simple test
+            ctx.fillStyle = '#ff0055';
+            ctx.fillRect(100, 100, 200, 200);
+            log('Step 7: Drew test rectangle');
+
+            // Try the animation frame
+            let frameCount = 0;
+            function render() {
+                frameCount++;
+                time += 1 / 60;
+                mouse.update();
+
+                // Background
+                ctx.fillStyle = '#100010';
+                ctx.fillRect(0, 0, W, H);
+
+                // Just draw something simple to confirm rendering works
+                ctx.fillStyle = '#00f5ff';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('JaZeR Effect Working!', W / 2, H / 2);
+                ctx.fillText('Frame: ' + frameCount, W / 2, H / 2 + 60);
+
+                requestAnimationFrame(render);
+            }
+
+            log('Step 8: Starting render loop...');
+            requestAnimationFrame(render);
+
+        } catch (err) {
+            log('CAUGHT ERROR: ' + err.message, true);
+            log('Stack: ' + err.stack, true);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Module Test</title>
+    <style>
+        body { background: #000; color: #fff; font-family: sans-serif; padding: 20px; }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+    </style>
+</head>
+<body>
+    <h1>Module Loading Test</h1>
+    <div id="status">Testing...</div>
+    <div id="log"></div>
+    
+    <script type="module">
+        const log = document.getElementById('log');
+        const status = document.getElementById('status');
+        
+        function addLog(msg, isError = false) {
+            const p = document.createElement('p');
+            p.className = isError ? 'error' : 'success';
+            p.textContent = msg;
+            log.appendChild(p);
+        }
+        
+        addLog('Script started executing');
+        
+        try {
+            addLog('Attempting to import jazer-background-engine.js...');
+            const module = await import('../jazer-background-engine.js');
+            addLog('Module imported successfully!');
+            addLog('Available exports: ' + Object.keys(module).join(', '));
+            
+            if (module.mouse) {
+                addLog('mouse object exists');
+                addLog('mouse.x = ' + module.mouse.x);
+            }
+            
+            if (module.noise2D) {
+                addLog('noise2D function exists');
+                const testNoise = module.noise2D(0.5, 0.5);
+                addLog('noise2D(0.5, 0.5) = ' + testNoise);
+            }
+            
+            status.textContent = 'All tests passed!';
+            status.className = 'success';
+        } catch (err) {
+            addLog('ERROR: ' + err.message, true);
+            addLog('Stack: ' + err.stack, true);
+            status.textContent = 'Module loading failed!';
+            status.className = 'error';
+        }
+    </script>
+</body>
+</html>
