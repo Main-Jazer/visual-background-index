@@ -1,12 +1,17 @@
 # 🎨 JaZeR Visual Effects - 73 Stunning Effects ✨
 
-**All effects are now working!** See [docs/FIXES-APPLIED.md](docs/FIXES-APPLIED.md) for details.
+**🌐 [View Live Demo](https://main-jazer.github.io/visual-background-index/)** | **All effects are now working!** See [docs/FIXES-APPLIED.md](docs/FIXES-APPLIED.md) for details.
 
 Stunning infinite 3D visual effects for web backgrounds. Powered by the JaZeR Background Engine with Three.js r160.
 
 ## 🚀 Quick Start
 
-### Step 1: Start Local Server
+### Option 1: View Online (Easiest!)
+Visit the live demo: **[https://main-jazer.github.io/visual-background-index/](https://main-jazer.github.io/visual-background-index/)**
+
+### Option 2: Run Locally
+
+#### Step 1: Start Local Server
 ```bash
 # Option A: Python (recommended)
 python -m http.server 8000
@@ -17,7 +22,7 @@ npx http-server -p 8000
 # Option C: VS Code Live Server extension
 ```
 
-### Step 2: View Gallery
+#### Step 2: View Gallery
 Open: `http://localhost:8000/index.html`
 
 Click any effect to launch it!
@@ -106,6 +111,7 @@ Click any effect to launch it!
 visual-background-index/
 ├── 📄 index.html                    # Main gallery page (73 effects)
 ├── 📄 README.md                     # This file
+├── 📄 LICENSE                       # MIT License
 ├── 📄 effect-showcase.html          # Effect showcase page
 ├── 📁 lib/                          # JavaScript libraries
 │   ├── Three.js                     # Three.js r160
@@ -214,12 +220,19 @@ const eased = Easing.easeInOutCubic(t);
 
 ## 📜 License
 
-MIT License - Use freely for your projects!
+MIT License - See [LICENSE](LICENSE) file for details. Use freely for your projects!
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to:
+- Submit bug reports or feature requests via GitHub Issues
+- Create pull requests with improvements or new effects
+- Share your creations made with the JaZeR Background Engine
 
 ## 🎉 Enjoy!
 
-All 73 effects are working perfectly. Explore the gallery at index.html!
+All 73 effects are working perfectly. Explore the gallery at [https://main-jazer.github.io/visual-background-index/](https://main-jazer.github.io/visual-background-index/)!
 
 ---
 
-Made with ❤️ using Three.js r160 and the JaZeR Background Engine
+Made with ❤️ by JaZeR | [JaZeR Ventures](https://github.com/Main-Jazer) | Powered by Three.js r160 and the JaZeR Background Engine
