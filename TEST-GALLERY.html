@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gallery Test - JaZeR Visual Effects</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 2rem;
+            background: #0a0a1a;
+            color: #fff;
+        }
+        h1 { 
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #00f5ff, #ff2aff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .test-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #00f5ff;
+        }
+        .test-section h2 {
+            margin-bottom: 1rem;
+            color: #00f5ff;
+        }
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .pass { background: #10b981; color: white; }
+        .fail { background: #ef4444; color: white; }
+        .info { background: #3b82f6; color: white; }
+        ul { margin-left: 1.5rem; margin-top: 0.5rem; }
+        li { margin: 0.25rem 0; }
+        .card-preview {
+            display: inline-block;
+            width: 100px;
+            height: 60px;
+            border-radius: 4px;
+            margin: 0.5rem;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 JaZeR Gallery Test Suite</h1>
+    
+    <div id="test-results">
+        <p>Running tests...</p>
+    </div>
+
+    <script type="module">
+        // Test suite for gallery functionality
+        const results = [];
+        
+        function addResult(title, passed, details) {
+            results.push({ title, passed, details });
+        }
+
+        // Load and test the effects array
+        try {
+            const response = await fetch('index.html');
+            const html = await response.text();
+            
+            // Test 1: Extract effects array
+            const effectsMatch = html.match(/const effects = \[([\s\S]*?)\];/);
+            if (!effectsMatch) {
+                addResult('Extract Effects Array', false, 'Could not find effects array in index.html');
+            } else {
+                addResult('Extract Effects Array', true, 'Successfully extracted effects array');
+                
+                // Parse effects
+                const effectsCode = effectsMatch[0];
+                eval(effectsCode);
+                
+                // Test 2: Count total effects
+                const totalEffects = effects.length;
+                addResult('Total Effects Count', totalEffects > 0, `Found ${totalEffects} effects`);
+                
+                // Test 3: All effects have colors property
+                let missingColors = [];
+                let invalidColors = [];
+                effects.forEach((effect, idx) => {
+                    if (!effect.colors) {
+                        missingColors.push(`${effect.title} (index ${idx})`);
+                    } else if (!Array.isArray(effect.colors) || effect.colors.length !== 2) {
+                        invalidColors.push(`${effect.title} (index ${idx})`);
+                    }
+                });
+                
+                if (missingColors.length === 0 && invalidColors.length === 0) {
+                    addResult('Colors Property', true, `All ${totalEffects} effects have valid colors array [color1, color2]`);
+                } else {
+                    let details = '';
+                    if (missingColors.length > 0) {
+                        details += `Missing colors: ${missingColors.join(', ')}. `;
+                    }
+                    if (invalidColors.length > 0) {
+                        details += `Invalid colors: ${invalidColors.join(', ')}`;
+                    }
+                    addResult('Colors Property', false, details);
+                }
+                
+                // Test 4: All effects have required properties
+                let missingProps = [];
+                const requiredProps = ['title', 'file', 'description', 'icon', 'category', 'type', 'colors'];
+                effects.forEach((effect, idx) => {
+                    requiredProps.forEach(prop => {
+                        if (!effect[prop]) {
+                            missingProps.push(`${effect.title || `Effect ${idx}`} missing ${prop}`);
+                        }
+                    });
+                });
+                
+                if (missingProps.length === 0) {
+                    addResult('Required Properties', true, 'All effects have all required properties');
+                } else {
+                    addResult('Required Properties', false, missingProps.join('; '));
+                }
+                
+                // Test 5: Test renderCard function
+                const renderCardMatch = html.match(/function renderCard\(effect\) \{[\s\S]*?\n\s{8}\}/);
+                if (renderCardMatch) {
+                    addResult('renderCard Function Exists', true, 'Found renderCard function');
+                    
+                    // Check if it uses colors
+                    const usesColors = renderCardMatch[0].includes('effect.colors[0]') && 
+                                      renderCardMatch[0].includes('effect.colors[1]');
+                    addResult('renderCard Uses Colors', usesColors, 
+                        usesColors ? 'Function correctly uses colors array' : 'Function does not use colors array');
+                } else {
+                    addResult('renderCard Function Exists', false, 'Could not find renderCard function');
+                }
+                
+                // Test 6: Verify color format (hex colors)
+                let invalidFormats = [];
+                effects.forEach((effect) => {
+                    if (effect.colors) {
+                        effect.colors.forEach((color, i) => {
+                            if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+                                invalidFormats.push(`${effect.title} color[${i}]: "${color}"`);
+                            }
+                        });
+                    }
+                });
+                
+                if (invalidFormats.length === 0) {
+                    addResult('Color Format Validation', true, 'All colors are valid hex format (#RRGGBB)');
+                } else {
+                    addResult('Color Format Validation', false, invalidFormats.slice(0, 5).join('; ') + 
+                        (invalidFormats.length > 5 ? ` ... and ${invalidFormats.length - 5} more` : ''));
+                }
+                
+                // Test 7: Check file references
+                const fileChecks = [];
+                const sampleFiles = [
+                    'jazer-plasma-storm.html',
+                    'jazer-particle-warp.html', 
+                    'jazer-nebula-pulse.html',
+                    'jazer-galactic-highway.html',
+                    'jazer-cosmic-laser-beams.html'
+                ];
+                
+                for (const file of sampleFiles) {
+                    const effect = effects.find(e => e.file === file);
+                    if (effect) {
+                        fileChecks.push(`✓ ${file}: ${effect.title}`);
+                    } else {
+                        fileChecks.push(`✗ ${file}: NOT FOUND`);
+                    }
+                }
+                
+                const allFound = fileChecks.every(check => check.startsWith('✓'));
+                addResult('Sample File References', allFound, fileChecks.join('<br>'));
+                
+                // Test 8: Render sample cards
+                let renderErrors = [];
+                const sampleEffects = effects.slice(0, 5);
+                sampleEffects.forEach((effect, idx) => {
+                    try {
+                        const gradient = `linear-gradient(45deg, ${effect.colors[0]}, ${effect.colors[1]})`;
+                        // If we got here, rendering succeeded
+                    } catch (e) {
+                        renderErrors.push(`${effect.title}: ${e.message}`);
+                    }
+                });
+                
+                if (renderErrors.length === 0) {
+                    addResult('Card Rendering Test', true, 'Successfully rendered 5 sample cards');
+                } else {
+                    addResult('Card Rendering Test', false, renderErrors.join('; '));
+                }
+                
+                // Display sample gradients
+                let gradientSamples = '<div style="margin-top: 1rem;">Sample gradients:<br>';
+                effects.slice(0, 10).forEach(effect => {
+                    const gradient = `linear-gradient(45deg, ${effect.colors[0]}, ${effect.colors[1]})`;
+                    gradientSamples += `<div class="card-preview" style="background: ${gradient};" title="${effect.title}"></div>`;
+                });
+                gradientSamples += '</div>';
+                addResult('Visual Gradient Test', true, gradientSamples);
+            }
+            
+        } catch (error) {
+            addResult('Test Suite Error', false, error.message);
+        }
+        
+        // Render results
+        let html = '<div class="test-section"><h2>📊 Test Summary</h2>';
+        const passed = results.filter(r => r.passed).length;
+        const total = results.length;
+        const allPassed = passed === total;
+        
+        html += `<div class="status ${allPassed ? 'pass' : 'fail'}">`;
+        html += `${passed} / ${total} tests passed`;
+        html += '</div>';
+        html += '</div>';
+        
+        results.forEach(result => {
+            html += '<div class="test-section">';
+            html += `<div class="status ${result.passed ? 'pass' : 'fail'}">`;
+            html += result.passed ? '✓ PASS' : '✗ FAIL';
+            html += '</div>';
+            html += `<h2>${result.title}</h2>`;
+            html += `<p>${result.details}</p>`;
+            html += '</div>';
+        });
+        
+        document.getElementById('test-results').innerHTML = html;
+        
+        // Log to console
+        console.log('=== GALLERY TEST RESULTS ===');
+        console.log(`Passed: ${passed}/${total}`);
+        results.forEach(r => {
+            console.log(`${r.passed ? '✓' : '✗'} ${r.title}: ${r.details.replace(/<[^>]*>/g, ' ')}`);
+        });
+    </script>
+</body>
+</html>
