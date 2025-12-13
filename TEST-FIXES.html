@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Fixes - JaZeR Background Engine</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 2rem;
+            background: #0a0a1a;
+            color: #fff;
+        }
+        h1 { 
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, #00f5ff, #ff2aff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .test-section {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #00f5ff;
+        }
+        .test-section h2 {
+            margin-bottom: 1rem;
+            color: #00f5ff;
+        }
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .pass { background: #10b981; color: white; }
+        .fail { background: #ef4444; color: white; }
+        .info { background: #3b82f6; color: white; }
+        pre {
+            background: rgba(0,0,0,0.3);
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 JaZeR Background Engine - Test Fixes</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Background Engine Module Loads</h2>
+        <div id="test1-status" class="status info">Running...</div>
+        <pre id="test1-details"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Three.js Module Loads</h2>
+        <div id="test2-status" class="status info">Running...</div>
+        <pre id="test2-details"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Core Functions Accessible</h2>
+        <div id="test3-status" class="status info">Running...</div>
+        <pre id="test3-details"></pre>
+    </div>
+
+    <script type="module">
+        function setStatus(testId, passed, message) {
+            const statusEl = document.getElementById(`${testId}-status`);
+            const detailsEl = document.getElementById(`${testId}-details`);
+            
+            statusEl.className = 'status ' + (passed ? 'pass' : 'fail');
+            statusEl.textContent = passed ? '✓ PASS' : '✗ FAIL';
+            detailsEl.textContent = message;
+        }
+
+        // Test 1: Background Engine Module Loads
+        try {
+            const module = await import('./lib/jazer-background-engine.js');
+            const exports = Object.keys(module);
+            setStatus('test1', true, `Module loaded successfully!\nExports: ${exports.join(', ')}`);
+        } catch (error) {
+            setStatus('test1', false, `Error loading module:\n${error.message}\n${error.stack}`);
+        }
+
+        // Test 2: Three.js Module Loads
+        try {
+            const THREE = await import('./lib/Three.js');
+            const exports = Object.keys(THREE).slice(0, 10);
+            setStatus('test2', true, `Three.js loaded successfully!\nSample exports: ${exports.join(', ')}`);
+        } catch (error) {
+            setStatus('test2', false, `Error loading Three.js:\n${error.message}`);
+        }
+
+        // Test 3: Core Functions Accessible
+        try {
+            const { noise2D, noise3D, noise4D, SimplexNoise, ColorPalettes, mouse } = await import('./lib/jazer-background-engine.js');
+            
+            // Test SimplexNoise instantiation
+            const simplex = new SimplexNoise(12345);
+            
+            // Test noise functions
+            const n2d = noise2D(0.5, 0.5);
+            const n3d = noise3D(0.5, 0.5, 0.5);
+            const n4d = noise4D(0.5, 0.5, 0.5, 0.5);
+            
+            // Test constants are defined
+            const hasConstants = simplex.F2 !== undefined && 
+                                 simplex.G2 !== undefined &&
+                                 simplex.F3 !== undefined &&
+                                 simplex.G3 !== undefined &&
+                                 simplex.F4 !== undefined &&
+                                 simplex.G4 !== undefined &&
+                                 simplex.grad4 !== undefined;
+            
+            if (!hasConstants) {
+                throw new Error('Missing constants in SimplexNoise class');
+            }
+            
+            setStatus('test3', true, 
+                `All functions accessible!\n` +
+                `noise2D(0.5, 0.5) = ${n2d.toFixed(4)}\n` +
+                `noise3D(0.5, 0.5, 0.5) = ${n3d.toFixed(4)}\n` +
+                `noise4D(0.5, 0.5, 0.5, 0.5) = ${n4d.toFixed(4)}\n` +
+                `SimplexNoise constants: F2=${simplex.F2.toFixed(4)}, G2=${simplex.G2.toFixed(4)}\n` +
+                `grad4 length: ${simplex.grad4.length}`
+            );
+        } catch (error) {
+            setStatus('test3', false, `Error testing functions:\n${error.message}\n${error.stack}`);
+        }
+    </script>
+</body>
+</html>
