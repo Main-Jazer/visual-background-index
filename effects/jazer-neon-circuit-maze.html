@@ -10,7 +10,7 @@
     body {
       margin: 0;
       font-family: "Inter", system-ui, sans-serif;
-      background: radial-gradient(circle at 50% 30%, #030113, #010007 70%);
+      background: radial-gradient(circle at 50% 25%, #050012, #010007 70%);
       color: #f8fbff;
       overflow: hidden;
       min-height: 100vh;
@@ -26,8 +26,8 @@
       position: fixed;
       right: 2rem;
       bottom: 2rem;
-      text-transform: uppercase;
       letter-spacing: 0.35em;
+      text-transform: uppercase;
       font-size: 0.8rem;
       color: rgba(255, 255, 255, 0.45);
       pointer-events: none;
@@ -44,92 +44,132 @@
     const canvas = document.getElementById('effectCanvas');
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x010008, 1);
+    renderer.setClearColor(0x010007, 1);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.3;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x040018, 0.05);
+    scene.fog = new THREE.FogExp2(0x030010, 0.08);
 
-    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
-    camera.position.set(0, 4, 8);
+    const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 250);
+    camera.position.set(0, 6, 14);
 
-    const gridGeometry = new THREE.PlaneGeometry(20, 20, 200, 200);
-    const gridMaterial = new THREE.ShaderMaterial({
+    const floorGeometry = new THREE.PlaneGeometry(80, 80, 1, 1);
+    const floorMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
-        uColorA: { value: new THREE.Color(0xff2aff) },
-        uColorB: { value: new THREE.Color(0x00f5ff) }
+        uColorA: { value: new THREE.Color(0x00f5ff) },
+        uColorB: { value: new THREE.Color(0xff2aff) }
       },
       vertexShader: /* glsl */`
-        uniform float uTime;
         varying vec2 vUv;
-        varying vec3 vPos;
-        void main(){
+        void main() {
           vUv = uv;
-          vec3 pos = position;
-          pos.z += sin(pos.x * 2.0 + uTime * 1.5) * 0.15;
-          pos.z += cos(pos.y * 2.0 + uTime * 1.2) * 0.15;
-          vPos = pos;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos,1.0);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
       fragmentShader: /* glsl */`
+        varying vec2 vUv;
+        uniform float uTime;
         uniform vec3 uColorA;
         uniform vec3 uColorB;
-        varying vec2 vUv;
-        varying vec3 vPos;
-        float gridLine(float v, float scale){
-          float line = abs(fract(v * scale) - 0.5);
-          return smoothstep(0.48, 0.5, line);
+
+        float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float noise(vec2 p){
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          float a = hash(i);
+          float b = hash(i + vec2(1.0, 0.0));
+          float c = hash(i + vec2(0.0, 1.0));
+          float d = hash(i + vec2(1.0, 1.0));
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
         }
+
         void main(){
-          float lines = gridLine(vUv.x, 25.0) + gridLine(vUv.y, 15.0);
-          vec3 color = mix(uColorA, uColorB, vUv.x);
-          color *= lines;
-          color += vec3(0.05, 0.1, 0.5) * abs(vPos.z);
-          gl_FragColor = vec4(color, lines);
+          vec2 uv = (vUv - 0.5) * vec2(1.0, 1.0);
+          uv *= 40.0;
+          float circuit = step(0.96, abs(fract(uv.x) - 0.5)) + step(0.96, abs(fract(uv.y) - 0.5));
+          float glow = noise(uv * 0.5 + uTime * 0.5);
+          vec3 color = mix(uColorA, uColorB, fract(uv.y * 0.05 + uTime * 0.02));
+          color *= circuit * (0.6 + glow * 0.6);
+          gl_FragColor = vec4(color, clamp(circuit, 0.0, 1.0));
         }
       `,
       transparent: true,
-      blending: THREE.AdditiveBlending,
       depthWrite: false
     });
-    const grid = new THREE.Mesh(gridGeometry, gridMaterial);
-    grid.rotation.x = -Math.PI / 2.2;
-    scene.add(grid);
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
 
-    const pulseGeometry = new THREE.RingGeometry(0.5, 0.52, 64);
-    const pulseMaterial = new THREE.MeshBasicMaterial({ color: 0xffd25b, transparent: true, opacity: 0.5 });
-    const pulses = [];
-    for (let i = 0; i < 8; i++) {
-      const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial.clone());
-      pulse.rotation.x = -Math.PI / 2;
-      scene.add(pulse);
-      pulses.push({ mesh: pulse, radius: 1 + i, speed: 0.5 + i * 0.2 });
-    }
+    const towerGeometry = new THREE.BoxGeometry(0.4, 1, 0.4);
+    const towerMaterial = new THREE.MeshStandardMaterial({
+      color: 0x040a16,
+      emissive: 0x000000,
+      roughness: 0.3,
+      metalness: 0.6,
+      vertexColors: true
+    });
 
-    const strutGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1.5, 6);
-    const strutMaterial = new THREE.MeshBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.4 });
-    const struts = new THREE.Group();
-    scene.add(struts);
-    for (let x = -4; x <= 4; x += 2) {
-      for (let z = -4; z <= 4; z += 2) {
-        const strut = new THREE.Mesh(strutGeometry, strutMaterial);
-        strut.position.set(x, 0.75, z);
-        struts.add(strut);
+    const GRID_RES = 50;
+    const towerCount = GRID_RES * GRID_RES;
+    const towers = new THREE.InstancedMesh(towerGeometry, towerMaterial, towerCount);
+    towers.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    towers.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(towerCount * 3), 3);
+    scene.add(towers);
+
+    let index = 0;
+    const dummy = new THREE.Object3D();
+    for (let x = -GRID_RES / 2; x < GRID_RES / 2; x++) {
+      for (let z = -GRID_RES / 2; z < GRID_RES / 2; z++) {
+        const height = THREE.MathUtils.randFloat(0.4, 4);
+        dummy.position.set(x * 0.8, height / 2, z * 0.8);
+        dummy.scale.set(1, height, 1);
+        dummy.updateMatrix();
+        towers.setMatrixAt(index, dummy.matrix);
+        const color = new THREE.Color().setHSL(0.55 + Math.sin((x + z) * 0.05) * 0.05, 0.8, 0.55);
+        towers.instanceColor.setXYZ(index, color.r, color.g, color.b);
+        index++;
       }
     }
 
-    const sparkGeometry = new THREE.BufferGeometry();
-    const sparkCount = 800;
-    const sparkPositions = new Float32Array(sparkCount * 3);
-    for (let i = 0; i < sparkCount; i++) {
-      sparkPositions[i * 3] = (Math.random() - 0.5) * 18;
-      sparkPositions[i * 3 + 1] = Math.random() * 2;
-      sparkPositions[i * 3 + 2] = (Math.random() - 0.5) * 18;
+    const drones = [];
+    const droneGeometry = new THREE.CapsuleGeometry(0.08, 0.4, 4, 8);
+    const droneMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    for (let i = 0; i < 6; i++) {
+      const drone = new THREE.Mesh(droneGeometry, droneMaterial.clone());
+      drone.material.color.setHSL(0.58 + i * 0.05, 1, 0.7);
+      drone.position.set((Math.random() - 0.5) * 20, 2 + Math.random() * 3, (Math.random() - 0.5) * 20);
+      scene.add(drone);
+      drones.push({ mesh: drone, offset: Math.random() * Math.PI * 2, radius: 6 + Math.random() * 3 });
     }
-    sparkGeometry.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
-    const sparks = new THREE.Points(sparkGeometry, new THREE.PointsMaterial({ size: 0.05, color: 0xffffff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
-    scene.add(sparks);
+
+    const particleGeometry = new THREE.BufferGeometry();
+    const particleCount = 1500;
+    const particlePositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      particlePositions[i * 3] = (Math.random() - 0.5) * 60;
+      particlePositions[i * 3 + 1] = Math.random() * 12;
+      particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+    }
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particles = new THREE.Points(particleGeometry, new THREE.PointsMaterial({
+      size: 0.05,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.25,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    }));
+    scene.add(particles);
+
+    const ambient = new THREE.AmbientLight(0x0b1430, 0.7);
+    scene.add(ambient);
+    const spot = new THREE.SpotLight(0x00f5ff, 1.5, 60, Math.PI / 4, 0.6, 1);
+    spot.position.set(0, 15, 0);
+    scene.add(spot);
 
     const clock = new THREE.Clock();
 
@@ -146,23 +186,23 @@
 
     function animate() {
       requestAnimationFrame(animate);
-      const delta = clock.getDelta();
       const elapsed = clock.getElapsedTime();
       mouse.update();
 
-      gridMaterial.uniforms.uTime.value = elapsed;
-      struts.rotation.y = elapsed * 0.05;
+      floorMaterial.uniforms.uTime.value = elapsed;
 
-      pulses.forEach(pulse => {
-        pulse.radius += delta * pulse.speed;
-        if (pulse.radius > 10) pulse.radius = 1;
-        pulse.mesh.scale.setScalar(pulse.radius);
-        pulse.mesh.material.opacity = THREE.MathUtils.mapLinear(pulse.radius, 1, 10, 0.6, 0);
-      });
-
-      camera.position.x = Math.sin(elapsed * 0.1) * 0.5 + mouse.centeredX * 1.2;
-      camera.position.y = 4 + Math.sin(elapsed * 0.2) * 0.3 + mouse.centeredY * 0.5;
+      const sway = Math.sin(elapsed * 0.4) * 0.2;
+      camera.position.x = Math.sin(elapsed * 0.1) * 4 + mouse.centeredX * 5;
+      camera.position.z = 12 + Math.cos(elapsed * 0.1) * 2;
+      camera.position.y = 6 + Math.sin(elapsed * 0.15) * 0.5;
       camera.lookAt(0, 0, 0);
+
+      drones.forEach((drone, i) => {
+        const angle = elapsed * 0.6 + drone.offset;
+        drone.mesh.position.set(Math.cos(angle) * drone.radius, 1.5 + Math.sin(elapsed * 1.2 + i) * 0.6, Math.sin(angle) * drone.radius);
+        drone.mesh.rotation.x = elapsed * 2.0;
+        drone.mesh.rotation.z = elapsed * 2.0;
+      });
 
       renderer.render(scene, camera);
     }

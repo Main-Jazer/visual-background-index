@@ -2,5 +2,164 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Starfall Conveyor</title>
-  ... full implementation
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 20%, #030015, #000008 70%);
+      color: #f8fbff;
+      overflow: hidden;
+      min-height: 100vh;
+    }
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+    .label {
+      position: fixed;
+      right: 2rem;
+      bottom: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.35em;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="effectCanvas"></canvas>
+  <div class="label">Starfall Conveyor</div>
+  <script type="module">
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
+
+    const canvas = document.getElementById('effectCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010008, 1);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x030012, 0.06);
+
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 400);
+    camera.position.set(0, 2, 8);
+
+    const beltGroup = new THREE.Group();
+    scene.add(beltGroup);
+
+    const beltGeometry = new THREE.PlaneGeometry(8, 12, 1, 1);
+    for (let i = 0; i < 5; i++) {
+      const material = new THREE.MeshBasicMaterial({ color: 0x040820, transparent: true, opacity: 0.6 });
+      const belt = new THREE.Mesh(beltGeometry, material);
+      belt.rotation.x = -Math.PI / 2;
+      belt.position.z = -i * 12;
+      beltGroup.add(belt);
+    }
+
+    const railGeometry = new THREE.CylinderGeometry(0.05, 0.05, 12, 8);
+    const railMaterial = new THREE.MeshBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.6 });
+    for (let offset of [-3.2, 3.2]) {
+      const rail = new THREE.Mesh(railGeometry, railMaterial.clone());
+      rail.rotation.z = Math.PI / 2;
+      rail.position.set(offset, 0.1, -12);
+      beltGroup.add(rail);
+    }
+
+    const starGeometry = new THREE.BufferGeometry();
+    const starCount = 2000;
+    const starPositions = new Float32Array(starCount * 3);
+    const starVelocities = new Float32Array(starCount);
+    for (let i = 0; i < starCount; i++) {
+      starPositions[i * 3] = (Math.random() - 0.5) * 6;
+      starPositions[i * 3 + 1] = Math.random() * 4 + 1;
+      starPositions[i * 3 + 2] = -Math.random() * 40;
+      starVelocities[i] = 8 + Math.random() * 10;
+    }
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({
+      size: 0.05,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    }));
+    scene.add(stars);
+
+    const podGeometry = new THREE.ConeGeometry(0.12, 0.4, 6);
+    const podMaterial = new THREE.MeshBasicMaterial({ color: 0xffc857, transparent: true, opacity: 0.8 });
+    const pods = [];
+    for (let i = 0; i < 14; i++) {
+      const pod = new THREE.Mesh(podGeometry, podMaterial.clone());
+      pod.rotation.x = Math.PI;
+      pod.position.set((Math.random() - 0.5) * 4, 0.2, -i * 4);
+      scene.add(pod);
+      pods.push(pod);
+    }
+
+    const ambient = new THREE.AmbientLight(0x0b1535, 0.7);
+    scene.add(ambient);
+    const dirLight = new THREE.DirectionalLight(0xff8ad3, 0.6);
+    dirLight.position.set(-5, 5, 5);
+    scene.add(dirLight);
+
+    const clock = new THREE.Clock();
+
+    function resize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      beltGroup.children.forEach((belt, idx) => {
+        belt.position.z += delta * 6;
+        if (belt.position.z > 6) belt.position.z -= 60;
+        belt.material.opacity = 0.4 + Math.sin(elapsed * 2 + idx) * 0.1;
+      });
+
+      const pos = starGeometry.attributes.position.array;
+      for (let i = 0; i < starCount; i++) {
+        pos[i * 3 + 2] += starVelocities[i] * delta;
+        if (pos[i * 3 + 2] > 2) {
+          pos[i * 3 + 2] = -40;
+          pos[i * 3] = (Math.random() - 0.5) * 6;
+          pos[i * 3 + 1] = Math.random() * 4 + 1;
+        }
+      }
+      starGeometry.attributes.position.needsUpdate = true;
+
+      pods.forEach(pod => {
+        pod.position.z += delta * 6;
+        if (pod.position.z > 4) pod.position.z = -50;
+      });
+
+      camera.position.x = mouse.centeredX * 3;
+      camera.position.y = 2 + mouse.centeredY * 1.2;
+      camera.lookAt(0, 0, -10);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
