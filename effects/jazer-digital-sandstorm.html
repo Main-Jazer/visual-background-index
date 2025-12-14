@@ -5,459 +5,183 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Digital Sandstorm</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #050315, #000007 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      right: 2rem;
+      bottom: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Digital Sandstorm</h1>
-      <p>Millions of tiny square "sand" pixels blowing across screen, occasionally assembling into JaZeR shapes.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Digital Sandstorm</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010008, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x040015, 0.04);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 300);
+    camera.position.set(0, 0.5, 4);
 
-    // Digital sandstorm properties
-    const center = { x: width / 2, y: height / 2 };
-    const sandPixels = [];
-    const pixelCount = 2000; // Number of digital sand pixels
-    const pixelSize = 2;
-    const windDirection = { x: 1, y: 0.2 }; // Overall wind direction
-    const windStrength = 0.5;
-    const formationInterval = 10; // Seconds between JaZeR formations
-    let lastFormationTime = 0;
-    const formationDuration = 3; // Seconds for formation to last
+    const particleCount = 4000;
+    const particleGeometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    const palette = [new THREE.Color('#ff2aff'), new THREE.Color('#00f5ff'), new THREE.Color('#ffd25b')];
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 10;
+      positions[i * 3 + 1] = Math.random() * 4;
+      positions[i * 3 + 2] = -Math.random() * 20;
+      velocities[i * 3] = (Math.random() - 0.5) * 0.2;
+      velocities[i * 3 + 1] = Math.random() * 0.3 + 0.1;
+      velocities[i * 3 + 2] = 6 + Math.random() * 6;
+      const color = palette[i % palette.length];
+      colors[i * 3] = color.r;
+      colors[i * 3 + 1] = color.g;
+      colors[i * 3 + 2] = color.b;
+    }
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particleGeometry.setAttribute('customColor', new THREE.BufferAttribute(colors, 3));
+
+    const particleMaterial = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */`
+        attribute vec3 customColor;
+        varying vec3 vColor;
+        varying float vAlpha;
+        uniform float uTime;
+        void main(){
+          vec3 pos = position;
+          pos.x += sin(uTime * 0.5 + pos.y * 2.0) * 0.2;
+          vColor = customColor;
+          vAlpha = smoothstep(-10.0, 0.0, pos.z);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = 25.0 / gl_Position.w;
+        }
+      `,
+      fragmentShader: /* glsl */`
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main(){
+          float d = length(gl_PointCoord - 0.5);
+          float alpha = smoothstep(0.5, 0.0, d) * vAlpha;
+          gl_FragColor = vec4(vColor, alpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particles);
+
+    const dataRibbonGeometry = new THREE.PlaneGeometry(6, 2, 120, 40);
+    const dataRibbonMaterial = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */`
+        uniform float uTime; varying vec2 vUv; varying float vPulse;
+        void main(){
+          vUv = uv;
+          vec3 pos = position;
+          pos.y += sin(uv.x * 6.0 + uTime * 2.0) * 0.4;
+          pos.z += sin(uv.y * 12.0 + uTime * 1.5) * 0.2;
+          vPulse = sin(uTime * 1.5 + uv.x * 8.0);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos,1.0);
+        }
+      `,
+      fragmentShader: /* glsl */`
+        varying vec2 vUv; varying float vPulse;
+        void main(){
+          vec3 color = mix(vec3(0.0,0.4,0.8), vec3(1.0,0.2,0.8), vUv.x);
+          color += vec3(0.3,0.2,0.1) * vPulse;
+          gl_FragColor = vec4(color, 0.3);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const dataRibbon = new THREE.Mesh(dataRibbonGeometry, dataRibbonMaterial);
+    dataRibbon.rotation.x = -Math.PI / 2;
+    dataRibbon.position.y = -0.3;
+    dataRibbon.position.z = -6;
+    scene.add(dataRibbon);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      
-      // Initialize sand pixels
-      initializeSandPixels();
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function initializeSandPixels() {
-      sandPixels.length = 0;
-      for (let i = 0; i < pixelCount; i++) {
-        sandPixels.push({
-          id: i,
-          x: Math.random() * width,
-          y: Math.random() * height,
-          originalX: Math.random() * width,
-          originalY: Math.random() * height,
-          vx: (Math.random() - 0.5) * 2,
-          vy: (Math.random() - 0.5) * 2,
-          size: pixelSize,
-          color: palette[Math.floor(Math.random() * palette.length)],
-          isForming: false,
-          targetX: 0,
-          targetY: 0,
-          opacity: 0.7 + Math.random() * 0.3,
-          noiseOffsetX: Math.random() * 1000,
-          noiseOffsetY: Math.random() * 1000,
-          life: 0,
-          angle: Math.random() * Math.PI * 2,
-          rotationSpeed: (Math.random() - 0.5) * 0.1
-        });
-      }
-    }
-
-    // Function to start JaZeR formation
-    function startJaZeRFormation() {
-      // Calculate positions for "JaZeR" text
-      const text = "JaZeR";
-      const fontSize = 100;
-      ctx.font = `bold ${fontSize}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      // Calculate the total width of the text
-      const textWidth = ctx.measureText(text).width;
-      const startX = center.x - textWidth / 2 + fontSize / 2;
-      const textY = center.y;
-      
-      let pixelIndex = 0;
-      
-      // Create formation positions for each character
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const charWidth = ctx.measureText(char).width;
-        const charX = startX + ctx.measureText(text.substring(0, i)).width + charWidth / 2;
-        
-        // Create points in a grid where the character would appear
-        // This is a simplified approach - ideally we'd use text outline detection
-        for (let x = -fontSize/3; x <= fontSize/3; x += 5) {
-          for (let y = -fontSize/4; y <= fontSize/4; y += 5) {
-            // Only form particles in areas that might be part of the character
-            // This is a simple approximation
-            if (Math.random() > 0.6) { // Only some particles join each character
-              if (pixelIndex < sandPixels.length) {
-                sandPixels[pixelIndex].isForming = true;
-                sandPixels[pixelIndex].targetX = charX + x + (Math.random() - 0.5) * 3;
-                sandPixels[pixelIndex].targetY = textY + y + (Math.random() - 0.5) * 3;
-                sandPixels[pixelIndex].formationColor = palette[i % palette.length];
-                pixelIndex++;
-              }
-            }
-          }
-        }
-      }
-      
-      // Allow extra particles to form background details
-      for (let i = pixelIndex; i < Math.min(pixelIndex + 200, sandPixels.length); i++) {
-        if (Math.random() > 0.8) { // Only some extra particles join the formation
-          sandPixels[i].isForming = true;
-          // Place extras around the main text
-          sandPixels[i].targetX = center.x + (Math.random() - 0.5) * 300;
-          sandPixels[i].targetY = center.y + (Math.random() - 0.5) * 150;
-          sandPixels[i].formationColor = palette[Math.floor(Math.random() * palette.length)];
-        }
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Check for JaZeR formation trigger
-      if (time - lastFormationTime > formationInterval) {
-        if (Math.floor(time / formationInterval) > Math.floor((time - dt) / formationInterval)) {
-          startJaZeRFormation();
-          lastFormationTime = time;
-        }
-      }
-
-      // Clear with dark background
-      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#000020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw digital sandstorm
-      updateAndDrawSandstorm();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function updateAndDrawSandstorm() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      // Update and draw each sand pixel
-      for (const pixel of sandPixels) {
-        if (pixel.isForming) {
-          // During formation: move toward target position
-          const dx = pixel.targetX - pixel.x;
-          const dy = pixel.targetY - pixel.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          
-          if (dist > 2) {
-            // Apply movement toward target with some easing
-            const ease = 0.05;
-            pixel.vx = dx * ease;
-            pixel.vy = dy * ease;
-          } else {
-            // Arrived at target, hold position but add slight movement
-            pixel.vx = (Math.random() - 0.5) * 0.2;
-            pixel.vy = (Math.random() - 0.5) * 0.2;
-          }
-          
-          // Apply the formation color transition
-          pixel.color = lerpColor(pixel.color, pixel.formationColor, 0.05);
-        } else {
-          // Normal storm behavior: move with wind and noise
-          // Calculate angle for natural wind direction
-          const windAngle = Math.atan2(windDirection.y, windDirection.x);
-          const force = windStrength * 0.1;
-          
-          // Apply wind force
-          pixel.vx += Math.cos(windAngle) * force;
-          pixel.vy += Math.sin(windAngle) * force;
-          
-          // Apply noise for organic/turbulent movement
-          const noiseForceX = noise2D(
-            pixel.x * 0.01 + pixel.noiseOffsetX, 
-            time * 0.5
-          ) * 0.3;
-          const noiseForceY = noise2D(
-            pixel.y * 0.01 + pixel.noiseOffsetY, 
-            time * 0.5 + 1000
-          ) * 0.3;
-          
-          pixel.vx += noiseForceX;
-          pixel.vy += noiseForceY;
-          
-          // Apply damping to prevent excessive acceleration
-          pixel.vx *= 0.99;
-          pixel.vy *= 0.99;
-          
-          // Occasionally reset particles that go off-screen
-          if (pixel.x < -50) pixel.x = width + 50;
-          if (pixel.x > width + 50) pixel.x = -50;
-          if (pixel.y < -50) pixel.y = height + 50;
-          if (pixel.y > height + 50) pixel.y = -50;
-          
-          // Apply mouse interaction - if mouse is near, deflect particles
-          if (mouse.isInside) {
-            const mouseX = mouse.x * width;
-            const mouseY = mouse.y * height;
-            const mdx = pixel.x - mouseX;
-            const mdy = pixel.y - mouseY;
-            const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
-            
-            if (mDist < 100) {
-              const repelForce = (100 - mDist) / 100 * 3.0;
-              const mAngle = Math.atan2(mdy, mdx);
-              pixel.vx += Math.cos(mAngle) * repelForce;
-              pixel.vy += Math.sin(mAngle) * repelForce;
-            }
-          }
-        }
-        
-        // Update position
-        pixel.x += pixel.vx;
-        pixel.y += pixel.vy;
-        
-        // Update rotation for organic feel
-        pixel.angle += pixel.rotationSpeed;
-        
-        // Draw the digital sand pixel
-        ctx.save();
-        ctx.translate(pixel.x, pixel.y);
-        ctx.rotate(pixel.angle);
-        
-        // Add subtle pulsing effect
-        const pulse = Math.sin(time * 5 + pixel.id) * 0.1 + 1;
-        const currentSize = pixel.size * pulse;
-        
-        // Draw rectangle with glow effect
-        ctx.fillStyle = pixel.color + Math.floor(pixel.opacity * 255).toString(16).padStart(2, '0');
-        ctx.shadowColor = pixel.color;
-        ctx.shadowBlur = 10;
-        ctx.fillRect(-currentSize/2, -currentSize/2, currentSize, currentSize);
-        
-        ctx.restore();
-        
-        // Occasionally allow particles to return to normal storm behavior after formation
-        if (pixel.isForming && time - lastFormationTime > formationDuration) {
-          pixel.isForming = false;
-        }
-      }
-      
-      // Draw JaZeR text during formation to reinforce visual effect
-      if (time - lastFormationTime < formationDuration) {
-        const formationProgress = (time - lastFormationTime) / formationDuration;
-        ctx.font = 'bold 80px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Draw text with high opacity during peak formation
-        for (let i = 0; i < "JaZeR".length; i++) {
-          const char = "JaZeR"[i];
-          const color = palette[i % palette.length];
-          ctx.fillStyle = color;
-          ctx.shadowColor = color;
-          ctx.shadowBlur = 30;
-          ctx.fillText(char, center.x - 150 + i * 75, center.y);
-        }
-      }
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      particleMaterial.uniforms.uTime.value = elapsed;
+      dataRibbonMaterial.uniforms.uTime.value = elapsed;
+
+      const pos = particleGeometry.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        pos[i * 3 + 2] += velocities[i * 3 + 2] * delta;
+        pos[i * 3 + 1] += velocities[i * 3 + 1] * delta;
+        pos[i * 3] += velocities[i * 3] * delta + mouse.centeredX * delta * 0.2;
+        if (pos[i * 3 + 2] > 2) {
+          pos[i * 3 + 2] = -20;
+          pos[i * 3] = (Math.random() - 0.5) * 10;
+          pos[i * 3 + 1] = Math.random() * 4;
+        }
+      }
+      particleGeometry.attributes.position.needsUpdate = true;
+
+      camera.position.x = Math.sin(elapsed * 0.2) * 0.4 + mouse.centeredX * 0.8;
+      camera.position.y = 0.5 + Math.sin(elapsed * 0.1) * 0.2 + mouse.centeredY * 0.3;
+      camera.lookAt(0, 0, -10);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

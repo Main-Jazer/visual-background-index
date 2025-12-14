@@ -5,418 +5,159 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Gravity Well Spiral</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 30%, #030314, #010007 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      left: 2rem;
+      top: 2rem;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      letter-spacing: 0.35em;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Gravity Well Spiral</h1>
-      <p>Particles orbit a central "gravity well" (JaZeR core), spiraling inward and then being flung outward in arcs.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Gravity Well Spiral</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010007, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x05001c, 0.07);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
+    camera.position.set(0, 0, 5);
 
-    // Gravity well properties
-    const center = { x: width / 2, y: height / 2 };
-    const particles = [];
-    const particleCount = 150;
-    const gravityStrength = 0.5;
-    const repulsionStrength = 200;
-    const spawnRadius = 200;
-    const coreRadius = 30;
+    const spiralGeometry = new THREE.BufferGeometry();
+    const spiralSegments = 1200;
+    const spiralPositions = new Float32Array(spiralSegments * 3);
+    const spiralColors = new Float32Array(spiralSegments * 3);
+    const palette = [new THREE.Color('#ff2aff'), new THREE.Color('#00f5ff'), new THREE.Color('#ffd25b')];
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    for (let i = 0; i < spiralSegments; i++) {
+      const t = i / spiralSegments;
+      const angle = t * Math.PI * 10;
+      const radius = 0.2 + t * 2.5;
+      const height = (t - 0.5) * 6;
+      spiralPositions[i * 3] = Math.cos(angle) * radius;
+      spiralPositions[i * 3 + 1] = height;
+      spiralPositions[i * 3 + 2] = Math.sin(angle) * radius;
+      const color = palette[i % palette.length];
+      spiralColors[i * 3] = color.r;
+      spiralColors[i * 3 + 1] = color.g;
+      spiralColors[i * 3 + 2] = color.b;
+    }
+    spiralGeometry.setAttribute('position', new THREE.BufferAttribute(spiralPositions, 3));
+    spiralGeometry.setAttribute('color', new THREE.BufferAttribute(spiralColors, 3));
+    const spiralMaterial = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8 });
+    const spiralLine = new THREE.Line(spiralGeometry, spiralMaterial);
+    scene.add(spiralLine);
+
+    const particleGeometry = new THREE.BufferGeometry();
+    const particleCount = 1600;
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleSpeeds = new Float32Array(particleCount);
+    for (let i = 0; i < particleCount; i++) {
+      const radius = Math.random() * 3 + 0.2;
+      const angle = Math.random() * Math.PI * 2;
+      particlePositions[i * 3] = Math.cos(angle) * radius;
+      particlePositions[i * 3 + 1] = (Math.random() - 0.5) * 6;
+      particlePositions[i * 3 + 2] = Math.sin(angle) * radius;
+      particleSpeeds[i] = 0.2 + Math.random() * 0.4;
+    }
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 0.05,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particles);
+
+    const accretionMaterial = new THREE.MeshBasicMaterial({ color: 0x04040c, transparent: true, opacity: 0.7, side: THREE.DoubleSide });
+    const accretionDisk = new THREE.Mesh(new THREE.RingGeometry(0.6, 2.4, 128), accretionMaterial);
+    accretionDisk.rotation.x = Math.PI / 2;
+    scene.add(accretionDisk);
+
+    const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.4, 32, 32), coreMaterial);
+    scene.add(core);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      
-      // Initialize particles
-      initializeParticles();
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function initializeParticles() {
-      particles.length = 0;
-      for (let i = 0; i < particleCount; i++) {
-        spawnParticle(i);
-      }
-    }
-
-    function spawnParticle(index) {
-      // Random angle around the spawn circle
-      const angle = Math.random() * Math.PI * 2;
-      // Random distance from center within spawn radius
-      const distance = spawnRadius + Math.random() * 100;
-      
-      particles.push({
-        id: index,
-        x: center.x + Math.cos(angle) * distance,
-        y: center.y + Math.sin(angle) * distance,
-        vx: 0,
-        vy: 0,
-        size: 1 + Math.random() * 2,
-        color: palette[Math.floor(Math.random() * palette.length)],
-        life: 100,
-        maxLife: 100,
-        state: 'orbiting', // 'orbiting', 'falling', 'ejected'
-        angle: angle,
-        distance: distance,
-        angularVelocity: 0.01 + Math.random() * 0.02,
-        trail: []
-      });
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Clear with dark background
-      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#000020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw particles
-      updateAndDrawParticles();
-
-      // Draw central gravity well
-      drawGravityWell();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function updateAndDrawParticles() {
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-        
-        // Calculate distance to center
-        const dx = center.x - p.x;
-        const dy = center.y - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        // Update trail
-        p.trail.push({x: p.x, y: p.y});
-        if (p.trail.length > 10) {
-          p.trail.shift();
-        }
-        
-        // Apply gravity
-        const gravityForce = gravityStrength / (dist * dist + 1);
-        p.vx += (dx / dist) * gravityForce;
-        p.vy += (dy / dist) * gravityForce;
-        
-        // Apply angular momentum to prevent direct fall
-        const tangentX = -dy / dist;
-        const tangentY = dx / dist;
-        const angularForce = p.angularVelocity * dist * 0.1;
-        p.vx += tangentX * angularForce;
-        p.vy += tangentY * angularForce;
-        
-        // Apply mouse gravity
-        if (mouse.isInside) {
-          const mouseX = mouse.x * width;
-          const mouseY = mouse.y * height;
-          const mDx = mouseX - p.x;
-          const mDy = mouseY - p.y;
-          const mDist = Math.sqrt(mDx * mDx + mDy * mDy);
-          
-          if (mDist > 5) {
-            const mGravityForce = 0.1 / (mDist * mDist + 1);
-            p.vx += (mDx / mDist) * mGravityForce;
-            p.vy += (mDy / mDist) * mGravityForce;
-          }
-        }
-        
-        // Update position
-        p.x += p.vx;
-        p.y += p.vy;
-        
-        // Apply velocity damping
-        p.vx *= 0.99;
-        p.vy *= 0.99;
-        
-        // Check if particle is close to the center
-        if (dist < coreRadius + 5) {
-          // Add some energy to cause ejection
-          const ejectAngle = Math.random() * Math.PI * 2;
-          const ejectForce = 2 + Math.random() * 3;
-          
-          // Reset particle
-          p.x = center.x + Math.cos(ejectAngle) * (spawnRadius + Math.random() * 50);
-          p.y = center.y + Math.sin(ejectAngle) * (spawnRadius + Math.random() * 50);
-          p.vx = 0;
-          p.vy = 0;
-          p.trail.length = 0;
-        } 
-        // If particle is too far away, reset it
-        else if (dist > spawnRadius * 2) {
-          // Reset particle at random position
-          const resetAngle = Math.random() * Math.PI * 2;
-          p.x = center.x + Math.cos(resetAngle) * (spawnRadius + Math.random() * 50);
-          p.y = center.y + Math.sin(resetAngle) * (spawnRadius + Math.random() * 50);
-          p.vx = 0;
-          p.vy = 0;
-          p.trail.length = 0;
-        }
-        
-        // Draw particle with trail
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        
-        // Draw trail
-        if (p.trail.length > 1) {
-          for (let j = 1; j < p.trail.length; j++) {
-            const point = p.trail[j];
-            const prevPoint = p.trail[j-1];
-            const trailAlpha = j / p.trail.length;
-            
-            ctx.beginPath();
-            ctx.moveTo(prevPoint.x, prevPoint.y);
-            ctx.lineTo(point.x, point.y);
-            ctx.strokeStyle = p.color + Math.floor(trailAlpha * 100).toString(16).padStart(2, '0');
-            ctx.lineWidth = p.size * trailAlpha;
-            ctx.stroke();
-          }
-        }
-        
-        // Draw particle
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 15;
-        ctx.fill();
-        
-        ctx.restore();
-      }
-    }
-
-    function drawGravityWell() {
-      // Draw central gravity well
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      // Core glow
-      const coreGradient = ctx.createRadialGradient(
-        center.x, center.y, 0,
-        center.x, center.y, coreRadius * 2
-      );
-      coreGradient.addColorStop(0, palette[0] + 'FF');
-      coreGradient.addColorStop(0.5, palette[1] + 'AA');
-      coreGradient.addColorStop(1, palette[2] + '33');
-      
-      ctx.fillStyle = coreGradient;
-      ctx.beginPath();
-      ctx.arc(center.x, center.y, coreRadius * 2, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Add glow effect
-      ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 40;
-      ctx.fill();
-      
-      // Draw "JaZeR" text in the core
-      ctx.font = 'bold 20px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText('JaZeR', center.x, center.y);
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      spiralLine.rotation.y += delta * 0.3;
+      spiralLine.rotation.x = Math.sin(elapsed * 0.2) * 0.2;
+
+      const pos = particleGeometry.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        const x = pos[i * 3];
+        const z = pos[i * 3 + 2];
+        const radius = Math.sqrt(x * x + z * z);
+        const angle = Math.atan2(z, x) + delta * (1.0 / radius) * 3.0;
+        const decay = Math.exp(-delta * 0.2);
+        pos[i * 3] = Math.cos(angle) * radius * decay;
+        pos[i * 3 + 2] = Math.sin(angle) * radius * decay;
+        pos[i * 3 + 1] = pos[i * 3 + 1] * decay + delta * particleSpeeds[i];
+        if (radius < 0.2) {
+          pos[i * 3] = (Math.random() - 0.5) * 7;
+          pos[i * 3 + 2] = (Math.random() - 0.5) * 7;
+          pos[i * 3 + 1] = (Math.random() - 0.5) * 4;
+        }
+      }
+      particleGeometry.attributes.position.needsUpdate = true;
+
+      camera.position.x = Math.sin(elapsed * 0.2) * 0.4 + mouse.centeredX * 0.8;
+      camera.position.y = Math.sin(elapsed * 0.15) * 0.3 + mouse.centeredY * 0.6;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

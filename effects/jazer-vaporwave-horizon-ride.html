@@ -5,433 +5,248 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Vaporwave Horizon Ride</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 20%, #05031a, #010008 70%);
+      color: #f8fbff;
+      min-height: 100vh;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      right: 2rem;
+      bottom: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Vaporwave Horizon Ride</h1>
-      <p>Classic synthwave: grid floor, big sun, mountains — but everything branded JaZeR with neon gradients.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Vaporwave Horizon Ride</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x01000a, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.vapor; // Use vapor palette for synthwave feel
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x050015, 0.04);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 200);
+    camera.position.set(0, 1.6, 7);
 
-    // Vaporwave horizon properties
-    const horizonY = height * 0.6;
-    const sun = {
-      x: width * 0.8,
-      y: height * 0.2,
-      radius: 60,
-      pulsePhase: 0
-    };
-    const gridLines = [];
-    const gridSpacing = 40;
-    const mountains = [];
-    const mountainCount = 8;
-
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
-
-    function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update horizon
-      horizonY = height * 0.6;
-      sun.x = width * 0.8;
-      sun.y = height * 0.2;
-      
-      // Initialize grid lines
-      initializeGrid();
-      initializeMountains();
-    }
-
-    function initializeGrid() {
-      gridLines.length = 0;
-      // Create grid lines that move toward the horizon
-      for (let i = 0; i < 20; i++) {
-        gridLines.push({
-          id: i,
-          y: horizonY + i * gridSpacing,
-          offset: Math.random() * 100
-        });
-      }
-    }
-
-    function initializeMountains() {
-      mountains.length = 0;
-      for (let i = 0; i < mountainCount; i++) {
-        const widthFrac = 0.2 + Math.random() * 0.3;
-        mountains.push({
-          id: i,
-          x: (i / mountainCount) * width,
-          width: width * widthFrac,
-          height: 50 + Math.random() * 150,
-          color: palette[i % palette.length],
-          offset: Math.random() * 1000
-        });
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Clear with gradient background
-      const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-      bgGradient.addColorStop(0, '#8a2be2'); // Purple sky
-      bgGradient.addColorStop(0.7, '#ff6ec7'); // Pink mid
-      bgGradient.addColorStop(1, '#00f0ff'); // Cyan bottom
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Draw mountains
-      drawMountains();
-
-      // Draw grid floor
-      drawGrid();
-
-      // Draw sun with pulsing effect
-      drawSun();
-
-      // Draw JaZeR text floating above sun
-      drawJaZeRText();
-
-      // Add scanline effect
-      addScanlines();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function drawMountains() {
-      for (const mountain of mountains) {
-        // Calculate position with movement
-        const x = (mountain.x + time * 10) % (width + mountain.width) - mountain.width;
-        
-        // Create mountain shape
-        ctx.beginPath();
-        ctx.moveTo(x, height);
-        ctx.lineTo(x + mountain.width/2, height - mountain.height);
-        ctx.lineTo(x + mountain.width, height);
-        ctx.closePath();
-        
-        // Fill with neon color
-        const gradient = ctx.createLinearGradient(x, height - mountain.height, x, height);
-        gradient.addColorStop(0, mountain.color + '88');
-        gradient.addColorStop(1, mountain.color + '44');
-        
-        ctx.fillStyle = gradient;
-        ctx.fill();
-        
-        // Add outline
-        ctx.strokeStyle = mountain.color;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    }
-
-    function drawGrid() {
-      ctx.strokeStyle = '#ffffff44';
-      ctx.lineWidth = 1;
-      
-      // Draw perspective grid lines
-      for (let i = 0; i < gridLines.length; i++) {
-        const line = gridLines[i];
-        
-        // Move lines toward horizon to simulate forward motion
-        const y = line.y - time * 30 + Math.sin(time * 0.5 + line.offset) * 5;
-        
-        // Reset line if it goes above horizon
-        if (y < horizonY) {
-          gridLines[i].y = height;
+    const gridGeometry = new THREE.PlaneGeometry(26, 26, 200, 200);
+    const gridMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColorA: { value: new THREE.Color(0xff66ff) },
+        uColorB: { value: new THREE.Color(0x00f5ff) }
+      },
+      vertexShader: /* glsl */`
+        uniform float uTime;
+        varying vec2 vUv;
+        varying float vHeight;
+        void main() {
+          vUv = uv;
+          vec3 pos = position;
+          float wave = sin(uv.x * 30.0 + uTime * 1.6) * 0.3;
+          wave += sin(uv.y * 60.0 + uTime * 2.4) * 0.2;
+          pos.z += wave;
+          pos.x += sin(uTime * 0.5 + uv.y * 60.0) * 0.03;
+          vHeight = wave;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
         }
-        
-        // Draw line with perspective
-        const perspective = map(y, horizonY, height, 0.2, 1);
-        const lineWidth = map(perspective, 0.2, 1, 1, 4);
-        
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-      
-      // Draw vertical grid lines for perspective
-      ctx.strokeStyle = '#ffffff22';
-      for (let x = 0; x < width; x += gridSpacing) {
-        const perspectiveX = x + Math.sin(time * 0.3 + x * 0.01) * 2;
-        ctx.beginPath();
-        ctx.moveTo(perspectiveX, horizonY);
-        ctx.lineTo(perspectiveX, height);
-        ctx.stroke();
-      }
+      `,
+      fragmentShader: /* glsl */`
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        varying vec2 vUv;
+        varying float vHeight;
+        float gridLine(float v, float scale) {
+          float line = abs(fract(v * scale) - 0.5);
+          return smoothstep(0.48, 0.5, line);
+        }
+        void main() {
+          float gridX = gridLine(vUv.x, 40.0);
+          float gridY = gridLine(vUv.y, 6.0);
+          float glow = smoothstep(0.0, 0.6, vUv.y);
+          vec3 base = mix(uColorA, uColorB, vUv.x);
+          vec3 color = base * (gridX + gridY);
+          color += vec3(0.05, 0.2, 0.5) * (0.4 + glow);
+          color += vec3(0.1, 0.05, 0.2) * vHeight;
+          float alpha = clamp(gridX + gridY, 0.0, 1.0);
+          gl_FragColor = vec4(color, alpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const grid = new THREE.Mesh(gridGeometry, gridMaterial);
+    grid.rotation.x = -Math.PI / 2.2;
+    grid.position.y = -1.4;
+    grid.position.z = 0;
+    scene.add(grid);
+
+    const mountainGeometry = new THREE.ConeGeometry(0.4, 1.2, 4);
+    mountainGeometry.translate(0, -0.6, 0);
+    const mountainMaterial = new THREE.MeshBasicMaterial({
+      color: 0xff2aff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.65
+    });
+    const mountainCount = 24;
+    const mountains = new THREE.InstancedMesh(mountainGeometry, mountainMaterial, mountainCount);
+    scene.add(mountains);
+    const tempMatrix = new THREE.Matrix4();
+    for (let i = 0; i < mountainCount; i++) {
+      const x = (Math.random() - 0.5) * 18;
+      const z = -Math.random() * 18 - 4;
+      const scale = 1 + Math.random() * 3;
+      tempMatrix.identity()
+        .makeRotationY(Math.random() * Math.PI)
+        .setPosition(x, -1.2, z)
+        .scale(new THREE.Vector3(1.5 + Math.random(), scale, 1.5 + Math.random()));
+      mountains.setMatrixAt(i, tempMatrix);
     }
 
-    function drawSun() {
-      // Animate sun properties
-      sun.pulsePhase += 0.05;
-      const pulseSize = Math.sin(sun.pulsePhase) * 5;
-      const pulseColor = Math.sin(sun.pulsePhase * 2) * 0.2 + 0.8;
-      
-      // Draw sun with glow
-      const sunGradient = ctx.createRadialGradient(
-        sun.x, sun.y, 0,
-        sun.x, sun.y, sun.radius + pulseSize
-      );
-      sunGradient.addColorStop(0, '#ffff00');
-      sunGradient.addColorStop(0.7, '#ff6ec7');
-      sunGradient.addColorStop(1, '#00f0ff');
-      
-      ctx.fillStyle = sunGradient;
-      ctx.beginPath();
-      ctx.arc(sun.x, sun.y, sun.radius + pulseSize, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Add sun rays
-      ctx.save();
-      ctx.globalCompositeOperation = 'overlay';
-      for (let i = 0; i < 12; i++) {
-        const angle = (i / 12) * Math.PI * 2 + time * 0.2;
-        const rayLength = sun.radius * 2 + pulseSize * 2;
-        const endX = sun.x + Math.cos(angle) * rayLength;
-        const endY = sun.y + Math.sin(angle) * rayLength;
-        
-        ctx.beginPath();
-        ctx.moveTo(sun.x, sun.y);
-        ctx.lineTo(endX, endY);
-        ctx.strokeStyle = palette[i % palette.length];
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-      ctx.restore();
-      
-      // Add glow
-      ctx.shadowColor = '#ffff00';
+    const sunGroup = new THREE.Group();
+    sunGroup.position.set(0, 2.5, -8);
+    scene.add(sunGroup);
+    const sunMaterial = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+      fragmentShader: /* glsl */`
+        uniform float uTime;
+        varying vec2 vUv;
+        void main(){
+          float stripes = step(0.0, sin((vUv.y + uTime * 0.1) * 60.0));
+          vec3 color = mix(vec3(1.0, 0.5, 0.2), vec3(1.0, 0.1, 0.8), vUv.y);
+          color *= 0.7 + 0.3 * stripes;
+          gl_FragColor = vec4(color, 0.95);
+        }
+      `,
+      transparent: true
+    });
+    const sunMesh = new THREE.Mesh(new THREE.CircleGeometry(1.6, 64), sunMaterial);
+    sunGroup.add(sunMesh);
+
+    const sunGlowTexture = (() => {
+      const glowCanvas = document.createElement('canvas');
+      glowCanvas.width = glowCanvas.height = 512;
+      const ctx = glowCanvas.getContext('2d');
+      const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+      gradient.addColorStop(0.5, 'rgba(255, 96, 200, 0.5)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 512, 512);
+      return new THREE.CanvasTexture(glowCanvas);
+    })();
+    const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunGlowTexture, transparent: true }));
+    sunGlow.scale.set(5, 5, 1);
+    sunGroup.add(sunGlow);
+
+    const textTexture = (() => {
+      const textCanvas = document.createElement('canvas');
+      textCanvas.width = 1024;
+      textCanvas.height = 256;
+      const ctx = textCanvas.getContext('2d');
+      ctx.fillStyle = '#00000000';
+      ctx.fillRect(0, 0, textCanvas.width, textCanvas.height);
+      const gradient = ctx.createLinearGradient(0, 0, textCanvas.width, 0);
+      gradient.addColorStop(0, '#00f5ff');
+      gradient.addColorStop(1, '#ff2aff');
+      ctx.fillStyle = gradient;
+      ctx.shadowColor = '#ffadff';
       ctx.shadowBlur = 40;
-      ctx.fill();
-    }
-
-    function drawJaZeRText() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      // Position text above the sun
-      const textX = sun.x;
-      const textY = sun.y - sun.radius - 40 + Math.sin(time * 2) * 10;
-      
-      // Draw "JaZeR" text with vaporwave style
-      ctx.font = 'bold 40px Arial';
+      ctx.font = 'bold 200px "Inter", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      
-      // Create vertical gradient for text
-      const textGradient = ctx.createLinearGradient(textX, textY - 20, textX, textY + 20);
-      textGradient.addColorStop(0, palette[0]);
-      textGradient.addColorStop(1, palette[2]);
-      
-      ctx.fillStyle = textGradient;
-      ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 20;
-      ctx.fillText('JaZeR', textX, textY);
-      
-      ctx.restore();
+      ctx.fillText('JAZER', textCanvas.width / 2, textCanvas.height / 2);
+      const texture = new THREE.CanvasTexture(textCanvas);
+      texture.flipY = false;
+      return texture;
+    })();
+    const textMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(4, 1),
+      new THREE.MeshBasicMaterial({ map: textTexture, transparent: true })
+    );
+    textMesh.position.set(0, 1.5, -4);
+    scene.add(textMesh);
+
+    const starGeometry = new THREE.BufferGeometry();
+    const starCount = 600;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      starPositions[i * 3 + 0] = (Math.random() - 0.5) * 60;
+      starPositions[i * 3 + 1] = Math.random() * 20 + 2;
+      starPositions[i * 3 + 2] = -Math.random() * 60;
+    }
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({
+      size: 0.08,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    }));
+    scene.add(stars);
+
+    const clock = new THREE.Clock();
+
+    function resize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function addScanlines() {
-      // Add scanline effect for retro feel
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-      for (let y = 0; y < height; y += 3) {
-        ctx.fillRect(0, y, width, 1);
-      }
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      gridMaterial.uniforms.uTime.value = elapsed;
+      sunMaterial.uniforms.uTime.value = elapsed;
+      mountains.rotation.z = Math.sin(elapsed * 0.02) * 0.05;
+
+      sunGroup.position.y = 2.3 + Math.sin(elapsed * 0.5) * 0.2;
+      sunGlow.rotation += delta * 0.1;
+
+      camera.position.x = Math.sin(elapsed * 0.2) * 0.5 + mouse.centeredX * 0.8;
+      camera.position.y = 1.6 + Math.sin(elapsed * 0.15) * 0.2 + mouse.centeredY * 0.5;
+      camera.lookAt(0, 0.2, -5);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

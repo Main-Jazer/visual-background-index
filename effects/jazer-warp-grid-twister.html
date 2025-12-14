@@ -5,424 +5,213 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Warp Grid Twister</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: #000007;
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      right: 2rem;
+      bottom: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Warp Grid Twister</h1>
-      <p>2D grid being sucked into a twisted center like fabric spiraling into a vortex, with JaZeR text embedded in the warp.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Warp Grid Twister</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010007, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x060019, 0.09);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(65, 1, 0.1, 400);
+    camera.position.set(0, 0, 4);
 
-    // Warp grid twister properties
-    const center = { x: width / 2, y: height / 2 };
-    const gridSpacing = 40;
-    const gridRows = Math.ceil(height / gridSpacing) + 2;
-    const gridCols = Math.ceil(width / gridSpacing) + 2;
-    const gridPoints = [];
-    const warpIntensity = 0.5;
-    const twistIntensity = 0.3;
-    const vortexCenter = { x: width / 2, y: height / 2 };
-    const mouseInfluence = 100;
+    const tunnelGeometry = new THREE.CylinderGeometry(4, 4, 80, 64, 200, true);
+    const tunnelMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColorA: { value: new THREE.Color(0x00f5ff) },
+        uColorB: { value: new THREE.Color(0xff2aff) }
+      },
+      vertexShader: /* glsl */`
+        uniform float uTime;
+        varying vec2 vUv;
+        varying float vDepth;
+        void main(){
+          vUv = uv;
+          vec3 pos = position;
+          float twist = sin(pos.y * 0.25 + uTime * 0.8);
+          float pinch = smoothstep(-30.0, 30.0, pos.y);
+          float radius = mix(0.5, 1.0, pinch);
+          pos.x *= radius;
+          pos.z *= radius;
+          float angle = twist * 0.6;
+          mat2 rot = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+          vec2 rotated = rot * pos.xz;
+          pos.x = rotated.x;
+          pos.z = rotated.y;
+          pos.y += sin((pos.x + pos.z) * 0.2 + uTime) * 0.2;
+          vDepth = pos.y;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos,1.0);
+        }
+      `,
+      fragmentShader: /* glsl */`
+        uniform float uTime;
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        varying vec2 vUv;
+        varying float vDepth;
+        float grid(float value, float scale){
+          float line = abs(fract(value * scale) - 0.5);
+          return smoothstep(0.45, 0.5, line);
+        }
+        void main(){
+          float gridX = grid(vUv.x, 30.0);
+          float gridY = grid(vUv.y + uTime * 0.1, 8.0);
+          float pulse = sin(vDepth * 0.2 + uTime * 2.0) * 0.5 + 0.5;
+          vec3 color = mix(uColorA, uColorB, vUv.x + pulse * 0.2);
+          color *= gridX + gridY;
+          color += vec3(0.02, 0.02, 0.05) * abs(vDepth) * 0.03;
+          gl_FragColor = vec4(color, clamp(gridX + gridY, 0.0, 1.0));
+        }
+      `,
+      transparent: true,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const tunnel = new THREE.Mesh(tunnelGeometry, tunnelMaterial);
+    tunnel.rotation.z = Math.PI;
+    scene.add(tunnel);
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    const frameLines = new THREE.Group();
+    scene.add(frameLines);
+    const frameMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1 });
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const lineGeometry = new THREE.BufferGeometry();
+      const positions = [];
+      for (let y = -40; y <= 40; y++) {
+        positions.push(Math.cos(angle) * 4, y, Math.sin(angle) * 4);
+      }
+      lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      const line = new THREE.Line(lineGeometry, frameMaterial);
+      frameLines.add(line);
+    }
+
+    const ribbonGeometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, -3, 0),
+      new THREE.Vector3(1, -1, 0.5),
+      new THREE.Vector3(-1, 1, -0.5),
+      new THREE.Vector3(0, 3, 0)
+    ]), 200, 0.05, 8, false);
+    const ribbonMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending });
+    const ribbon = new THREE.Mesh(ribbonGeometry, ribbonMaterial);
+    scene.add(ribbon);
+
+    const sparkGeometry = new THREE.BufferGeometry();
+    const sparkCount = 1200;
+    const sparkPositions = new Float32Array(sparkCount * 3);
+    const sparkOffsets = new Float32Array(sparkCount);
+    for (let i = 0; i < sparkCount; i++) {
+      sparkPositions[i * 3] = (Math.random() - 0.5) * 8;
+      sparkPositions[i * 3 + 1] = Math.random() * 80 - 40;
+      sparkPositions[i * 3 + 2] = (Math.random() - 0.5) * 8;
+      sparkOffsets[i] = Math.random();
+    }
+    sparkGeometry.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
+    sparkGeometry.setAttribute('offset', new THREE.BufferAttribute(sparkOffsets, 1));
+    const sparkMaterial = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */`
+        attribute float offset;
+        uniform float uTime;
+        varying float vAlpha;
+        void main(){
+          vec3 pos = position;
+          pos.y += mod(uTime * 30.0 + offset * 80.0, 80.0) - 40.0;
+          vAlpha = fract(offset + uTime * 0.2);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos,1.0);
+          gl_PointSize = 18.0 / gl_Position.w;
+        }
+      `,
+      fragmentShader: /* glsl */`
+        varying float vAlpha;
+        void main(){
+          float d = length(gl_PointCoord - 0.5);
+          float alpha = smoothstep(0.5, 0.0, d) * vAlpha;
+          gl_FragColor = vec4(1.0, 0.9, 0.6, alpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const sparks = new THREE.Points(sparkGeometry, sparkMaterial);
+    scene.add(sparks);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      vortexCenter.x = width / 2;
-      vortexCenter.y = height / 2;
-      
-      // Initialize grid points
-      initializeGrid();
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function initializeGrid() {
-      gridPoints.length = 0;
-      
-      // Create grid points
-      for (let y = 0; y <= gridRows; y++) {
-        for (let x = 0; x <= gridCols; x++) {
-          gridPoints.push({
-            id: y * (gridCols + 1) + x,
-            x: x * gridSpacing,
-            y: y * gridSpacing,
-            originalX: x * gridSpacing,
-            originalY: y * gridSpacing,
-            color: palette[Math.floor(Math.random() * palette.length)],
-            pulsePhase: Math.random() * Math.PI * 2
-          });
-        }
-      }
-    }
-
-    // Function to apply warp transformation to a point
-    function applyWarpTransformation(x, y) {
-      // Calculate distance from vortex center
-      const dx = x - vortexCenter.x;
-      const dy = y - vortexCenter.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      
-      if (dist < 0.1) {
-        return { x: vortexCenter.x, y: vortexCenter.y };
-      }
-      
-      // Calculate angle from center
-      let angle = Math.atan2(dy, dx);
-      
-      // Apply twisting effect based on distance (more twist closer to center)
-      const twistAmount = twistIntensity * (1 - Math.min(1, dist / 200)) * time * 0.8;
-      angle += twistAmount;
-      
-      // Apply warping effect (pulling toward center)
-      const warpFactor = warpIntensity * (1 - Math.min(1, dist / 300)) * 0.4;
-      const newDist = dist * (1 - warpFactor);
-      
-      // Apply noise for organic movement
-      const noiseX = noise2D(x * 0.01, y * 0.01 + time * 0.5) * 3;
-      const noiseY = noise2D(x * 0.01, y * 0.01 + time * 0.5 + 1000) * 3;
-      
-      return {
-        x: vortexCenter.x + Math.cos(angle) * newDist + noiseX,
-        y: vortexCenter.y + Math.sin(angle) * newDist + noiseY
-      };
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Update vortex center based on mouse position for interaction
-      if (mouse.isInside) {
-        vortexCenter.x = mouse.x * width;
-        vortexCenter.y = mouse.y * height;
-      } else {
-        // Return to center if mouse is not inside
-        vortexCenter.x += (width / 2 - vortexCenter.x) * 0.05;
-        vortexCenter.y += (height / 2 - vortexCenter.y) * 0.05;
-      }
-
-      // Clear with dark background
-      const bgGradient = ctx.createLinearGradient(0, 0, width, height);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#000020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw warp grid twister
-      updateAndDrawGrid();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function updateAndDrawGrid() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      // Update grid points with warp transformation
-      for (const point of gridPoints) {
-        // Apply mouse influence
-        const mouseDx = point.originalX - (mouse.isInside ? mouse.x * width : center.x);
-        const mouseDy = point.originalY - (mouse.isInside ? mouse.y * height : center.y);
-        const mouseDist = Math.sqrt(mouseDx * mouseDx + mouseDy * mouseDy);
-        
-        if (mouseDist < mouseInfluence) {
-          // Apply stronger warp near the mouse
-          const mouseWarpFactor = (mouseInfluence - mouseDist) / mouseInfluence;
-          const mouseTwist = mouseWarpFactor * twistIntensity * time * 0.5;
-          
-          // Calculate modified angle and position
-          const angle = Math.atan2(mouseDy, mouseDx) + mouseTwist;
-          const newDist = mouseDist * (1 - mouseWarpFactor * warpIntensity * 0.2);
-          
-          point.x = (mouse.isInside ? mouse.x * width : center.x) + Math.cos(angle) * newDist;
-          point.y = (mouse.isInside ? mouse.y * height : center.y) + Math.sin(angle) * newDist;
-        } else {
-          // Apply normal warp transformation
-          const transformedPos = applyWarpTransformation(point.originalX, point.originalY);
-          point.x = transformedPos.x;
-          point.y = transformedPos.y;
-        }
-      }
-      
-      // Draw grid lines horizontally
-      for (let y = 0; y <= gridRows; y++) {
-        ctx.beginPath();
-        
-        for (let x = 0; x <= gridCols; x++) {
-          const idx = y * (gridCols + 1) + x;
-          const point = gridPoints[idx];
-          
-          if (x === 0) {
-            ctx.moveTo(point.x, point.y);
-          } else {
-            ctx.lineTo(point.x, point.y);
-          }
-        }
-        
-        // Create gradient for the line
-        const lineColor = palette[y % palette.length];
-        ctx.strokeStyle = lineColor + '88';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        
-        // Add glow effect
-        ctx.shadowColor = lineColor;
-        ctx.shadowBlur = 10;
-        ctx.stroke();
-      }
-      
-      // Draw grid lines vertically
-      for (let x = 0; x <= gridCols; x++) {
-        ctx.beginPath();
-        
-        for (let y = 0; y <= gridRows; y++) {
-          const idx = y * (gridCols + 1) + x;
-          const point = gridPoints[idx];
-          
-          if (y === 0) {
-            ctx.moveTo(point.x, point.y);
-          } else {
-            ctx.lineTo(point.x, point.y);
-          }
-        }
-        
-        // Create gradient for the line
-        const lineColor = palette[x % palette.length];
-        ctx.strokeStyle = lineColor + '88';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        
-        // Add glow effect
-        ctx.shadowColor = lineColor;
-        ctx.shadowBlur = 10;
-        ctx.stroke();
-      }
-      
-      // Draw central vortex effect
-      const vortexGradient = ctx.createRadialGradient(
-        vortexCenter.x, vortexCenter.y, 0,
-        vortexCenter.x, vortexCenter.y, 60
-      );
-      vortexGradient.addColorStop(0, palette[0] + 'FF');
-      vortexGradient.addColorStop(0.7, palette[1] + '44');
-      vortexGradient.addColorStop(1, palette[2] + '00');
-      
-      ctx.fillStyle = vortexGradient;
-      ctx.beginPath();
-      ctx.arc(vortexCenter.x, vortexCenter.y, 60, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Add glow effect
-      ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 50;
-      ctx.fill();
-      
-      // Draw JaZeR text in the vortex
-      ctx.font = 'bold 40px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = palette[0];
-      ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 30;
-      ctx.fillText('JaZeR', vortexCenter.x, vortexCenter.y);
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      tunnelMaterial.uniforms.uTime.value = elapsed;
+      sparkMaterial.uniforms.uTime.value = elapsed;
+
+      tunnel.rotation.y = Math.sin(elapsed * 0.2) * 0.2 + mouse.centeredX * 0.3;
+      ribbon.rotation.y += delta * 0.3;
+      ribbon.rotation.x = Math.sin(elapsed * 0.4) * 0.4;
+
+      frameLines.rotation.z = elapsed * 0.05;
+
+      camera.position.x = Math.sin(elapsed * 0.15) * 0.5 + mouse.centeredX * 0.7;
+      camera.position.y = Math.sin(elapsed * 0.2) * 0.3 + mouse.centeredY * 0.4;
+      camera.lookAt(0, 0, -10);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>
