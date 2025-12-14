@@ -5,501 +5,129 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Singularity Swirl</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 30%, #030012, #000006 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      left: 2rem;
+      top: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Singularity Swirl</h1>
-      <p>Particles swirl around a central singularity, spiraling inward and then flung outward in arcs.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Singularity Swirl</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010006, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x030014, 0.05);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 400);
+    camera.position.set(0, 0, 5);
 
-    // Singularity swirl properties
-    const center = { x: width / 2, y: height / 2 };
-    const particles = [];
-    const particleCount = 400;
-    const singularityX = width / 2;
-    const singularityY = height / 2;
-    const eventHorizon = 30; // Radius where things get pulled in strongly
-    const gravityStrength = 500;
-    const repulsionStrength = 1000; // Strength of outward fling
-    const maxOrbitalRadius = Math.min(width, height) * 0.4;
+    const swirlGeometry = new THREE.BufferGeometry();
+    const particleCount = 2500;
+    const positions = new Float32Array(particleCount * 3);
+    const speeds = new Float32Array(particleCount);
+    const radii = new Float32Array(particleCount);
+    const angles = new Float32Array(particleCount);
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    for (let i = 0; i < particleCount; i++) {
+      radii[i] = 0.3 + Math.random() * 3;
+      angles[i] = Math.random() * Math.PI * 2;
+      positions[i * 3] = Math.cos(angles[i]) * radii[i];
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 2;
+      positions[i * 3 + 2] = Math.sin(angles[i]) * radii[i];
+      speeds[i] = 0.3 + Math.random() * 0.8;
+    }
+    swirlGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 0.05,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const particles = new THREE.Points(swirlGeometry, particleMaterial);
+    scene.add(particles);
+
+    const accretionMaterial = new THREE.MeshBasicMaterial({ color: 0x05050a, transparent: true, opacity: 0.8 });
+    const accretionDisk = new THREE.Mesh(new THREE.RingGeometry(0.4, 1.8, 128), accretionMaterial);
+    accretionDisk.rotation.x = Math.PI / 2;
+    scene.add(accretionDisk);
+
+    const singularity = new THREE.Mesh(new THREE.SphereGeometry(0.2, 32, 32), new THREE.MeshBasicMaterial({ color: 0xff2aff, transparent: true, opacity: 0.7 }));
+    scene.add(singularity);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      singularityX = width / 2;
-      singularityY = height / 2;
-      
-      // Initialize particles
-      initializeParticles();
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function initializeParticles() {
-      particles.length = 0;
-      for (let i = 0; i < particleCount; i++) {
-        // Create particles in orbits around the singularity
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 100 + Math.random() * (maxOrbitalRadius - 100);
-        
-        particles.push({
-          id: i,
-          x: center.x + Math.cos(angle) * distance,
-          y: center.y + Math.sin(angle) * distance,
-          originalX: center.x + Math.cos(angle) * distance,
-          originalY: center.y + Math.sin(angle) * distance,
-          vx: 0,
-          vy: 0,
-          size: 1 + Math.random() * 3,
-          color: palette[Math.floor(Math.random() * palette.length)],
-          orbitAngle: angle,
-          orbitRadius: distance,
-          angularVelocity: (Math.random() - 0.5) * 0.05,
-          phase: Math.random() * Math.PI * 2,
-          life: 0,
-          maxLife: 10 + Math.random() * 10,
-          inOrbit: true,
-          nearSingularity: false,
-          trail: [],
-          trailLength: 10
-        });
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Clear with dark background
-      const bgGradient = ctx.createRadialGradient(singularityX, singularityY, 0, singularityX, singularityY, Math.max(width, height) / 2);
-      bgGradient.addColorStop(0, '#100020');
-      bgGradient.addColorStop(1, '#000000');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw singularity swirl
-      updateAndDrawSingularity();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function updateAndDrawSingularity() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      for (const particle of particles) {
-        // Calculate distance to singularity
-        const dx = singularityX - particle.x;
-        const dy = singularityY - particle.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        // Add some noise for organic motion
-        const noiseX = noise2D(particle.x * 0.01, particle.y * 0.01 + time * 0.5) * 0.5;
-        const noiseY = noise2D(particle.x * 0.01, particle.y * 0.01 + time * 0.5 + 1000) * 0.5;
-        
-        if (dist < eventHorizon) {
-          // Particle crossed the event horizon, fling it outward
-          particle.inOrbit = false;
-          particle.nearSingularity = true;
-          
-          // Calculate ejection direction (perpendicular to the approach)
-          const ejectionAngle = particle.orbitAngle + Math.PI/2;
-          const ejectionForce = repulsionStrength / (dist + 1);
-          
-          // Set velocity for ejection
-          particle.vx = Math.cos(ejectionAngle) * ejectionForce * 0.02;
-          particle.vy = Math.sin(ejectionAngle) * ejectionForce * 0.02;
-          
-          // Add some randomness to ejection
-          particle.vx += (Math.random() - 0.5) * 2;
-          particle.vy += (Math.random() - 0.5) * 2;
-        } 
-        else if (dist < eventHorizon * 3) {
-          // Strong gravitational pull near the event horizon
-          const gravityForce = gravityStrength / (dist * dist);
-          particle.vx += (dx / dist) * gravityForce * 0.1;
-          particle.vy += (dy / dist) * gravityForce * 0.1;
-          
-          // Add angular velocity for orbital motion
-          const tangentX = -dy / dist;
-          const tangentY = dx / dist;
-          const angularForce = 0.5 / dist;
-          particle.vx += tangentX * angularForce;
-          particle.vy += tangentY * angularForce;
-        }
-        else if (particle.inOrbit) {
-          // Particle is in orbit around the singularity
-          // Apply gravity to maintain orbit
-          const gravityForce = gravityStrength / (dist * dist);
-          particle.vx += (dx / dist) * gravityForce * 0.01;
-          
-          // Apply tangential force to keep orbiting
-          const tangentX = -dy / dist;
-          const tangentY = dx / dist;
-          const tangentialForce = Math.sqrt(gravityStrength / particle.orbitRadius) * 0.1;
-          particle.vx += tangentX * tangentialForce;
-          particle.vy += tangentY * tangentialForce;
-          
-          // Apply angular velocity based on their stored value
-          particle.orbitAngle += particle.angularVelocity;
-          particle.x = center.x + Math.cos(particle.orbitAngle) * particle.orbitRadius;
-          particle.y = center.y + Math.sin(particle.orbitAngle) * particle.orbitRadius;
-        }
-        else {
-          // Particle is away from singularity, apply general physics
-          particle.x += particle.vx + noiseX;
-          particle.y += particle.vy + noiseY;
-          
-          // Apply damping to velocity
-          particle.vx *= 0.98;
-          particle.vy *= 0.98;
-          
-          // Check if particle has gone far enough to reset to orbit
-          if (dist > maxOrbitalRadius * 1.5) {
-            particle.inOrbit = true;
-            particle.nearSingularity = false;
-            // Reset to a random position in orbit
-            particle.orbitAngle = Math.random() * Math.PI * 2;
-            particle.orbitRadius = 100 + Math.random() * maxOrbitalRadius/2;
-            particle.x = center.x + Math.cos(particle.orbitAngle) * particle.orbitRadius;
-            particle.y = center.y + Math.sin(particle.orbitAngle) * particle.orbitRadius;
-            particle.vx = 0;
-            particle.vy = 0;
-          }
-        }
-        
-        // Add to trail
-        particle.trail.push({x: particle.x, y: particle.y, size: particle.size});
-        if (particle.trail.length > particle.trailLength) {
-          particle.trail.shift();
-        }
-        
-        // Draw particle trail
-        for (let j = 1; j < particle.trail.length; j++) {
-          const point = particle.trail[j];
-          const prevPoint = particle.trail[j-1];
-          const trailAlpha = j / particle.trail.length;
-          
-          ctx.beginPath();
-          ctx.moveTo(prevPoint.x, prevPoint.y);
-          ctx.lineTo(point.x, point.y);
-          ctx.strokeStyle = particle.color + Math.floor(trailAlpha * 100).toString(16).padStart(2, '0');
-          ctx.lineWidth = particle.size * 0.5 * trailAlpha;
-          ctx.stroke();
-          
-          // Add glow
-          ctx.shadowColor = particle.color;
-          ctx.shadowBlur = 8 * trailAlpha;
-          ctx.stroke();
-        }
-        
-        // Draw particle
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fillStyle = particle.color;
-        ctx.shadowColor = particle.color;
-        ctx.shadowBlur = 15;
-        ctx.fill();
-        
-        // Reset trail periodically
-        if (frameCount % 100 === 0) {
-          particle.trail = [];
-        }
-      }
-      
-      // Draw the singularity event horizon
-      const eventHorizonGradient = ctx.createRadialGradient(
-        singularityX, singularityY, 0,
-        singularityX, singularityY, eventHorizon * 2
-      );
-      eventHorizonGradient.addColorStop(0, palette[0] + 'FF');
-      eventHorizonGradient.addColorStop(0.5, palette[1] + '88');
-      eventHorizonGradient.addColorStop(1, palette[2] + '00');
-      
-      ctx.fillStyle = eventHorizonGradient;
-      ctx.beginPath();
-      ctx.arc(singularityX, singularityY, eventHorizon * 2, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Add glow effect to the singularity
-      ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 50;
-      ctx.fill();
-      
-      // Draw the central singularity core
-      const coreGradient = ctx.createRadialGradient(
-        singularityX, singularityY, 0,
-        singularityX, singularityY, eventHorizon * 0.5
-      );
-      coreGradient.addColorStop(0, '#FFFFFF');
-      coreGradient.addColorStop(0.7, palette[0]);
-      coreGradient.addColorStop(1, palette[1] + '00');
-      
-      ctx.fillStyle = coreGradient;
-      ctx.beginPath();
-      ctx.arc(singularityX, singularityY, eventHorizon * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Draw accretion disk
-      for (let r = eventHorizon * 2; r < eventHorizon * 5; r += 5) {
-        const diskGradient = ctx.createRadialGradient(
-          singularityX, singularityY, r - 2,
-          singularityX, singularityY, r + 2
-        );
-        diskGradient.addColorStop(0, palette[0] + '22');
-        diskGradient.addColorStop(0.5, palette[1] + '66');
-        diskGradient.addColorStop(1, palette[2] + '22');
-        
-        ctx.strokeStyle = diskGradient;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(singularityX, singularityY, r, 0, Math.PI * 2);
-        ctx.stroke();
-        
-        // Add glow
-        ctx.shadowColor = palette[1];
-        ctx.shadowBlur = 10;
-        ctx.stroke();
-      }
-      
-      // Draw energy jets from poles
-      for (let i = 0; i < 2; i++) {
-        const sign = i === 0 ? 1 : -1; // One jet up, one down
-        
-        // Draw a line for the jet
-        ctx.beginPath();
-        ctx.moveTo(singularityX, singularityY);
-        ctx.lineTo(singularityX, singularityY - sign * eventHorizon * 4);
-        ctx.strokeStyle = palette[0] + '88';
-        ctx.lineWidth = 5;
-        ctx.stroke();
-        
-        // Add glow effect
-        ctx.shadowColor = palette[0];
-        ctx.shadowBlur = 30;
-        ctx.stroke();
-        
-        // Draw jet particles
-        for (let j = 1; j <= 5; j++) {
-          const jetX = singularityX + (Math.random() - 0.5) * 10;
-          const jetY = singularityY - sign * eventHorizon * j;
-          
-          ctx.beginPath();
-          ctx.arc(jetX, jetY, 2 + Math.random() * 3, 0, Math.PI * 2);
-          ctx.fillStyle = palette[0];
-          ctx.shadowColor = palette[0];
-          ctx.shadowBlur = 10;
-          ctx.fill();
-        }
-      }
-      
-      // Draw JaZeR text near the singularity
-      ctx.font = 'bold 40px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = palette[0];
-      ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 30;
-      ctx.fillText('JaZeR', singularityX, singularityY - eventHorizon * 6);
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      const pos = swirlGeometry.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        angles[i] += speeds[i] * delta;
+        radii[i] -= delta * 0.1;
+        if (radii[i] < 0.1) {
+          radii[i] = 3 + Math.random() * 2;
+        }
+        pos[i * 3] = Math.cos(angles[i]) * radii[i];
+        pos[i * 3 + 2] = Math.sin(angles[i]) * radii[i];
+      }
+      swirlGeometry.attributes.position.needsUpdate = true;
+
+      accretionDisk.rotation.z = elapsed * 0.5;
+      camera.position.x = mouse.centeredX * 1.2;
+      camera.position.y = mouse.centeredY * 0.9;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>
