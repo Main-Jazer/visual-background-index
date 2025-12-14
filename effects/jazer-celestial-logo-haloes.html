@@ -5,193 +5,148 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Celestial Logo Haloes</title>
   <style>
+    :root {
+      color-scheme: dark;
+    }
+
     * {
       box-sizing: border-box;
+    }
+
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #06061b, #010108 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
 
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
 
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      left: 2rem;
+      bottom: 1.5rem;
+      letter-spacing: 0.25em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Celestial Logo Haloes</h1>
-      <p>Each letter of JaZeR has its own orbit of smaller glowing particles, forming planetary rings around each character.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <canvas id="effect"></canvas>
+  <div class="label">Celestial Logo Haloes</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import { mouse, noise2D, ColorPalettes } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
-    const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
-
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
-
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
+    const canvas = document.getElementById('effect');
     const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
+    const palette = ColorPalettes.galaxy || ColorPalettes.cyberpunk || ColorPalettes.jazer;
+
+    const TEXT = 'JaZeR';
+    const HALO_RINGS = 3;
+    const PARTICLES_PER_RING = 60;
+    const DUST_COUNT = 220;
+
+    const letterInfo = [];
+    const haloParticles = [];
+    const dustParticles = [];
+
+    let width = 0;
+    let height = 0;
+    let fontSize = 140;
+    let lastTime = 0;
     let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
 
-    // Celestial logo haloes properties
-    const center = { x: width / 2, y: height / 2 };
-    const logoText = "JaZeR";
-    const logoParticles = [];
-    const particlesPerLetter = 50;
-    const orbitSpeed = 0.5;
-    const ringCount = 3;
-    const haloRadiusBase = 80;
-    const particleSize = 2;
-    const fontSize = 120;
+    class HaloParticle {
+      constructor(letterIndex, ring) {
+        this.letterIndex = letterIndex;
+        this.ring = ring;
+        this.reset(true);
+      }
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+      reset(initial = false) {
+        this.angle = Math.random() * Math.PI * 2;
+        this.radius = fontSize * (0.25 + this.ring * 0.2) + Math.random() * 10;
+        this.speed = (0.4 + this.ring * 0.15) * (Math.random() > 0.5 ? 1 : -1);
+        this.size = 1 + Math.random() * 2;
+        this.phase = Math.random() * Math.PI * 2;
+        this.noiseOffset = Math.random() * 1000;
+        this.alpha = 0.4 + Math.random() * 0.4;
+        if (!initial) {
+          this.angle = Math.random() * Math.PI * 2;
+        }
+      }
+
+      update(dt) {
+        this.angle += this.speed * dt;
+      }
+
+      draw() {
+        const letter = letterInfo[this.letterIndex];
+        if (!letter) return;
+        const wobble = noise2D(this.angle, time * 0.6 + this.noiseOffset) * 8;
+        const x = letter.x + Math.cos(this.angle) * (this.radius + wobble) + mouse.centeredX * this.ring * 6;
+        const y = letter.y + Math.sin(this.angle) * (this.radius * 0.55 + wobble * 0.3) + mouse.centeredY * this.ring * 10;
+        const pulse = Math.sin(time * 3 + this.phase) * 0.3 + 1;
+        ctx.fillStyle = `${letter.color}${Math.floor(this.alpha * 255).toString(16).padStart(2, '0')}`;
+        ctx.shadowColor = letter.color;
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.arc(x, y, this.size * pulse, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    class DustParticle {
+      constructor() {
+        this.reset();
+      }
+
+      reset() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.speed = 10 + Math.random() * 25;
+        this.alpha = 0.05 + Math.random() * 0.15;
+        this.color = palette[Math.floor(Math.random() * palette.length)] || '#ffffff';
+      }
+
+      update(dt) {
+        this.y -= dt * this.speed;
+        this.x += mouse.centeredX * dt * 40;
+        if (this.y < -10) {
+          this.y = height + 10;
+          this.x = Math.random() * width;
+        }
+      }
+
+      draw() {
+        ctx.fillStyle = `${this.color}${Math.floor(this.alpha * 255).toString(16).padStart(2, '0')}`;
+        ctx.fillRect(this.x, this.y, 2, 2);
+      }
+    }
+
+    function setup() {
+      for (let i = 0; i < DUST_COUNT; i++) {
+        dustParticles.push(new DustParticle());
+      }
+      resize();
+      rebuildLetters();
+      rebuildHaloParticles();
+      requestAnimationFrame(render);
+    }
 
     function resize() {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
       width = window.innerWidth;
       height = window.innerHeight;
       canvas.width = width * dpr;
@@ -199,196 +154,140 @@
       canvas.style.width = width + 'px';
       canvas.style.height = height + 'px';
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      
-      // Initialize logo haloes
-      initializeLogoHaloes();
+      fontSize = Math.max(90, Math.min(width * 0.12, 180));
+      rebuildLetters();
+      rebuildHaloParticles();
     }
 
-    function initializeLogoHaloes() {
-      logoParticles.length = 0;
-      
-      // Calculate text positions
-      const textWidth = ctx.measureText(logoText).width;
-      const startX = center.x - textWidth / 2 + fontSize / 2;
-      const textY = center.y;
-      
-      // Create orbiting particles for each letter in "JaZeR"
-      for (let i = 0; i < logoText.length; i++) {
-        const char = logoText[i];
-        const charX = startX + ctx.measureText(logoText.substring(0, i)).width + ctx.measureText(char).width / 2;
-        const charColor = palette[i % palette.length];
-        
-        // Create multiple rings for each letter
-        for (let r = 0; r < ringCount; r++) {
-          for (let p = 0; p < particlesPerLetter; p++) {
-            const angle = (p / particlesPerLetter) * Math.PI * 2;
-            const radius = haloRadiusBase + r * 25;
-            
-            logoParticles.push({
-              id: i * particlesPerLetter * ringCount + r * particlesPerLetter + p,
-              x: charX + Math.cos(angle) * radius,
-              y: textY + Math.sin(angle) * radius,
-              charX: charX,
-              charY: textY,
-              angle: angle,
-              radius: radius,
-              color: charColor,
-              size: particleSize * (0.8 + Math.random() * 0.4),
-              originalAngle: angle,
-              orbitSpeed: orbitSpeed * (0.8 + Math.random() * 0.4),
-              noiseOffset: Math.random() * 1000,
-              orbitRing: r,
-              belongsTo: i, // Which character this particle orbits
-              pulsePhase: Math.random() * Math.PI * 2,
-              opacity: 0.7 + Math.random() * 0.3
-            });
+    function rebuildLetters() {
+      letterInfo.length = 0;
+      ctx.font = `${fontSize}px 'Inter', sans-serif`;
+      const spacing = fontSize * 0.12;
+      const widths = [...TEXT].map(char => ctx.measureText(char).width);
+      const totalWidth = widths.reduce((sum, w) => sum + w, 0) + spacing * (TEXT.length - 1);
+      let cursor = width / 2 - totalWidth / 2;
+      [...TEXT].forEach((char, index) => {
+        const w = widths[index];
+        letterInfo.push({
+          char,
+          x: cursor + w / 2,
+          y: height / 2,
+          width: w,
+          color: palette[index % palette.length] || '#00f5ff'
+        });
+        cursor += w + spacing;
+      });
+    }
+
+    function rebuildHaloParticles() {
+      haloParticles.length = 0;
+      letterInfo.forEach((letter, letterIndex) => {
+        for (let ring = 0; ring < HALO_RINGS; ring++) {
+          const count = PARTICLES_PER_RING + ring * 15;
+          for (let i = 0; i < count; i++) {
+            haloParticles.push(new HaloParticle(letterIndex, ring));
           }
         }
-      }
+      });
     }
 
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
+    window.addEventListener('resize', resize);
 
-      // Update mouse (for interactive effects)
+    function render(now) {
+      const dt = (now - lastTime) / 1000 || 0;
+      lastTime = now;
+      time += dt;
       mouse.update();
 
-      // Clear with dark background
-      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#000020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
+      ctx.clearRect(0, 0, width, height);
+      drawBackground();
 
-      // Update and draw celestial logo haloes
-      updateAndDrawLogoHaloes();
+      dustParticles.forEach(particle => {
+        particle.update(dt);
+        particle.draw();
+      });
 
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
+      drawLetterHalos();
+      drawConnectors();
+
+      haloParticles.forEach(particle => {
+        particle.update(dt);
+        particle.draw();
+      });
+
+      drawLetters();
+      drawScanlines();
 
       requestAnimationFrame(render);
     }
 
-    function updateAndDrawLogoHaloes() {
+    function drawBackground() {
+      const gradient = ctx.createRadialGradient(width / 2, height * 0.4, 50, width / 2, height, Math.max(width, height));
+      gradient.addColorStop(0, '#070819');
+      gradient.addColorStop(1, '#000005');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    function drawLetterHalos() {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      
-      // Calculate text positions again to update if needed
-      const textWidth = ctx.measureText(logoText).width;
-      const startX = center.x - textWidth / 2 + fontSize / 2;
-      const textY = center.y;
-      
-      // Update and draw particles for each character halo
-      for (const particle of logoParticles) {
-        // Update particle position
-        particle.angle += particle.orbitSpeed * 0.01;
-        
-        // Apply noise for organic movement
-        const noiseX = noise2D(particle.x * 0.01, time * 0.5 + particle.noiseOffset) * 5;
-        const noiseY = noise2D(particle.y * 0.01, time * 0.5 + particle.noiseOffset + 1000) * 5;
-        
-        // Apply pulsing effect
-        const pulse = Math.sin(time * 3 + particle.pulsePhase) * 0.2 + 0.8;
-        const currentSize = particle.size * pulse;
-        
-        // Apply mouse interaction
-        if (mouse.isInside) {
-          const mouseX = mouse.x * width;
-          const mouseY = mouse.y * height;
-          const dx = particle.x - mouseX;
-          const dy = particle.y - mouseY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          
-          if (dist < 100) {
-            const force = (100 - dist) / 100 * 5;
-            const angle = Math.atan2(dy, dx);
-            particle.x += Math.cos(angle) * force;
-            particle.y += Math.sin(angle) * force;
-          }
-        }
-        
-        // Calculate position with updated text positions
-        particle.x = particle.charX + Math.cos(particle.angle) * particle.radius + noiseX;
-        particle.y = particle.charY + Math.sin(particle.angle) * particle.radius + noiseY;
-        
-        // Draw particle with glow
+      letterInfo.forEach(letter => {
+        const glow = ctx.createRadialGradient(letter.x, letter.y, 0, letter.x, letter.y, fontSize * 0.9);
+        glow.addColorStop(0, `${letter.color}33`);
+        glow.addColorStop(1, '#00000000');
+        ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.arc(particle.x, particle.y, currentSize, 0, Math.PI * 2);
-        ctx.fillStyle = particle.color + Math.floor(particle.opacity * 255).toString(16).padStart(2, '0');
-        ctx.shadowColor = particle.color;
-        ctx.shadowBlur = 15;
+        ctx.arc(letter.x, letter.y, fontSize * 0.9, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Draw connection lines between nearby particles of the same character
-        for (const other of logoParticles) {
-          if (particle.belongsTo === other.belongsTo) {
-            const dist = distance(particle.x, particle.y, other.x, other.y);
-            if (dist < 40 && dist > 5) {
-              const alpha = (40 - dist) / 40;
-              ctx.beginPath();
-              ctx.moveTo(particle.x, particle.y);
-              ctx.lineTo(other.x, other.y);
-              ctx.strokeStyle = particle.color + Math.floor(alpha * 100).toString(16).padStart(2, '0');
-              ctx.lineWidth = 1;
-              ctx.stroke();
-              
-              // Add glow effect
-              ctx.shadowColor = particle.color;
-              ctx.shadowBlur = 10;
-              ctx.stroke();
-            }
-          }
-        }
-      }
-      
-      // Draw the main letters in the center
-      ctx.font = `bold ${fontSize}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      for (let i = 0; i < logoText.length; i++) {
-        const char = logoText[i];
-        const charX = startX + ctx.measureText(logoText.substring(0, i)).width + ctx.measureText(char).width / 2;
-        const charColor = palette[i % palette.length];
-        
-        // Draw the main character with glow
-        ctx.fillStyle = charColor;
-        ctx.shadowColor = charColor;
-        ctx.shadowBlur = 30;
-        ctx.fillText(char, charX, textY);
-        
-        // Draw multiple glows for enhanced effect
-        for (let j = 1; j <= 3; j++) {
-          ctx.shadowBlur = 50 * j;
-          ctx.globalAlpha = 0.3 / j;
-          ctx.fillText(char, charX, textY);
-        }
-        
-        ctx.globalAlpha = 1.0;
-      }
-      
+      });
       ctx.restore();
     }
 
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
-    window.addEventListener('resize', resize);
-    resize();
-    requestAnimationFrame(render);
+    function drawConnectors() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < letterInfo.length - 1; i++) {
+        const from = letterInfo[i];
+        const to = letterInfo[i + 1];
+        ctx.strokeStyle = `${from.color}55`;
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y - fontSize * 0.15);
+        ctx.quadraticCurveTo((from.x + to.x) / 2, from.y - fontSize * 0.6, to.x, to.y - fontSize * 0.15);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawLetters() {
+      ctx.save();
+      ctx.font = `${fontSize}px 'Inter', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      letterInfo.forEach(letter => {
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = letter.color;
+        ctx.shadowBlur = 35;
+        ctx.fillText(letter.char, letter.x, letter.y);
+        ctx.fillStyle = `${letter.color}dd`;
+        ctx.shadowBlur = 10;
+        ctx.fillText(letter.char, letter.x, letter.y);
+      });
+      ctx.restore();
+    }
+
+    function drawScanlines() {
+      ctx.save();
+      ctx.globalAlpha = 0.07;
+      ctx.fillStyle = '#04040c';
+      for (let y = 0; y < height; y += 3) {
+        ctx.fillRect(0, y, width, 1);
+      }
+      ctx.restore();
+    }
+
+    setup();
   </script>
 </body>
 </html>
