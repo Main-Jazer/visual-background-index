@@ -5,23 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Binary Star Tunnel</title>
   <style>
-    :root {
-      color-scheme: dark;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: "Inter", system-ui, sans-serif;
-      background: #01010a;
-      color: #e4edff;
-      min-height: 100vh;
+      background: radial-gradient(circle at 50% 10%, #050313, #010108 70%);
+      color: #f4f6ff;
       overflow: hidden;
+      min-height: 100vh;
     }
-
     canvas {
       position: fixed;
       inset: 0;
@@ -29,227 +22,208 @@
       height: 100vh;
       display: block;
     }
-
     .label {
       position: fixed;
-      top: 2rem;
       right: 2rem;
-      font-size: 0.85rem;
+      top: 2rem;
+      font-size: 0.8rem;
       letter-spacing: 0.3em;
       text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.35);
+      color: rgba(255, 255, 255, 0.45);
       pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <canvas id="effect"></canvas>
+  <canvas id="effectCanvas"></canvas>
   <div class="label">Binary Star Tunnel</div>
   <script type="module">
-    import { mouse, noise2D, ColorPalettes } from '../lib/jazer-background-engine.js';
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-    const canvas = document.getElementById('effect');
-    const ctx = canvas.getContext('2d');
-    const palette = ColorPalettes.quantum || ColorPalettes.cyberpunk || ColorPalettes.jazer;
+    const canvas = document.getElementById('effectCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x02000a, 1);
 
-    const STAR_COUNT = 900;
-    const RING_COUNT = 30;
-    const orbitTrail = [];
-    const stars = [];
-    const rings = [];
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x030015, 0.05);
 
-    let width = 0;
-    let height = 0;
-    let lastTime = 0;
-    let time = 0;
+    const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 300);
+    camera.position.set(0, 0, 5);
 
-    class TunnelStar {
-      constructor() {
-        this.reset();
-      }
+    const pathPoints = [];
+    for (let i = 0; i < 40; i++) {
+      pathPoints.push(new THREE.Vector3(
+        Math.sin(i * 0.25) * 1.5,
+        Math.cos(i * 0.2) * 0.8,
+        -i * 2
+      ));
+    }
+    const path = new THREE.CatmullRomCurve3(pathPoints);
 
-      reset() {
-        this.depth = Math.random();
-        this.angle = Math.random() * Math.PI * 2;
-        this.radius = 80 + Math.random() * 320;
-        this.speed = 0.3 + Math.random() * 0.6;
-        this.color = palette[Math.floor(Math.random() * palette.length)] || '#00f5ff';
-      }
+    const tunnelGeometry = new THREE.TubeGeometry(path, 800, 0.85, 64, false);
+    const tunnelMaterial = new THREE.MeshBasicMaterial({
+      color: 0x0d1028,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.25
+    });
+    const tunnelMesh = new THREE.Mesh(tunnelGeometry, tunnelMaterial);
+    scene.add(tunnelMesh);
 
-      tick(dt) {
-        this.depth -= dt * this.speed * 0.4;
-        if (this.depth <= 0) {
-          this.reset();
-          this.depth += 1;
+    const tunnelGlowMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 }
+      },
+      vertexShader: /* glsl */`
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
-      }
-
-      draw() {
-        const perspective = 0.2 + Math.pow(1 - this.depth, 2.2);
-        const radius = this.radius * perspective;
-        const x = width / 2 + Math.cos(this.angle + time * 0.5) * radius + mouse.centeredX * this.depth * 220;
-        const y = height / 2 + Math.sin(this.angle + time * 0.35) * radius * 0.6 - this.depth * height * 0.55 + mouse.centeredY * this.depth * 100;
-        const size = Math.max(1, perspective * 3);
-        const alpha = Math.min(1, perspective * 1.2);
-        ctx.fillStyle = `${this.color}${Math.floor(alpha * 200).toString(16).padStart(2, '0')}`;
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = 8 * perspective;
-        ctx.beginPath();
-        ctx.arc(x, y, size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    class TunnelRing {
-      constructor(depth) {
-        this.reset(depth);
-      }
-
-      reset(depth) {
-        this.depth = depth;
-        this.tilt = (Math.random() - 0.5) * 0.25;
-        this.color = palette[Math.floor(Math.random() * palette.length)] || '#00f5ff';
-      }
-
-      tick(dt) {
-        this.depth -= dt * 0.5;
-        if (this.depth <= 0) {
-          this.reset(1);
+      `,
+      fragmentShader: /* glsl */`
+        uniform float uTime;
+        varying vec2 vUv;
+        void main() {
+          float glow = sin(vUv.y * 200.0 - uTime * 6.0) * 0.5 + 0.5;
+          glow = smoothstep(0.0, 1.0, glow);
+          gl_FragColor = vec4(vec3(0.2, 0.6, 1.0) * glow, glow * 0.4);
         }
-      }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const tunnelGlow = new THREE.Mesh(tunnelGeometry.clone(), tunnelGlowMaterial);
+    scene.add(tunnelGlow);
 
-      draw() {
-        const perspective = Math.pow(1 - this.depth, 1.4);
-        const radius = perspective * Math.max(width, height) * 0.7 + 40;
-        const alpha = Math.max(0, 0.35 - this.depth * 0.25);
-        ctx.strokeStyle = `${this.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`;
-        ctx.lineWidth = 1 + perspective * 1.5;
-        ctx.beginPath();
-        ctx.ellipse(width / 2, height / 2, radius, radius * 0.6, this.tilt, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+    const particleCount = 1200;
+    const particleGeometry = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleOffsets = new Float32Array(particleCount);
+    for (let i = 0; i < particleCount; i++) {
+      const t = Math.random();
+      const point = path.getPointAt(t);
+      const tangent = path.getTangentAt(t);
+      const normal = new THREE.Vector3().crossVectors(tangent, new THREE.Vector3(0, 1, 0)).normalize();
+      normal.applyAxisAngle(tangent, Math.random() * Math.PI * 2);
+      const radius = 1.2 + Math.random() * 2.0;
+      const pos = point.clone().add(normal.multiplyScalar(radius));
+      particlePositions.set([pos.x, pos.y, pos.z], i * 3);
+      particleOffsets[i] = Math.random();
     }
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    particleGeometry.setAttribute('offset', new THREE.BufferAttribute(particleOffsets, 1));
+    const particleMaterial = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */`
+        attribute float offset;
+        uniform float uTime;
+        varying float vAlpha;
+        void main() {
+          vec3 pos = position;
+          pos.z += mod(-uTime * 25.0 + offset * 200.0, 200.0);
+          vAlpha = fract(offset + uTime * 0.1);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = 30.0 / gl_Position.w;
+        }
+      `,
+      fragmentShader: /* glsl */`
+        varying float vAlpha;
+        void main() {
+          float d = length(gl_PointCoord - 0.5);
+          float alpha = smoothstep(0.5, 0.0, d) * vAlpha;
+          gl_FragColor = vec4(1.0, 0.9, 0.6, alpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const tunnelParticles = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(tunnelParticles);
 
-    function setup() {
-      for (let i = 0; i < STAR_COUNT; i++) {
-        stars.push(new TunnelStar());
-      }
-      for (let i = 0; i < RING_COUNT; i++) {
-        rings.push(new TunnelRing(i / RING_COUNT));
-      }
-      resize();
-      requestAnimationFrame(render);
-    }
+    const binaryGroup = new THREE.Group();
+    const primary = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 32), new THREE.MeshBasicMaterial({ color: 0xfff6de }));
+    const secondary = new THREE.Mesh(new THREE.SphereGeometry(0.28, 32, 32), new THREE.MeshBasicMaterial({ color: 0x9dd4ff }));
+    binaryGroup.add(primary, secondary);
+    scene.add(binaryGroup);
+
+    const orbitTrailGeometry = new THREE.BufferGeometry();
+    const orbitTrailCount = 200;
+    const orbitPositions = new Float32Array(orbitTrailCount * 3);
+    orbitTrailGeometry.setAttribute('position', new THREE.BufferAttribute(orbitPositions, 3));
+    const orbitTrailMaterial = new THREE.LineBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.4
+    });
+    const orbitTrail = new THREE.Line(orbitTrailGeometry, orbitTrailMaterial);
+    scene.add(orbitTrail);
+
+    const ringMaterial = new THREE.MeshBasicMaterial({
+      color: 0x1c2cf7,
+      transparent: true,
+      opacity: 0.25
+    });
+    const orbitalRing = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.9, 64), ringMaterial);
+    orbitalRing.rotation.x = Math.PI / 2;
+    binaryGroup.add(orbitalRing);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
     window.addEventListener('resize', resize);
+    resize();
 
-    function render(now) {
-      const dt = (now - lastTime) / 1000 || 0;
-      lastTime = now;
-      time += dt;
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
       mouse.update();
 
-      ctx.clearRect(0, 0, width, height);
-      drawBackground();
+      const t = (elapsed * 0.05) % 1;
+      const camPos = path.getPointAt(t);
+      const lookAhead = path.getPointAt((t + 0.01) % 1);
+      camera.position.copy(camPos);
+      camera.position.x += mouse.centeredX * 0.6;
+      camera.position.y += mouse.centeredY * 0.4;
+      camera.lookAt(lookAhead);
 
-      rings.forEach(ring => {
-        ring.tick(dt);
-        ring.draw();
-      });
+      tunnelGlowMaterial.uniforms.uTime.value = elapsed;
+      particleMaterial.uniforms.uTime.value = elapsed;
 
-      stars.forEach(star => {
-        star.tick(dt);
-        star.draw();
-      });
+      const orbitRadius = 0.9;
+      primary.position.set(Math.cos(elapsed * 1.5) * orbitRadius, Math.sin(elapsed * 1.5) * 0.4, 0);
+      secondary.position.set(Math.cos(elapsed * 1.5 + Math.PI) * orbitRadius, Math.sin(elapsed * 1.5 + Math.PI) * 0.4, 0);
 
-      drawBinarySystem();
-      drawScanlines();
-
-      requestAnimationFrame(render);
-    }
-
-    function drawBackground() {
-      const gradient = ctx.createRadialGradient(width / 2, height * 0.2, 100, width / 2, height / 2, Math.max(width, height));
-      gradient.addColorStop(0, '#040414');
-      gradient.addColorStop(1, '#000107');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, width, height);
-    }
-
-    function drawBinarySystem() {
-      const orbitRadius = Math.min(width, height) * 0.18;
-      const lift = height * 0.08;
-      const colors = [palette[0] || '#ff2aff', palette[1] || '#00f5ff'];
-
-      colors.forEach((color, index) => {
-        const angle = time * 0.8 + index * Math.PI;
-        const x = width / 2 + Math.cos(angle) * orbitRadius + mouse.centeredX * 40;
-        const y = height / 2 + Math.sin(angle) * orbitRadius * 0.6 + lift + mouse.centeredY * 30;
-
-        const halo = ctx.createRadialGradient(x, y, 0, x, y, 90);
-        halo.addColorStop(0, '#ffffff');
-        halo.addColorStop(0.4, color);
-        halo.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = halo;
-        ctx.beginPath();
-        ctx.arc(x, y, 90, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(x, y, 20, 0, Math.PI * 2);
-        ctx.fill();
-
-        orbitTrail.push({ x, y, color });
-      });
-
-      while (orbitTrail.length > 150) {
-        orbitTrail.shift();
+      for (let i = orbitTrailCount - 1; i > 0; i--) {
+        orbitPositions[i * 3] = orbitPositions[(i - 1) * 3];
+        orbitPositions[i * 3 + 1] = orbitPositions[(i - 1) * 3 + 1];
+        orbitPositions[i * 3 + 2] = orbitPositions[(i - 1) * 3 + 2];
       }
+      orbitPositions[0] = primary.position.x;
+      orbitPositions[1] = primary.position.y;
+      orbitPositions[2] = primary.position.z;
+      orbitTrailGeometry.attributes.position.needsUpdate = true;
 
-      orbitTrail.forEach((point, idx) => {
-        const alpha = 1 - idx / orbitTrail.length;
-        ctx.fillStyle = `${point.color}${Math.floor(alpha * 120).toString(16).padStart(2, '0')}`;
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, 2 + alpha * 4, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      tunnelMesh.rotation.z = Math.sin(elapsed * 0.1) * 0.05;
+      tunnelMesh.rotation.x = Math.sin(elapsed * 0.08) * 0.02;
+      tunnelGlow.rotation.copy(tunnelMesh.rotation);
 
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.ellipse(width / 2, height / 2 + lift, orbitRadius * 2, orbitRadius * 1.2, 0, 0, Math.PI * 2);
-      ctx.stroke();
+      renderer.render(scene, camera);
     }
 
-    function drawScanlines() {
-      ctx.save();
-      ctx.globalAlpha = 0.08;
-      ctx.fillStyle = '#04040a';
-      for (let y = 0; y < height; y += 3) {
-        ctx.fillRect(0, y, width, 1);
-      }
-      ctx.restore();
-
-      if (Math.random() < 0.04) {
-        const glitchY = Math.random() * height;
-        ctx.fillStyle = 'rgba(255,255,255,0.07)';
-        ctx.fillRect(0, glitchY, width, 2);
-      }
-    }
-
-    setup();
+    animate();
   </script>
 </body>
 </html>
