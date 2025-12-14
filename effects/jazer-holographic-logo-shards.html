@@ -5,405 +5,168 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Holographic Logo Shards</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #05031a, #010008 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      right: 2rem;
+      bottom: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Holographic Logo Shards</h1>
-      <p>The JaZeR logo appears as if made of floating glass shards, each slightly offset and shimmering.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Holographic Logo Shards</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010009, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x050022, 0.04);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
+    camera.position.set(0, 0, 5);
 
-    // Holographic logo shards properties
-    const center = { x: width / 2, y: height / 2 };
-    const logoShards = [];
-    const shardCount = 50; // Number of shards in the logo
-    const maxDistance = 100; // Maximum displacement from the original position
-    const rotationSpeed = 0.1;
-    const wobbleSpeed = 0.05;
-    const wobbleAmount = 5;
-    const shimmerIntensity = 0.2;
-
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
-
-    function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      
-      // Initialize holographic logo shards
-      initializeHolographicLogo();
-    }
-
-    function initializeHolographicLogo() {
-      logoShards.length = 0;
-      
-      // Create the JaZeR logo from individual shards
-      const text = "JaZeR";
-      const fontSize = 120;
-      ctx.font = `bold ${fontSize}px Arial`;
+    function createLogoTexture() {
+      const texCanvas = document.createElement('canvas');
+      texCanvas.width = texCanvas.height = 512;
+      const ctx = texCanvas.getContext('2d');
+      ctx.fillStyle = '#00000000';
+      ctx.fillRect(0, 0, 512, 512);
+      ctx.font = 'bold 320px "Inter", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      
-      // Calculate starting x position for the text
-      const textWidth = ctx.measureText(text).width;
-      const textStartX = center.x - textWidth / 2 + fontSize / 2;
-      const textY = center.y;
-      
-      // Create shards by sampling points along the text outline
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const charWidth = ctx.measureText(char).width;
-        const charX = textStartX + ctx.measureText(text.substring(0, i)).width + charWidth / 2;
-        
-        // Create a grid of points within each character
-        for (let x = -charWidth/2; x < charWidth/2; x += 15) {
-          for (let y = -fontSize/2; y < fontSize/2; y += 15) {
-            // Only create shards at points that are likely inside the character
-            if (Math.random() > 0.4) { // Randomly skip some points to create the right density
-              logoShards.push({
-                id: logoShards.length,
-                baseX: charX + x,
-                baseY: textY + y,
-                x: charX + x,
-                y: textY + y,
-                offsetX: (Math.random() - 0.5) * maxDistance,
-                offsetY: (Math.random() - 0.5) * maxDistance,
-                rotation: Math.random() * Math.PI * 2,
-                rotationSpeed: (Math.random() - 0.5) * rotationSpeed,
-                wobblePhase: Math.random() * Math.PI * 2,
-                wobbleSpeed: wobbleSpeed + Math.random() * 0.02,
-                wobbleAmount: wobbleAmount * (0.5 + Math.random()),
-                color: palette[(i + Math.floor(Math.random() * 3)) % palette.length],
-                size: 4 + Math.random() * 6,
-                opacity: 0.6 + Math.random() * 0.4,
-                shimmerPhase: Math.random() * Math.PI * 2,
-                shimmerSpeed: 0.5 + Math.random(),
-                pulsePhase: Math.random() * Math.PI * 2,
-                pulseSpeed: 0.5 + Math.random() * 0.5
-              });
-            }
-          }
-        }
-      }
+      const gradient = ctx.createLinearGradient(0, 0, 512, 0);
+      gradient.addColorStop(0, '#00f5ff');
+      gradient.addColorStop(1, '#ff2aff');
+      ctx.fillStyle = gradient;
+      ctx.shadowColor = '#ff84ff';
+      ctx.shadowBlur = 40;
+      ctx.fillText('JaZeR', 256, 270);
+      const texture = new THREE.CanvasTexture(texCanvas);
+      texture.flipY = false;
+      return texture;
     }
 
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
+    const holoPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(3, 1.5),
+      new THREE.MeshBasicMaterial({ map: createLogoTexture(), transparent: true })
+    );
+    scene.add(holoPlane);
 
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Clear with dark background
-      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#000020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw holographic logo shards
-      updateAndDrawHolographicLogo();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
+    const shardGeometry = new THREE.IcosahedronGeometry(0.15, 0);
+    const shardMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, wireframe: true });
+    const shardCount = 400;
+    const shards = new THREE.InstancedMesh(shardGeometry, shardMaterial, shardCount);
+    scene.add(shards);
+    const shardMatrix = new THREE.Matrix4();
+    const shardData = [];
+    for (let i = 0; i < shardCount; i++) {
+      const radius = 0.5 + Math.random() * 3.5;
+      const angle = Math.random() * Math.PI * 2;
+      const y = (Math.random() - 0.5) * 2;
+      shardMatrix.identity()
+        .makeRotationFromEuler(new THREE.Euler(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI))
+        .setPosition(Math.cos(angle) * radius, y, Math.sin(angle) * radius);
+      shards.setMatrixAt(i, shardMatrix);
+      shardData.push({ radius, angle, y, speed: 0.4 + Math.random() * 0.6 });
     }
 
-    function updateAndDrawHolographicLogo() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      for (const shard of logoShards) {
-        // Update shard position with floating/wobble effect
-        const wobbleX = Math.sin(time * shard.wobbleSpeed + shard.wobblePhase) * shard.wobbleAmount;
-        const wobbleY = Math.cos(time * shard.wobbleSpeed + shard.wobblePhase) * shard.wobbleAmount;
-        
-        // Apply offset based on time for a fluid movement
-        shard.x = shard.baseX + Math.sin(time * 0.3) * shard.offsetX * 0.2 + wobbleX;
-        shard.y = shard.baseY + Math.cos(time * 0.3) * shard.offsetY * 0.2 + wobbleY;
-        
-        // Apply rotation
-        shard.rotation += shard.rotationSpeed;
-        
-        // Calculate shimmer effect
-        const shimmer = Math.sin(time * shard.shimmerSpeed + shard.shimmerPhase) * shimmerIntensity * shard.opacity + shard.opacity;
-        const currentOpacity = Math.max(0, Math.min(1, shimmer));
-        
-        // Calculate pulse effect
-        const pulse = Math.sin(time * shard.pulseSpeed + shard.pulsePhase) * 0.2 + 1;
-        const currentSize = shard.size * pulse;
-        
-        // Apply mouse interaction - if mouse is near, attract shards
-        if (mouse.isInside) {
-          const mouseX = mouse.x * width;
-          const mouseY = mouse.y * height;
-          const dx = shard.x - mouseX;
-          const dy = shard.y - mouseY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          
-          if (dist < 150) {
-            const force = (150 - dist) / 150 * 2.0;
-            const angle = Math.atan2(dy, dx);
-            shard.x += Math.cos(angle) * force;
-            shard.y += Math.sin(angle) * force;
-          }
-        }
-        
-        // Draw the shard with glow effect
-        ctx.save();
-        ctx.translate(shard.x, shard.y);
-        ctx.rotate(shard.rotation);
-        
-        // Create a polygon shape as a shard
-        const numPoints = 3 + Math.floor(Math.random() * 4); // Triangle to pentagon
-        ctx.beginPath();
-        for (let i = 0; i < numPoints; i++) {
-          const angle = (i / numPoints) * Math.PI * 2;
-          const radius = currentSize;
-          const pointX = Math.cos(angle) * radius;
-          const pointY = Math.sin(angle) * radius;
-          
-          if (i === 0) {
-            ctx.moveTo(pointX, pointY);
-          } else {
-            ctx.lineTo(pointX, pointY);
-          }
-        }
-        ctx.closePath();
-        
-        // Create gradient for the shard
-        const gradient = ctx.createRadialGradient(
-          0, 0, 0,
-          0, 0, currentSize * 2
-        );
-        const colorHex = shard.color;
-        gradient.addColorStop(0, colorHex + 'FF');
-        gradient.addColorStop(0.7, colorHex + Math.floor(currentOpacity * 150).toString(16).padStart(2, '0'));
-        gradient.addColorStop(1, colorHex + '00');
-        
-        ctx.fillStyle = gradient;
-        ctx.strokeStyle = colorHex + Math.floor(currentOpacity * 200).toString(16).padStart(2, '0');
-        ctx.lineWidth = 1;
-        ctx.shadowColor = colorHex;
-        ctx.shadowBlur = 20;
-        
-        // Draw with glow
-        ctx.fill();
-        ctx.stroke();
-        
-        ctx.restore();
-      }
-      
-      // Draw connections between nearby shards for holographic effect
-      for (let i = 0; i < logoShards.length; i++) {
-        for (let j = i + 1; j < logoShards.length; j++) {
-          const shard1 = logoShards[i];
-          const shard2 = logoShards[j];
-          const dist = distance(shard1.x, shard1.y, shard2.x, shard2.y);
-          
-          if (dist < 40) {
-            const alpha = (40 - dist) / 40;
-            ctx.beginPath();
-            ctx.moveTo(shard1.x, shard1.y);
-            ctx.lineTo(shard2.x, shard2.y);
-            ctx.strokeStyle = shard1.color + Math.floor(alpha * 100).toString(16).padStart(2, '0');
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
-        }
-      }
-      
-      ctx.restore();
+    const shardTrailGeometry = new THREE.BufferGeometry();
+    const shardTrailCount = 800;
+    const shardTrailPositions = new Float32Array(shardTrailCount * 3);
+    for (let i = 0; i < shardTrailCount; i++) {
+      shardTrailPositions[i * 3] = (Math.random() - 0.5) * 6;
+      shardTrailPositions[i * 3 + 1] = (Math.random() - 0.5) * 3;
+      shardTrailPositions[i * 3 + 2] = (Math.random() - 0.5) * 6;
+    }
+    shardTrailGeometry.setAttribute('position', new THREE.BufferAttribute(shardTrailPositions, 3));
+    const shardTrails = new THREE.Points(shardTrailGeometry, new THREE.PointsMaterial({ size: 0.05, color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending }));
+    scene.add(shardTrails);
+
+    const glowTexture = (() => {
+      const glowCanvas = document.createElement('canvas');
+      glowCanvas.width = glowCanvas.height = 256;
+      const ctx = glowCanvas.getContext('2d');
+      const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+      gradient.addColorStop(0, 'rgba(255,255,255,0.8)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 256, 256);
+      return new THREE.CanvasTexture(glowCanvas);
+    })();
+    const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0x00f5ff, transparent: true }));
+    glowSprite.scale.set(5, 5, 1);
+    scene.add(glowSprite);
+
+    const clock = new THREE.Clock();
+
+    function resize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      holoPlane.rotation.y = Math.sin(elapsed * 0.5) * 0.2 + mouse.centeredX * 0.3;
+      holoPlane.rotation.x = Math.sin(elapsed * 0.4) * 0.1 + mouse.centeredY * 0.2;
+
+      for (let i = 0; i < shardCount; i++) {
+        const data = shardData[i];
+        data.angle += delta * data.speed;
+        data.y += Math.sin(elapsed * 0.5 + i) * 0.002;
+        shardMatrix.identity()
+          .makeRotationFromEuler(new THREE.Euler(elapsed + i, elapsed * 0.4 + i * 0.1, 0))
+          .setPosition(Math.cos(data.angle) * data.radius, data.y, Math.sin(data.angle) * data.radius);
+        shards.setMatrixAt(i, shardMatrix);
+      }
+      shards.instanceMatrix.needsUpdate = true;
+
+      glowSprite.position.set(Math.sin(elapsed * 0.3) * 0.4, Math.cos(elapsed * 0.2) * 0.4, 0);
+
+      camera.position.x = mouse.centeredX * 1.2;
+      camera.position.y = mouse.centeredY * 1.2;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

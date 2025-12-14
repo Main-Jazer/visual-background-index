@@ -5,498 +5,158 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Laser Fountain Columns</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 20%, #040217, #000007 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      right: 2rem;
+      bottom: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Laser Fountain Columns</h1>
-      <p>Vertical columns of pulsing laser beams shooting up and down from a floor plane with JaZeR text integrated.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Laser Fountain Columns</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010008, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x05001a, 0.06);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
+    camera.position.set(0, 1.5, 6);
 
-    // Laser fountain columns properties
-    const center = { x: width / 2, y: height / 2 };
-    const baseFloorY = height * 0.8;
-    const laserColumns = [];
-    const columnCount = 8;
-    const particles = [];
-    const particleCount = 300;
-    const pulseSpeed = 2; // Speed of laser pulse animation
-    const floorY = height * 0.75; // Floor plane
+    const pillarCount = 10;
+    const pillars = new THREE.Group();
+    scene.add(pillars);
+    const pillarGeometry = new THREE.CylinderGeometry(0.2, 0.2, 4, 16);
+    const pillarMaterial = new THREE.MeshBasicMaterial({ color: 0x0c1230, transparent: true, opacity: 0.4 });
+    for (let i = 0; i < pillarCount; i++) {
+      const pillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+      const angle = (i / pillarCount) * Math.PI * 2;
+      const radius = 2.5;
+      pillar.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+      pillars.add(pillar);
+    }
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    const laserGeometry = new THREE.BufferGeometry();
+    const laserCount = 1500;
+    const laserPositions = new Float32Array(laserCount * 3);
+    const laserVelocity = new Float32Array(laserCount);
+    const laserColor = new Float32Array(laserCount * 3);
+    const palette = [new THREE.Color('#00f5ff'), new THREE.Color('#ff2aff'), new THREE.Color('#ffd25b')];
+
+    for (let i = 0; i < laserCount; i++) {
+      laserPositions[i * 3] = (Math.random() - 0.5) * 5;
+      laserPositions[i * 3 + 1] = 0;
+      laserPositions[i * 3 + 2] = (Math.random() - 0.5) * 5;
+      laserVelocity[i] = 4 + Math.random() * 12;
+      const color = palette[i % palette.length];
+      laserColor[i * 3] = color.r;
+      laserColor[i * 3 + 1] = color.g;
+      laserColor[i * 3 + 2] = color.b;
+    }
+    laserGeometry.setAttribute('position', new THREE.BufferAttribute(laserPositions, 3));
+    laserGeometry.setAttribute('color', new THREE.BufferAttribute(laserColor, 3));
+    const laserMaterial = new THREE.ShaderMaterial({
+      vertexShader: /* glsl */`
+        attribute vec3 color; varying vec3 vColor;
+        void main(){
+          vColor = color;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+          gl_PointSize = 30.0 / mvPosition.w;
+        }
+      `,
+      fragmentShader: /* glsl */`
+        varying vec3 vColor;
+        void main(){
+          float dist = length(gl_PointCoord - vec2(0.5));
+          float alpha = smoothstep(0.5, 0.0, dist);
+          gl_FragColor = vec4(vColor, alpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      vertexColors: true
+    });
+    const lasers = new THREE.Points(laserGeometry, laserMaterial);
+    scene.add(lasers);
+
+    const baseRing = new THREE.Mesh(new THREE.RingGeometry(3, 3.2, 64), new THREE.MeshBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.2 }));
+    baseRing.rotation.x = -Math.PI / 2;
+    scene.add(baseRing);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      floorY = height * 0.8;
-      
-      // Initialize laser columns
-      initializeLaserColumns();
-      initializeParticles();
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function initializeLaserColumns() {
-      laserColumns.length = 0;
-      for (let i = 0; i < columnCount; i++) {
-        const x = map(i, 0, columnCount - 1, width * 0.1, width * 0.9);
-        
-        laserColumns.push({
-          id: i,
-          x: x,
-          floorY: floorY,
-          ceilingY: height * 0.1,
-          height: floorY - height * 0.1, // Full height from floor to ceiling
-          width: 30,
-          color: palette[i % palette.length],
-          pulsePhase: Math.random() * Math.PI * 2,
-          pulseSpeed: 1 + Math.random() * 2,
-          baseIntensity: 0.7 + Math.random() * 0.3,
-          beamParticles: [],
-          hasText: i === Math.floor(columnCount / 2) // Text in center column
-        });
-      }
-    }
-
-    function initializeParticles() {
-      particles.length = 0;
-      for (let i = 0; i < particleCount; i++) {
-        particles.push({
-          id: i,
-          x: width * 0.1 + Math.random() * width * 0.8,
-          y: floorY + Math.random() * 100, // Start near floor
-          vx: (Math.random() - 0.5) * 0.5,
-          vy: -Math.random() * 3 - 1, // Initially moving upward
-          size: 1 + Math.random() * 3,
-          color: palette[Math.floor(Math.random() * palette.length)],
-          life: 0,
-          maxLife: 2 + Math.random() * 2,
-          isAlive: true
-        });
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Clear with dark background
-      const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(0.7, '#000020');
-      bgGradient.addColorStop(1, '#100020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Draw floor
-      drawFloor();
-
-      // Update and draw laser fountain columns
-      updateAndDrawLaserColumns();
-
-      // Update and draw particles
-      updateAndDrawParticles();
-
-      // Draw JaZeR text integrated with laser columns
-      drawJaZeRText();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function drawFloor() {
-      // Draw floor plane with grid
-      const floorGradient = ctx.createLinearGradient(0, floorY, 0, height);
-      floorGradient.addColorStop(0, '#001133');
-      floorGradient.addColorStop(1, '#000022');
-      
-      ctx.fillStyle = floorGradient;
-      ctx.fillRect(0, floorY, width, height - floorY);
-      
-      // Add grid pattern to floor
-      ctx.strokeStyle = '#00f5ff44';
-      ctx.lineWidth = 1;
-      
-      // Draw horizontal grid lines
-      for (let y = floorY; y < height; y += 20) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-      
-      // Draw vertical grid lines
-      for (let x = 0; x < width; x += 20) {
-        ctx.beginPath();
-        ctx.moveTo(x, floorY);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-    }
-
-    function updateAndDrawLaserColumns() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      for (const column of laserColumns) {
-        // Calculate pulse effect
-        const pulse = Math.sin(time * column.pulseSpeed + column.pulsePhase) * 0.3 + 0.7;
-        const currentIntensity = column.baseIntensity * pulse;
-        
-        // Create pulsing laser beam
-        const beamGradient = ctx.createLinearGradient(column.x, column.ceilingY, column.x, column.floorY);
-        beamGradient.addColorStop(0, column.color + '00');
-        beamGradient.addColorStop(0.2, column.color + Math.floor(currentIntensity * 200).toString(16).padStart(2, '0'));
-        beamGradient.addColorStop(0.5, column.color + Math.floor(currentIntensity * 255).toString(16).padStart(2, '0'));
-        beamGradient.addColorStop(0.8, column.color + Math.floor(currentIntensity * 200).toString(16).padStart(2, '0'));
-        beamGradient.addColorStop(1, column.color + '00');
-        
-        // Draw the main laser column
-        ctx.fillStyle = beamGradient;
-        ctx.fillRect(
-          column.x - column.width/2, 
-          column.ceilingY, 
-          column.width, 
-          column.floorY - column.ceilingY
-        );
-        
-        // Add glow effect
-        ctx.shadowColor = column.color;
-        ctx.shadowBlur = 30;
-        ctx.fillRect(
-          column.x - column.width/2, 
-          column.ceilingY, 
-          column.width, 
-          column.floorY - column.ceilingY
-        );
-        
-        // Draw top and bottom source points with pulsing
-        const sourceSize = 8 * pulse;
-        
-        // Top source
-        ctx.beginPath();
-        ctx.arc(column.x, column.ceilingY, sourceSize, 0, Math.PI * 2);
-        ctx.fillStyle = column.color;
-        ctx.shadowColor = column.color;
-        ctx.shadowBlur = 20;
-        ctx.fill();
-        
-        // Bottom source
-        ctx.beginPath();
-        ctx.arc(column.x, column.floorY, sourceSize, 0, Math.PI * 2);
-        ctx.fillStyle = column.color;
-        ctx.shadowColor = column.color;
-        ctx.shadowBlur = 20;
-        ctx.fill();
-      }
-      
-      // Draw connecting laser arcs between columns
-      for (let i = 0; i < laserColumns.length - 1; i++) {
-        const col1 = laserColumns[i];
-        const col2 = laserColumns[i + 1];
-        
-        // Only draw connections occasionally
-        if (Math.random() < 0.05) {
-          ctx.beginPath();
-          ctx.moveTo(col1.x, col1.floorY);
-          ctx.quadraticCurveTo(
-            (col1.x + col2.x) / 2, 
-            Math.min(col1.floorY, col2.floorY) - 50, 
-            col2.x, 
-            col2.floorY
-          );
-          
-          ctx.strokeStyle = col1.color + '66';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          
-          // Add glow
-          ctx.shadowColor = col1.color;
-          ctx.shadowBlur = 20;
-          ctx.stroke();
-        }
-      }
-      
-      ctx.restore();
-    }
-
-    function updateAndDrawParticles() {
-      for (const particle of particles) {
-        if (!particle.isAlive) {
-          // Reset dead particles
-          particle.x = laserColumns[Math.floor(Math.random() * laserColumns.length)].x + (Math.random() - 0.5) * 20;
-          particle.y = floorY;
-          particle.vx = (Math.random() - 0.5) * 2;
-          particle.vy = -Math.random() * 4 - 1;
-          particle.life = 0;
-          particle.isAlive = true;
-        }
-        
-        // Apply physics to particles
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-        particle.vy += 0.1; // Gravity
-        particle.life += 1/60;
-        
-        // Apply slight noise for organic motion
-        particle.x += noise2D(particle.x * 0.01, particle.y * 0.01 + time * 2) * 0.5;
-        
-        // Reset particle if it falls below floor or lives too long
-        if (particle.y > floorY + 50 || particle.life > particle.maxLife) {
-          particle.isAlive = false;
-        }
-        
-        // Draw particle with glow
-        if (particle.isAlive) {
-          ctx.save();
-          ctx.globalCompositeOperation = 'lighter';
-          
-          ctx.beginPath();
-          ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-          ctx.fillStyle = particle.color;
-          ctx.shadowColor = particle.color;
-          ctx.shadowBlur = 10;
-          ctx.fill();
-          
-          ctx.restore();
-        }
-      }
-    }
-
-    function drawJaZeRText() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      // Draw JaZeR text in the center column
-      const centerX = width / 2;
-      const centerY = height / 2;
-      
-      // Use the central column for the text
-      const centerColumn = laserColumns[Math.floor(laserColumns.length / 2)];
-      
-      ctx.font = 'bold 60px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      // Draw text with pulsing effect synchronized to laser columns
-      const textPulse = Math.sin(time * 1.5) * 0.2 + 0.8;
-      const currentSize = 60 * textPulse;
-      
-      ctx.font = `bold ${currentSize}px Arial`;
-      
-      // Apply gradient based on the center column's color
-      const textGradient = ctx.createLinearGradient(
-        centerX - 100, centerY,
-        centerX + 100, centerY
-      );
-      textGradient.addColorStop(0, centerColumn.color);
-      textGradient.addColorStop(1, palette[1]);
-      
-      ctx.fillStyle = textGradient;
-      ctx.shadowColor = centerColumn.color;
-      ctx.shadowBlur = 30;
-      ctx.fillText('JaZeR', centerX, centerY);
-      
-      // Add outline for readability
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 1;
-      ctx.strokeText('JaZeR', centerX, centerY);
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      const pos = laserGeometry.attributes.position.array;
+      for (let i = 0; i < laserCount; i++) {
+        pos[i * 3 + 1] += laserVelocity[i] * delta;
+        if (pos[i * 3 + 1] > 6) {
+          pos[i * 3 + 1] = 0;
+          const angle = Math.random() * Math.PI * 2;
+          const radius = 2.5;
+          pos[i * 3] = Math.cos(angle) * radius;
+          pos[i * 3 + 2] = Math.sin(angle) * radius;
+        }
+      }
+      laserGeometry.attributes.position.needsUpdate = true;
+
+      pillars.rotation.y = elapsed * 0.1;
+      baseRing.rotation.z = elapsed * 0.3;
+
+      camera.position.x = Math.sin(elapsed * 0.2) * 0.6 + mouse.centeredX * 0.8;
+      camera.position.y = 1.5 + Math.sin(elapsed * 0.25) * 0.2 + mouse.centeredY * 0.5;
+      camera.lookAt(0, 0.5, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

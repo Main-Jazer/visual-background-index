@@ -3,412 +3,199 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JaZeR Zero-Gravity Logo Cloud</title>
+  <title>JaZeR Zero Gravity Logo Cloud</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #040316, #010008 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      left: 2rem;
+      top: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Zero-Gravity Logo Cloud</h1>
-      <p>Hundreds of JaZeR logos floating in zero gravity like confetti with physics-based rotation and movement.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Zero Gravity Logo Cloud</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010009, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x050013, 0.04);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
+    camera.position.set(0, 0, 6);
 
-    // Zero-gravity logo cloud properties
-    const center = { x: width / 2, y: height / 2 };
-    const logos = [];
-    const logoCount = 200; // Number of JaZeR logos in the cloud
-    const gravity = 0; // Zero gravity
-    const logoSize = 40;
-    const rotationDamping = 0.98; // How much rotation slows down
-    const velocityDamping = 0.99; // How much velocity slows down
-    const mouseInfluenceRadius = 150;
-    const mouseRepulsionForce = 200;
+    function createLetterTexture(char, color) {
+      const letterCanvas = document.createElement('canvas');
+      letterCanvas.width = letterCanvas.height = 256;
+      const ctx = letterCanvas.getContext('2d');
+      ctx.fillStyle = 'rgba(0,0,0,0)';
+      ctx.fillRect(0, 0, 256, 256);
+      const gradient = ctx.createLinearGradient(0, 0, 256, 256);
+      gradient.addColorStop(0, color);
+      gradient.addColorStop(1, '#ffffff');
+      ctx.fillStyle = gradient;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 30;
+      ctx.font = 'bold 180px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(char, 128, 140);
+      const texture = new THREE.CanvasTexture(letterCanvas);
+      texture.needsUpdate = true;
+      texture.flipY = false;
+      return texture;
+    }
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    const letters = ['J', 'A', 'Z', 'E', 'R'];
+    const palette = ['#00f5ff', '#ff2aff', '#ffc857', '#6c63ff', '#ff8ad3'];
+    const letterPlanes = [];
+    const planeGeometry = new THREE.PlaneGeometry(1, 1);
+    letters.forEach((char, index) => {
+      const texture = createLetterTexture(char, palette[index]);
+      const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false });
+      for (let i = 0; i < 15; i++) {
+        const mesh = new THREE.Mesh(planeGeometry, material.clone());
+        mesh.position.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 6);
+        mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        mesh.scale.setScalar(0.7 + Math.random() * 0.6);
+        mesh.material.opacity = 0.4 + Math.random() * 0.5;
+        scene.add(mesh);
+        letterPlanes.push({ mesh, charIndex: index, drift: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5) });
+      }
+    });
+
+    const connectorMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
+    const connectionLines = [];
+    for (let i = 0; i < 12; i++) {
+      const lineGeometry = new THREE.BufferGeometry();
+      lineGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+      const line = new THREE.Line(lineGeometry, connectorMaterial);
+      scene.add(line);
+      connectionLines.push(line);
+    }
+
+    const particleGeometry = new THREE.BufferGeometry();
+    const particleCount = 1500;
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleVelocity = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      particlePositions[i * 3] = (Math.random() - 0.5) * 18;
+      particlePositions[i * 3 + 1] = (Math.random() - 0.5) * 12;
+      particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 18;
+      particleVelocity[i * 3] = (Math.random() - 0.5) * 0.1;
+      particleVelocity[i * 3 + 1] = (Math.random() - 0.5) * 0.1;
+      particleVelocity[i * 3 + 2] = (Math.random() - 0.5) * 0.1;
+    }
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 0.07,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.4,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    scene.add(particles);
+
+    const glowGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+    const glowMaterial = new THREE.MeshBasicMaterial({ color: 0x8f6fff, transparent: true, opacity: 0.2, wireframe: true });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    scene.add(glow);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      
-      // Initialize logo cloud
-      initializeLogoCloud();
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function initializeLogoCloud() {
-      logos.length = 0;
-      for (let i = 0; i < logoCount; i++) {
-        logos.push({
-          id: i,
-          x: Math.random() * width,
-          y: Math.random() * height,
-          vx: (Math.random() - 0.5) * 4,
-          vy: (Math.random() - 0.5) * 4,
-          rotation: Math.random() * Math.PI * 2,
-          rotationSpeed: (Math.random() - 0.5) * 0.2,
-          color: palette[Math.floor(Math.random() * palette.length)],
-          size: logoSize * (0.7 + Math.random() * 0.6), // Random size variation
-          originalSize: logoSize * (0.7 + Math.random() * 0.6),
-          pulsePhase: Math.random() * Math.PI * 2,
-          pulseSpeed: 2 + Math.random() * 2,
-          opacity: 0.7 + Math.random() * 0.3,
-          scale: 1,
-          originalX: Math.random() * width,
-          originalY: Math.random() * height,
-          noiseOffsetX: Math.random() * 1000,
-          noiseOffsetY: Math.random() * 1000,
-          trail: [],
-          trailLength: 5
-        });
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Clear with dark background
-      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#000020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw zero-gravity logo cloud
-      updateAndDrawLogoCloud();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function updateAndDrawLogoCloud() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      for (const logo of logos) {
-        // Add physics: apply forces
-        // Apply random forces for organic movement
-        logo.vx += (Math.random() - 0.5) * 0.1;
-        logo.vy += (Math.random() - 0.5) * 0.1;
-        
-        // Apply rotation
-        logo.rotation += logo.rotationSpeed;
-        
-        // Apply noise for organic movement
-        const noiseForceX = noise2D(
-          logo.x * 0.005 + time * 0.1,
-          logo.noiseOffsetX
-        ) * 0.3;
-        const noiseForceY = noise2D(
-          logo.y * 0.005 + time * 0.1,
-          logo.noiseOffsetY
-        ) * 0.3;
-        
-        logo.vx += noiseForceX;
-        logo.vy += noiseForceY;
-        
-        // Apply mouse repulsion if mouse is inside
-        if (mouse.isInside) {
-          const mouseX = mouse.x * width;
-          const mouseY = mouse.y * height;
-          const dx = logo.x - mouseX;
-          const dy = logo.y - mouseY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          
-          if (dist < mouseInfluenceRadius) {
-            const force = (mouseInfluenceRadius - dist) / mouseInfluenceRadius * mouseRepulsionForce;
-            const angle = Math.atan2(dy, dx);
-            
-            logo.vx += Math.cos(angle) * force * dt;
-            logo.vy += Math.sin(angle) * force * dt;
-            
-            // Also apply rotational force
-            logo.rotationSpeed += Math.sin(angle) * force * 0.001;
-          }
-        }
-        
-        // Apply damping to velocity and rotation
-        logo.vx *= velocityDamping;
-        logo.vy *= velocityDamping;
-        logo.rotationSpeed *= rotationDamping;
-        
-        // Update position
-        logo.x += logo.vx;
-        logo.y += logo.vy;
-        
-        // Boundary wrapping - if a logo goes off-screen, wrap it to the opposite side
-        if (logo.x < -logo.size) logo.x = width + logo.size;
-        if (logo.x > width + logo.size) logo.x = -logo.size;
-        if (logo.y < -logo.size) logo.y = height + logo.size;
-        if (logo.y > height + logo.size) logo.y = -logo.size;
-        
-        // Add current position to trail
-        logo.trail.push({ x: logo.x, y: logo.y });
-        if (logo.trail.length > logo.trailLength) {
-          logo.trail.shift();
-        }
-        
-        // Calculate pulsing effect
-        const pulse = Math.sin(time * logo.pulseSpeed + logo.pulsePhase) * 0.2 + 0.8;
-        logo.scale = pulse;
-        
-        // Draw logo with trail
-        ctx.save();
-        ctx.translate(logo.x, logo.y);
-        ctx.rotate(logo.rotation);
-        ctx.scale(logo.scale, logo.scale);
-        
-        // Draw the JaZeR text
-        ctx.font = `bold ${logo.size}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = logo.color;
-        ctx.shadowColor = logo.color;
-        ctx.shadowBlur = 15;
-        ctx.fillText('JaZeR', 0, 0);
-        
-        // Add outline for more definition
-        ctx.strokeStyle = logo.color + '88';
-        ctx.lineWidth = 1;
-        ctx.strokeText('JaZeR', 0, 0);
-        
-        // Draw trail
-        for (let i = 1; i < logo.trail.length; i++) {
-          const point = logo.trail[i];
-          const prevPoint = logo.trail[i-1];
-          const trailAlpha = i / logo.trail.length * logo.opacity * 0.5;
-          
-          ctx.beginPath();
-          ctx.moveTo(prevPoint.x, prevPoint.y);
-          ctx.lineTo(point.x, point.y);
-          ctx.strokeStyle = logo.color + Math.floor(trailAlpha * 100).toString(16).padStart(2, '0');
-          ctx.lineWidth = logo.size * 0.1;
-          ctx.stroke();
-        }
-        
-        ctx.restore();
-      }
-      
-      // Occasionally form group patterns
-      if (Math.floor(time) % 10 === 0 && time % 1 < 0.1) { // Every 10 seconds, for 0.1 seconds
-        // Briefly form a larger JaZeR pattern with logos
-        for (const logo of logos) {
-          // Apply forces to create a pattern
-          const centerX = width * (0.5 + Math.sin(time * 0.1) * 0.1);
-          const centerY = height * (0.5 + Math.cos(time * 0.1) * 0.1);
-          const angleToCenter = Math.atan2(logo.y - centerY, logo.x - centerX);
-          const distanceToCenter = distance(logo.x, logo.y, centerX, centerY);
-          
-          // Create circular formation
-          if (distanceToCenter < 300) {
-            const targetAngle = angleToCenter + Math.PI/2;
-            const targetX = centerX + Math.cos(targetAngle) * 200;
-            const targetY = centerY + Math.sin(targetAngle) * 200;
-            
-            logo.vx += (targetX - logo.x) * 0.005;
-            logo.vy += (targetY - logo.y) * 0.005;
-            
-            // Rotate to face center
-            logo.rotation = angleToCenter + Math.PI/2;
-          }
-        }
-      }
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      letterPlanes.forEach(item => {
+        const { mesh, drift } = item;
+        mesh.position.addScaledVector(drift, delta * 0.2);
+        mesh.position.x += Math.sin(elapsed * 0.3 + item.charIndex) * 0.001;
+        mesh.rotation.x += delta * 0.1 * (item.charIndex + 1);
+        mesh.rotation.y += delta * 0.13;
+        const radius = 4;
+        mesh.position.x = THREE.MathUtils.euclideanModulo(mesh.position.x + radius, radius * 2) - radius;
+        mesh.position.y = THREE.MathUtils.euclideanModulo(mesh.position.y + radius, radius * 2) - radius;
+        mesh.position.z = THREE.MathUtils.euclideanModulo(mesh.position.z + radius, radius * 2) - radius;
+      });
+
+      connectionLines.forEach((line, index) => {
+        const a = letterPlanes[(index * 2) % letterPlanes.length].mesh.position;
+        const b = letterPlanes[(index * 2 + 1) % letterPlanes.length].mesh.position;
+        const positions = line.geometry.attributes.position.array;
+        positions[0] = a.x; positions[1] = a.y; positions[2] = a.z;
+        positions[3] = b.x; positions[4] = b.y; positions[5] = b.z;
+        line.geometry.attributes.position.needsUpdate = true;
+      });
+
+      const posArray = particleGeometry.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        posArray[i * 3] += particleVelocity[i * 3] * delta * 30;
+        posArray[i * 3 + 1] += particleVelocity[i * 3 + 1] * delta * 30;
+        posArray[i * 3 + 2] += particleVelocity[i * 3 + 2] * delta * 30;
+        if (posArray[i * 3] > 9) posArray[i * 3] = -9;
+        if (posArray[i * 3] < -9) posArray[i * 3] = 9;
+        if (posArray[i * 3 + 1] > 6) posArray[i * 3 + 1] = -6;
+        if (posArray[i * 3 + 1] < -6) posArray[i * 3 + 1] = 6;
+        if (posArray[i * 3 + 2] > 9) posArray[i * 3 + 2] = -9;
+        if (posArray[i * 3 + 2] < -9) posArray[i * 3 + 2] = 9;
+      }
+      particleGeometry.attributes.position.needsUpdate = true;
+
+      glow.scale.setScalar(2.2 + Math.sin(elapsed * 0.8) * 0.3);
+      glow.rotation.y += delta * 0.2;
+
+      camera.position.x = Math.sin(elapsed * 0.15) * 0.6 + mouse.centeredX * 0.9;
+      camera.position.y = Math.sin(elapsed * 0.2) * 0.4 + mouse.centeredY * 0.6;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

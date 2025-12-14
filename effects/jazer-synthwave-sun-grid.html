@@ -5,475 +5,222 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Synthwave Sun Grid</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 10%, #060318, #010009 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      left: 2rem;
+      bottom: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Synthwave Sun Grid</h1>
-      <p>Big retro sun with horizontal scanlines and grid floor leading toward it, with JaZeR text integrated.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Synthwave Sun Grid</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010008, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.vapor; // Use vapor palette for synthwave feel
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x050015, 0.05);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 300);
+    camera.position.set(0, 1.5, 5);
 
-    // Synthwave sun grid properties
-    const center = { x: width / 2, y: height / 2 };
-    const horizonY = height * 0.7;
-    const sun = {
-      x: width * 0.8,
-      y: height * 0.3,
-      radius: 100,
-      pulsePhase: 0
-    };
-    const gridLines = [];
-    const gridSpacing = 40;
-    const scanlines = [];
-    const scanlineSpacing = 3;
-    const mountains = [];
-    const mountainCount = 8;
-
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
-
-    function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      horizonY = height * 0.7;
-      sun.x = width * 0.8;
-      sun.y = height * 0.3;
-      
-      // Initialize grid
-      initializeGrid();
-      initializeScanlines();
-      initializeMountains();
-    }
-
-    function initializeGrid() {
-      gridLines.length = 0;
-      
-      // Create perspective grid lines
-      for (let y = horizonY; y < height; y += gridSpacing) {
-        const perspective = map(y, horizonY, height, 0.1, 1);
-        const lineWidth = width * perspective;
-        const offsetX = map(y, horizonY, height, width/2, 0); // Convergence effect
-        
-        gridLines.push({
-          id: gridLines.length,
-          y: y,
-          width: lineWidth,
-          offsetX: offsetX,
-          perspective: perspective,
-          baseY: y
-        });
-      }
-    }
-
-    function initializeScanlines() {
-      scanlines.length = 0;
-      for (let y = 0; y < height; y += scanlineSpacing) {
-        scanlines.push({
-          id: y,
-          y: y,
-          alpha: 0.1 + Math.random() * 0.2
-        });
-      }
-    }
-
-    function initializeMountains() {
-      mountains.length = 0;
-      for (let i = 0; i < mountainCount; i++) {
-        mountains.push({
-          id: i,
-          x: (i / mountainCount) * width,
-          width: width / mountainCount * (0.8 + Math.random() * 0.4),
-          height: 50 + Math.random() * 150,
-          color: palette[i % palette.length],
-          offset: Math.random() * 1000
-        });
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Clear with synthwave gradient background
-      const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-      bgGradient.addColorStop(0, '#8A2BE2'); // Purple at top
-      bgGradient.addColorStop(0.5, '#0000FF'); // Blue in middle
-      bgGradient.addColorStop(1, '#FF6EC7'); // Pink at bottom
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Draw mountains
-      for (const mountain of mountains) {
-        const waveOffset = noise2D(time * 0.2, mountain.offset) * 10;
-        const color = palette[mountain.id % palette.length];
-        
-        ctx.beginPath();
-        ctx.moveTo(mountain.x - mountain.width/2, height);
-        ctx.lineTo(mountain.x, height - mountain.height + waveOffset);
-        ctx.lineTo(mountain.x + mountain.width/2, height);
-        ctx.closePath();
-        
-        // Create gradient for mountain
-        const mountainGradient = ctx.createLinearGradient(
-          mountain.x, height - mountain.height,
-          mountain.x, height
-        );
-        mountainGradient.addColorStop(0, color + '44');
-        mountainGradient.addColorStop(1, color + '22');
-        
-        ctx.fillStyle = mountainGradient;
-        ctx.fill();
-        
-        // Add glow effect
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 20;
-        ctx.fill();
-      }
-
-      // Draw grid floor with perspective
-      for (const gridLine of gridLines) {
-        // Apply movement to simulate motion
-        const waveEffect = Math.sin(gridLine.baseY * 0.02 + time * 2) * 5;
-        const currentY = gridLine.y + waveEffect;
-        
-        // Reset if line moves too far up
-        if (currentY < horizonY - 100) {
-          gridLine.y = horizonY + gridLines.length * gridSpacing - gridSpacing * Math.floor(gridLine.y / gridSpacing);
-          continue;
+    const sunMaterial = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+      fragmentShader: /* glsl */`
+        uniform float uTime;
+        varying vec2 vUv;
+        void main(){
+          float stripes = step(0.0, sin((vUv.y - 0.5) * 80.0 + uTime * 2.0));
+          vec3 color = mix(vec3(1.0,0.5,0.1), vec3(1.0,0.1,0.7), vUv.y);
+          color *= 0.7 + 0.3 * stripes;
+          gl_FragColor = vec4(color, 0.95);
         }
-        
-        // Calculate perspective
-        const perspective = map(currentY, horizonY, height, 0.1, 1);
-        const currentWidth = gridLine.width * perspective;
-        const currentOffset = gridLine.offsetX * (1 - perspective);
-        
-        // Apply horizontal wave effect to grid line
-        const hWave = Math.sin(time * 2 + gridLine.id * 0.3) * 5 * perspective;
-        
-        ctx.beginPath();
-        ctx.moveTo(width/2 - currentWidth/2 + currentOffset + hWave, currentY);
-        ctx.lineTo(width/2 + currentWidth/2 + currentOffset + hWave, currentY);
-        
-        // Set line color based on synthwave palette
-        const lineColor = '#00FFFF'; // Cyan for synthwave grid
-        ctx.strokeStyle = lineColor + '44';
-        ctx.lineWidth = 1 * perspective;
-        ctx.stroke();
-        
-        // Add glow effect to grid lines
-        ctx.shadowColor = lineColor;
-        ctx.shadowBlur = 10 * perspective;
-        ctx.stroke();
-      }
+      `,
+      transparent: true
+    });
+    const sun = new THREE.Mesh(new THREE.CircleGeometry(1.8, 64), sunMaterial);
+    sun.position.set(0, 2.5, -8);
+    scene.add(sun);
 
-      // Draw sun with pulsing and glow effect
-      drawSun();
+    const sunGlowTexture = (() => {
+      const glowCanvas = document.createElement('canvas');
+      glowCanvas.width = glowCanvas.height = 512;
+      const ctx = glowCanvas.getContext('2d');
+      const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+      gradient.addColorStop(0, 'rgba(255,255,255,0.8)');
+      gradient.addColorStop(0.5, 'rgba(255,96,200,0.4)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 512, 512);
+      return new THREE.CanvasTexture(glowCanvas);
+    })();
+    const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunGlowTexture, transparent: true }));
+    sunGlow.scale.set(6, 6, 1);
+    sun.add(sunGlow);
 
-      // Draw retro scanlines effect
-      drawScanlines();
+    const gridGeometry = new THREE.PlaneGeometry(20, 40, 200, 400);
+    const gridMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColorA: { value: new THREE.Color(0x00f5ff) },
+        uColorB: { value: new THREE.Color(0xff62c3) }
+      },
+      vertexShader: /* glsl */`
+        uniform float uTime;
+        varying vec2 vUv;
+        varying float vHeight;
+        void main(){
+          vUv = uv;
+          vec3 pos = position;
+          float ripple = sin(pos.y * 1.5 + uTime * 1.5) * 0.1;
+          pos.z += ripple;
+          pos.y += sin(pos.x * 2.0 + uTime) * 0.05;
+          vHeight = ripple;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos,1.0);
+        }
+      `,
+      fragmentShader: /* glsl */`
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        uniform float uTime;
+        varying vec2 vUv;
+        varying float vHeight;
+        float grid(float v, float scale){
+          float line = abs(fract(v * scale) - 0.5);
+          return smoothstep(0.48, 0.5, line);
+        }
+        void main(){
+          float gridX = grid(vUv.x, 25.0);
+          float gridY = grid(vUv.y + uTime * 0.2, 12.0);
+          vec3 color = mix(uColorA, uColorB, vUv.x);
+          color *= gridX + gridY;
+          color += vec3(0.05, 0.1, 0.3) * vHeight;
+          gl_FragColor = vec4(color, clamp(gridX + gridY, 0.0, 1.0));
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const grid = new THREE.Mesh(gridGeometry, gridMaterial);
+    grid.rotation.x = -Math.PI / 2.4;
+    grid.position.y = -1.2;
+    grid.position.z = -5;
+    scene.add(grid);
 
-      // Draw JaZeR text integrated into the scene
-      drawJaZeRText();
+    const horizonGeometry = new THREE.PlaneGeometry(30, 12, 60, 20);
+    const horizonMaterial = new THREE.MeshBasicMaterial({ color: 0x0f1230, wireframe: true, transparent: true, opacity: 0.15 });
+    const horizon = new THREE.Mesh(horizonGeometry, horizonMaterial);
+    horizon.rotation.x = -Math.PI / 6;
+    horizon.position.set(0, 0.5, -15);
+    scene.add(horizon);
 
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
+    const starGeometry = new THREE.BufferGeometry();
+    const starCount = 800;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      starPositions[i * 3] = (Math.random() - 0.5) * 30;
+      starPositions[i * 3 + 1] = Math.random() * 20;
+      starPositions[i * 3 + 2] = -Math.random() * 30;
     }
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({
+      size: 0.06,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.5,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    }));
+    scene.add(stars);
 
-    function drawSun() {
-      // Calculate pulsing effect for the sun
-      const pulse = Math.sin(time * 1.5) * 0.1 + 1;
-      const currentRadius = sun.radius * pulse;
-      
-      // Create sun gradient
-      const sunGradient = ctx.createRadialGradient(
-        sun.x, sun.y, 0,
-        sun.x, sun.y, currentRadius * 1.5
-      );
-      sunGradient.addColorStop(0, '#FFFF00'); // Yellow center
-      sunGradient.addColorStop(0.5, '#FF6EC7'); // Pink middle
-      sunGradient.addColorStop(1, '#00F5FF'); // Cyan edge
-      
-      // Draw sun
-      ctx.beginPath();
-      ctx.arc(sun.x, sun.y, currentRadius, 0, Math.PI * 2);
-      ctx.fillStyle = sunGradient;
-      ctx.shadowColor = '#FFFF00';
-      ctx.shadowBlur = 60;
-      ctx.fill();
-      
-      // Draw sun rays
-      ctx.save();
-      ctx.translate(sun.x, sun.y);
-      
-      for (let i = 0; i < 16; i++) {
-        const angle = (i / 16) * Math.PI * 2 + time * 0.2;
-        const rayLength = currentRadius * (1.5 + Math.sin(time * 3 + i) * 0.2);
-        const rayThickness = 2 + Math.sin(time * 4 + i) * 1;
-        
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(angle) * rayLength, Math.sin(angle) * rayLength);
-        ctx.strokeStyle = '#FF6EC788'; // Semi-transparent pink
-        ctx.lineWidth = rayThickness;
-        ctx.stroke();
-        
-        // Add glow to rays
-        ctx.shadowColor = '#FF6EC7';
-        ctx.shadowBlur = 20;
-        ctx.stroke();
-      }
-      
-      ctx.restore();
-    }
-
-    function drawScanlines() {
-      // Draw retro scanlines
-      for (const scanline of scanlines) {
-        // Apply subtle movement to scanlines
-        const scanlineOffset = noise2D(scanline.id * 0.01, time * 2) * 2;
-        const alpha = (Math.sin(time * 3 + scanline.id * 0.1) * 0.1 + 0.15) * scanline.alpha;
-        
-        ctx.fillStyle = '#00FFFF' + Math.floor(alpha * 100).toString(16).padStart(2, '0');
-        ctx.fillRect(0, scanline.y + scanlineOffset, width, 1);
-      }
-    }
-
-    function drawJaZeRText() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      // Draw "JaZeR" text floating near the sun
-      const textX = sun.x - sun.radius - 100;
-      const textY = sun.y;
-      const textAlpha = Math.sin(time * 2) * 0.2 + 0.8;
-      
-      ctx.font = 'bold 40px Arial';
+    const neonTextTexture = (() => {
+      const textCanvas = document.createElement('canvas');
+      textCanvas.width = 1024;
+      textCanvas.height = 256;
+      const ctx = textCanvas.getContext('2d');
+      ctx.fillStyle = '#00000000';
+      ctx.fillRect(0, 0, 1024, 256);
+      ctx.font = 'bold 160px "Inter", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      
-      // Draw each character with different colors
-      const text = "JaZeR";
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const color = palette[i % palette.length];
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 20;
-        ctx.globalAlpha = textAlpha;
-        ctx.fillText(char, textX - 80 + i * 40, textY);
-      }
-      
-      // Draw additional JaZeR text on the ground
-      ctx.font = 'bold 30px Arial';
-      ctx.globalAlpha = 0.6;
-      for (let i = 0; i < 3; i++) {
-        const groundTextX = width * 0.2 + i * width * 0.3;
-        const groundTextY = height * 0.8;
-        const pulse = Math.sin(time * 1.5 + i) * 0.2 + 0.8;
-        const currentSize = 30 * pulse;
-        
-        ctx.font = `bold ${currentSize}px Arial`;
-        ctx.fillStyle = palette[(i + 3) % palette.length];
-        ctx.shadowColor = palette[(i + 3) % palette.length];
-        ctx.shadowBlur = 15;
-        ctx.fillText('JaZeR', groundTextX, groundTextY);
-      }
-      
-      ctx.restore();
+      const grad = ctx.createLinearGradient(0, 0, 1024, 0);
+      grad.addColorStop(0, '#00f5ff');
+      grad.addColorStop(1, '#ff2aff');
+      ctx.fillStyle = grad;
+      ctx.shadowColor = '#ff8ad3';
+      ctx.shadowBlur = 50;
+      ctx.fillText('JaZeR', 512, 130);
+      const texture = new THREE.CanvasTexture(textCanvas);
+      texture.flipY = false;
+      return texture;
+    })();
+    const textMesh = new THREE.Mesh(new THREE.PlaneGeometry(4, 1), new THREE.MeshBasicMaterial({ map: neonTextTexture, transparent: true }));
+    textMesh.position.set(0, 0.6, -3);
+    scene.add(textMesh);
+
+    const clock = new THREE.Clock();
+
+    function resize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      sunMaterial.uniforms.uTime.value = elapsed;
+      gridMaterial.uniforms.uTime.value = elapsed;
+
+      sun.position.y = 2.4 + Math.sin(elapsed * 0.4) * 0.15;
+      sunGlow.rotation += delta * 0.1;
+
+      camera.position.x = Math.sin(elapsed * 0.2) * 0.4 + mouse.centeredX * 0.9;
+      camera.position.y = 1.5 + Math.sin(elapsed * 0.3) * 0.2 + mouse.centeredY * 0.6;
+      camera.lookAt(0, 0.3, -6);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

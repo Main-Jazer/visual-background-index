@@ -5,23 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Anamorphic Logo Waves</title>
   <style>
-    :root {
-      color-scheme: dark;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: "Inter", system-ui, sans-serif;
-      background: linear-gradient(180deg, #040513 0%, #010108 70%);
-      color: #d5d9ff;
-      overflow: hidden;
+      background: radial-gradient(circle at 50% 20%, #050516, #010108 70%);
+      color: #f5f7ff;
       min-height: 100vh;
+      overflow: hidden;
     }
-
     canvas {
       position: fixed;
       inset: 0;
@@ -29,261 +22,243 @@
       height: 100vh;
       display: block;
     }
-
     .label {
       position: fixed;
       right: 2rem;
       bottom: 2rem;
-      text-transform: uppercase;
-      letter-spacing: 0.25em;
       font-size: 0.8rem;
-      color: rgba(255, 255, 255, 0.5);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.45);
       pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <canvas id="effect"></canvas>
+  <canvas id="effectCanvas"></canvas>
   <div class="label">Anamorphic Logo Waves</div>
   <script type="module">
-    import { mouse, noise2D, smoothstep, ColorPalettes } from '../lib/jazer-background-engine.js';
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-    const canvas = document.getElementById('effect');
-    const ctx = canvas.getContext('2d');
-    const palette = ColorPalettes.vapor || ColorPalettes.cyberpunk || ColorPalettes.jazer;
+    const canvas = document.getElementById('effectCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x02020a, 1);
 
-    const ROWS = 58;
-    const COLS = 160;
-    const CREST_COUNT = 90;
-    const MASK_WIDTH = 640;
-    const MASK_HEIGHT = 160;
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x02020a, 0.05);
 
-    const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = MASK_WIDTH;
-    maskCanvas.height = MASK_HEIGHT;
-    const maskCtx = maskCanvas.getContext('2d');
-    const logoProfile = new Float32Array(MASK_WIDTH);
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+    camera.position.set(0, 3, 7);
+    camera.lookAt(0, 0, 0);
 
-    const crestParticles = [];
+    const gridGeometry = new THREE.PlaneGeometry(16, 10, 280, 160);
 
-    let width = 0;
-    let height = 0;
-    let lastTime = 0;
-    let time = 0;
+    function createLogoTexture() {
+      const texCanvas = document.createElement('canvas');
+      texCanvas.width = 1024;
+      texCanvas.height = 256;
+      const ctx = texCanvas.getContext('2d');
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, texCanvas.width, texCanvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '190px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('JAZER', texCanvas.width / 2, texCanvas.height * 0.55);
+      const texture = new THREE.CanvasTexture(texCanvas);
+      texture.flipY = false;
+      return texture;
+    }
 
-    class CrestParticle {
-      constructor() {
-        this.reset();
+    const logoTexture = createLogoTexture();
+
+    const gridVertex = /* glsl */`
+      varying vec2 vUv;
+      varying float vHeight;
+      uniform float uTime;
+      uniform sampler2D uLogo;
+      uniform vec2 uMouse;
+
+      vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+      float snoise(vec3 v){
+        const vec2  C = vec2(1.0/6.0, 1.0/3.0);
+        const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+        vec3 i  = floor(v + dot(v, C.yyy));
+        vec3 x0 =   v - i + dot(i, C.xxx);
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min( g.xyz, l.zxy );
+        vec3 i2 = max( g.xyz, l.zxy );
+        vec3 x1 = x0 - i1 + C.xxx;
+        vec3 x2 = x0 - i2 + C.yyy;
+        vec3 x3 = x0 - D.yyy;
+        i = mod(i, 289.0);
+        vec4 p = permute( permute( permute(
+                  i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+                + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+        float n_ = 1.0/7.0;
+        vec3  ns = n_ * D.wyz - D.xzx;
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_);
+        vec4 x = x_ *ns.x + ns.yyyy;
+        vec4 y = y_ *ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+        vec4 b0 = vec4( x.xy, y.xy );
+        vec4 b1 = vec4( x.zw, y.zw );
+        vec4 s0 = floor(b0)*2.0 + 1.0;
+        vec4 s1 = floor(b1)*2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+        vec3 g0 = vec3(a0.xy,h.x);
+        vec3 g1 = vec3(a0.zw,h.y);
+        vec3 g2 = vec3(a1.xy,h.z);
+        vec3 g3 = vec3(a1.zw,h.w);
+        vec4 norm = inversesqrt(vec4(dot(g0,g0), dot(g1,g1), dot(g2,g2), dot(g3,g3)));
+        g0 *= norm.x;
+        g1 *= norm.y;
+        g2 *= norm.z;
+        g3 *= norm.w;
+        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot(m*m, vec4( dot(g0,x0), dot(g1,x1),
+                                      dot(g2,x2), dot(g3,x3) ));
       }
 
-      reset() {
-        this.depth = 0.05 + Math.random() * 0.35;
-        this.column = Math.random();
-        this.life = 0.8 + Math.random() * 1.4;
-        this.elapsed = Math.random() * this.life;
-        this.color = palette[Math.floor(Math.random() * palette.length)] || '#00f5ff';
-        this.size = 1.5 + Math.random() * 1.5;
+      void main() {
+        vUv = uv;
+        vec3 pos = position;
+        float wave = sin(uv.x * 60.0 + uTime * 1.6) * 0.2;
+        wave += snoise(vec3(uv * 6.0, uTime * 0.45)) * 0.4;
+        float imprint = texture(uLogo, vec2(uv.x, 1.0 - uv.y)).r;
+        float anamorph = smoothstep(0.6, 0.95, imprint);
+        pos.z += wave - anamorph * 0.9;
+        pos.x += uMouse.x * (pos.z * 0.08);
+        pos.y += uMouse.y * (pos.z * 0.05);
+        vHeight = pos.z;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      }
+    `;
+
+    const gridFragment = /* glsl */`
+      varying vec2 vUv;
+      varying float vHeight;
+      uniform float uTime;
+      uniform sampler2D uLogo;
+
+      float gridLine(float v, float scale) {
+        return smoothstep(0.0, 0.02, abs(fract(v * scale) - 0.5));
       }
 
-      tick(dt) {
-        this.elapsed += dt;
-        this.column = (this.column + dt * 0.05) % 1;
-        if (this.elapsed > this.life) {
-          this.reset();
+      void main() {
+        vec3 base = mix(vec3(0.0, 0.1, 0.2), vec3(0.9, 0.2, 0.8), vUv.x);
+        float gridX = gridLine(vUv.x, 40.0);
+        float gridY = gridLine(vUv.y, 18.0);
+        float glow = exp(-abs(vHeight) * 1.5);
+        float imprint = texture(uLogo, vec2(vUv.x, 1.0 - vUv.y)).r;
+        float reveal = smoothstep(0.45, 0.7, imprint) * smoothstep(-0.2, 0.6, vHeight);
+        vec3 color = base;
+        color += vec3(0.2, 0.5, 1.0) * (gridX + gridY) * 0.25;
+        color += vec3(1.0, 0.35, 0.8) * reveal * 1.4;
+        color += vec3(0.05, 0.2, 0.8) * glow;
+        float alpha = 0.8 + reveal * 0.2;
+        gl_FragColor = vec4(color, alpha);
+      }
+    `;
+
+    const gridMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uLogo: { value: logoTexture },
+        uMouse: { value: new THREE.Vector2() }
+      },
+      vertexShader: gridVertex,
+      fragmentShader: gridFragment,
+      transparent: true,
+      side: THREE.DoubleSide
+    });
+
+    const grid = new THREE.Mesh(gridGeometry, gridMaterial);
+    grid.rotation.x = -Math.PI / 3;
+    grid.position.y = -1;
+    scene.add(grid);
+
+    const crestGeometry = new THREE.BufferGeometry();
+    const crestCount = 160;
+    const crestPositions = new Float32Array(crestCount * 3);
+    const crestOffsets = new Float32Array(crestCount);
+    for (let i = 0; i < crestCount; i++) {
+      crestPositions.set([ (Math.random() - 0.5) * 12, (Math.random() - 0.3) * 4, -Math.random() * 6 ], i * 3);
+      crestOffsets[i] = Math.random() * Math.PI * 2;
+    }
+    crestGeometry.setAttribute('position', new THREE.BufferAttribute(crestPositions, 3));
+    crestGeometry.setAttribute('offset', new THREE.BufferAttribute(crestOffsets, 1));
+    const crestMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 }
+      },
+      vertexShader: /* glsl */`
+        attribute float offset;
+        uniform float uTime;
+        varying float vAlpha;
+        void main() {
+          vec3 pos = position;
+          pos.y += sin(uTime * 2.0 + offset) * 0.2;
+          vAlpha = fract(offset);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = 30.0 / gl_Position.w;
         }
-      }
-
-      draw() {
-        const h = computeHeight(this.column, this.depth);
-        const pos = projectPoint(this.column, this.depth, h);
-        const fade = 1 - this.elapsed / this.life;
-        ctx.globalAlpha = fade;
-        ctx.fillStyle = ``;
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = 12;
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-    }
-
-    function rebuildLogoMask() {
-      maskCtx.clearRect(0, 0, MASK_WIDTH, MASK_HEIGHT);
-      maskCtx.fillStyle = '#000';
-      maskCtx.fillRect(0, 0, MASK_WIDTH, MASK_HEIGHT);
-      maskCtx.fillStyle = '#fff';
-      maskCtx.font = `${MASK_HEIGHT * 0.75}px 'Inter', sans-serif`;
-      maskCtx.textAlign = 'center';
-      maskCtx.textBaseline = 'middle';
-      maskCtx.fillText('JAZER', MASK_WIDTH / 2, MASK_HEIGHT * 0.55);
-      const data = maskCtx.getImageData(0, 0, MASK_WIDTH, MASK_HEIGHT).data;
-      for (let x = 0; x < MASK_WIDTH; x++) {
-        let total = 0;
-        for (let y = 0; y < MASK_HEIGHT; y++) {
-          total += data[(y * MASK_WIDTH + x) * 4 + 3];
+      `,
+      fragmentShader: /* glsl */`
+        varying float vAlpha;
+        void main() {
+          float dist = length(gl_PointCoord - 0.5);
+          float alpha = smoothstep(0.5, 0.0, dist) * (0.4 + 0.6 * vAlpha);
+          gl_FragColor = vec4(0.6, 0.9, 1.0, alpha);
         }
-        logoProfile[x] = total / (MASK_HEIGHT * 255);
-      }
-    }
+      `,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false
+    });
+    const crests = new THREE.Points(crestGeometry, crestMaterial);
+    scene.add(crests);
 
-    function sampleMask(t) {
-      const index = Math.max(0, Math.min(MASK_WIDTH - 1, Math.floor(t * (MASK_WIDTH - 1))));
-      return logoProfile[index] || 0;
-    }
-
-    function computeHeight(column, depth) {
-      const wave = Math.sin(time * 1.4 + depth * 12 + column * 18) * (30 + depth * 55);
-      const ripple = noise2D(column * 5, time * 0.5 + depth * 3) * 20;
-      const reveal = 1 - smoothstep(0.05, 0.25, depth);
-      const imprint = sampleMask(column) * reveal * 140;
-      return wave + ripple - imprint;
-    }
-
-    function projectPoint(column, depth, heightValue) {
-      const depthScale = 1 - depth * 0.75;
-      const spread = width * (0.85 + depth * 0.25);
-      const baseY = height * 0.78 - depth * height * 0.35;
-      const x = width / 2 + (column - 0.5) * spread + mouse.centeredX * depth * 220;
-      const y = baseY - heightValue * depthScale * 0.45 + mouse.centeredY * depth * -120;
-      return { x, y };
-    }
-
-    function hexToRgba(hex, alpha) {
-      const value = hex.replace('#', '');
-      const bigint = parseInt(value, 16);
-      const r = (bigint >> 16) & 255;
-      const g = (bigint >> 8) & 255;
-      const b = bigint & 255;
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
+    const clock = new THREE.Clock();
 
     function resize() {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      rebuildLogoMask();
-    }
-
-    function setup() {
-      rebuildLogoMask();
-      for (let i = 0; i < CREST_COUNT; i++) {
-        crestParticles.push(new CrestParticle());
-      }
-      resize();
-      requestAnimationFrame(render);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
     window.addEventListener('resize', resize);
+    resize();
 
-    function render(now) {
-      const dt = (now - lastTime) / 1000 || 0;
-      lastTime = now;
-      time += dt;
+    function animate() {
+      requestAnimationFrame(animate);
+      const elapsed = clock.getElapsedTime();
       mouse.update();
 
-      ctx.clearRect(0, 0, width, height);
-      drawBackground();
-      drawGhostText();
-      drawGrid();
-      drawCrests(dt);
-      drawScanlines();
+      gridMaterial.uniforms.uTime.value = elapsed;
+      gridMaterial.uniforms.uMouse.value.set(mouse.centeredX, mouse.centeredY);
+      crestMaterial.uniforms.uTime.value = elapsed;
 
-      requestAnimationFrame(render);
+      grid.rotation.z = Math.sin(elapsed * 0.2) * 0.06 + mouse.centeredX * 0.1;
+      camera.position.x = Math.sin(elapsed * 0.2) * 0.4 + mouse.centeredX * 0.6;
+      camera.position.y = 3 + Math.sin(elapsed * 0.3) * 0.2;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
     }
 
-    function drawBackground() {
-      const gradient = ctx.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, '#050516');
-      gradient.addColorStop(0.6, '#01000a');
-      gradient.addColorStop(1, '#000000');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, width, height);
-    }
-
-    function drawGhostText() {
-      ctx.save();
-      ctx.translate(width / 2, height * 0.38);
-      ctx.transform(1, -0.35, 0, 1, 0, 0);
-      ctx.font = `${Math.min(width * 0.35, 360)}px 'Inter', sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const ghostGrad = ctx.createLinearGradient(-width * 0.4, 0, width * 0.4, 0);
-      ghostGrad.addColorStop(0, 'rgba(0, 245, 255, 0.08)');
-      ghostGrad.addColorStop(1, 'rgba(255, 42, 255, 0.08)');
-      ctx.fillStyle = ghostGrad;
-      ctx.globalCompositeOperation = 'screen';
-      ctx.fillText('JAZER', 0, 0);
-      ctx.restore();
-    }
-
-    function drawGrid() {
-      ctx.save();
-      ctx.lineWidth = 1;
-
-      for (let row = 0; row < ROWS; row++) {
-        const depth = row / (ROWS - 1);
-        ctx.beginPath();
-        for (let col = 0; col <= COLS; col++) {
-          const column = col / COLS;
-          const h = computeHeight(column, depth);
-          const pos = projectPoint(column, depth, h);
-          if (col === 0) {
-            ctx.moveTo(pos.x, pos.y);
-          } else {
-            ctx.lineTo(pos.x, pos.y);
-          }
-        }
-        const alpha = 0.15 + (1 - depth) * 0.35;
-        const color = palette[row % palette.length] || '#00f5ff';
-        ctx.strokeStyle = hexToRgba(color, alpha);
-        ctx.stroke();
-      }
-
-      for (let col = 0; col <= COLS; col += 8) {
-        ctx.beginPath();
-        for (let row = 0; row < ROWS; row++) {
-          const depth = row / (ROWS - 1);
-          const column = col / COLS;
-          const h = computeHeight(column, depth);
-          const pos = projectPoint(column, depth, h);
-          if (row === 0) {
-            ctx.moveTo(pos.x, pos.y);
-          } else {
-            ctx.lineTo(pos.x, pos.y);
-          }
-        }
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-        ctx.stroke();
-      }
-
-      ctx.restore();
-    }
-
-    function drawCrests(dt) {
-      crestParticles.forEach(particle => {
-        particle.tick(dt);
-        particle.draw();
-      });
-    }
-
-    function drawScanlines() {
-      ctx.save();
-      ctx.globalAlpha = 0.1;
-      ctx.fillStyle = '#05050d';
-      for (let y = 0; y < height; y += 4) {
-        ctx.fillRect(0, y, width, 1);
-      }
-      ctx.restore();
-    }
-
-    setup();
+    animate();
   </script>
 </body>
 </html>
-

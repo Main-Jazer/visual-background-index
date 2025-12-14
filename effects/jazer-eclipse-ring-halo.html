@@ -5,394 +5,176 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Eclipse Ring Halo</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 40%, #050218, #010007 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      left: 2rem;
+      bottom: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Eclipse Ring Halo</h1>
-      <p>Central dark disc (eclipse) surrounded by intensely glowing rings in JaZeR colors, with subtle solar flares spelling out "JaZeR".</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Eclipse Ring Halo</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010007, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x040017, 0.05);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 300);
+    camera.position.set(0, 0, 6);
 
-    // Eclipse ring halo properties
-    const center = { x: width / 2, y: height / 2 };
-    const eclipseRadius = 80;
-    const ringCount = 5;
-    const rings = [];
-    const flareCount = 12;
-    const solarFlares = [];
+    const sunMaterial = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: /* glsl */`
+        varying vec2 vUv;
+        uniform float uTime;
+        void main(){
+          float radial = length(vUv - 0.5) * 2.0;
+          float eclipse = smoothstep(0.9, 0.4, radial);
+          vec3 color = mix(vec3(0.0,0.05,0.1), vec3(1.0,0.5,0.1), eclipse);
+          float stripes = step(0.0, sin((vUv.y - 0.5) * 80.0 + uTime * 2.0));
+          color *= 0.6 + 0.4 * stripes;
+          gl_FragColor = vec4(color, eclipse);
+        }
+      `,
+      transparent: true
+    });
+    const sun = new THREE.Mesh(new THREE.CircleGeometry(1.5, 64), sunMaterial);
+    scene.add(sun);
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    const haloMaterial = new THREE.MeshBasicMaterial({ color: 0xff2aff, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+    const halo = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.8, 128), haloMaterial);
+    halo.rotation.x = Math.PI / 2;
+    scene.add(halo);
+
+    const orbitRings = [];
+    for (let i = 0; i < 4; i++) {
+      const ring = new THREE.Mesh(new THREE.RingGeometry(2.5 + i * 0.6, 2.6 + i * 0.6, 128), haloMaterial.clone());
+      ring.rotation.x = Math.PI / 2;
+      ring.material.opacity = 0.25 - i * 0.05;
+      ring.material.color.offsetHSL(i * 0.05, 0, 0);
+      scene.add(ring);
+      orbitRings.push(ring);
+    }
+
+    const sparkGeometry = new THREE.BufferGeometry();
+    const sparkCount = 500;
+    const sparkPositions = new Float32Array(sparkCount * 3);
+    const sparkSpeed = new Float32Array(sparkCount);
+    for (let i = 0; i < sparkCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 1.7 + Math.random() * 2.2;
+      sparkPositions[i * 3] = Math.cos(angle) * radius;
+      sparkPositions[i * 3 + 1] = (Math.random() - 0.5) * 0.3;
+      sparkPositions[i * 3 + 2] = Math.sin(angle) * radius;
+      sparkSpeed[i] = 0.5 + Math.random() * 0.7;
+    }
+    sparkGeometry.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
+    const sparkMaterial = new THREE.PointsMaterial({
+      size: 0.06,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.6,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const sparks = new THREE.Points(sparkGeometry, sparkMaterial);
+    scene.add(sparks);
+
+    const glyphTexture = (() => {
+      const glyphCanvas = document.createElement('canvas');
+      glyphCanvas.width = glyphCanvas.height = 256;
+      const ctx = glyphCanvas.getContext('2d');
+      ctx.fillStyle = '#00000000';
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.strokeStyle = '#00f5ff';
+      ctx.lineWidth = 6;
+      ctx.shadowColor = '#00f5ff';
+      ctx.shadowBlur = 20;
+      ctx.beginPath();
+      ctx.arc(128, 128, 80, 0, Math.PI * 2);
+      ctx.stroke();
+      const texture = new THREE.CanvasTexture(glyphCanvas);
+      texture.flipY = false;
+      return texture;
+    })();
+    const glyphSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glyphTexture, color: 0xffffff, transparent: true }));
+    glyphSprite.scale.set(4, 4, 1);
+    glyphSprite.position.set(0, 0, 0.1);
+    scene.add(glyphSprite);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      
-      // Initialize rings
-      initializeRings();
-      
-      // Initialize solar flares
-      initializeSolarFlares();
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function initializeRings() {
-      rings.length = 0;
-      for (let i = 0; i < ringCount; i++) {
-        rings.push({
-          id: i,
-          baseRadius: eclipseRadius + 30 + i * 40,
-          currentRadius: eclipseRadius + 30 + i * 40,
-          thickness: 8 - i * 1.2,
-          rotation: 0,
-          rotationSpeed: 0.1 + i * 0.05,
-          opacity: 0.8 - i * 0.1,
-          color: palette[i % palette.length],
-          pulsePhase: Math.random() * Math.PI * 2
-        });
-      }
-    }
-
-    function initializeSolarFlares() {
-      solarFlares.length = 0;
-      for (let i = 0; i < flareCount; i++) {
-        const angle = (i / flareCount) * Math.PI * 2;
-        solarFlares.push({
-          id: i,
-          angle: angle,
-          baseLength: 50 + Math.random() * 50,
-          length: 50 + Math.random() * 50,
-          thickness: 5 + Math.random() * 10,
-          active: false,
-          activeTime: 0,
-          maxActiveTime: 1 + Math.random() * 2,
-          color: palette[Math.floor(Math.random() * palette.length)],
-          textChar: 'JaZeR'[i % 5], // Cycle through characters in JaZeR
-          maxActiveTime: 1 + Math.random() * 2
-        });
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Clear with dark background
-      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#000020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw eclipse ring halo
-      updateAndDrawHalo();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function updateAndDrawHalo() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      // Draw the central eclipse disc
-      const eclipseGradient = ctx.createRadialGradient(
-        center.x, center.y, 0,
-        center.x, center.y, eclipseRadius
-      );
-      eclipseGradient.addColorStop(0, '#000000');
-      eclipseGradient.addColorStop(1, '#111133');
-      
-      ctx.fillStyle = eclipseGradient;
-      ctx.beginPath();
-      ctx.arc(center.x, center.y, eclipseRadius, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Update and draw rings
-      for (let i = 0; i < rings.length; i++) {
-        const ring = rings[i];
-        
-        // Apply pulsing effect
-        const pulse = Math.sin(time * 2 + ring.pulsePhase) * 0.2 + 0.8;
-        const currentRadius = ring.baseRadius + Math.sin(time * 1.5 + i) * 5 * pulse;
-        const currentThickness = ring.thickness * pulse;
-        
-        // Draw ring
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, currentRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = ring.color;
-        ctx.lineWidth = currentThickness;
-        ctx.shadowColor = ring.color;
-        ctx.shadowBlur = 20 * pulse;
-        ctx.stroke();
-      }
-      
-      // Update and draw solar flares
-      for (let i = 0; i < solarFlares.length; i++) {
-        const flare = solarFlares[i];
-        
-        // Randomly activate flares
-        if (!flare.active && Math.random() < 0.02) { // 2% chance per frame
-          flare.active = true;
-          flare.activeTime = 0;
-        }
-        
-        if (flare.active) {
-          flare.activeTime += 1/60;
-          
-          if (flare.activeTime >= flare.maxActiveTime) {
-            flare.active = false;
-          } else {
-            // Calculate flare position
-            const startX = center.x + Math.cos(flare.angle) * eclipseRadius;
-            const startY = center.y + Math.sin(flare.angle) * eclipseRadius;
-            const currentLength = flare.length * (1 - flare.activeTime / flare.maxActiveTime);
-            const endX = center.x + Math.cos(flare.angle) * (eclipseRadius + currentLength);
-            const endY = center.y + Math.sin(flare.angle) * (eclipseRadius + currentLength);
-            
-            // Create flare gradient
-            const flareGradient = ctx.createLinearGradient(startX, startY, endX, endY);
-            flareGradient.addColorStop(0, flare.color + '00');
-            flareGradient.addColorStop(0.5, flare.color);
-            flareGradient.addColorStop(1, flare.color + '44');
-            
-            // Draw solar flare
-            ctx.strokeStyle = flareGradient;
-            ctx.lineWidth = flare.thickness;
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.lineTo(endX, endY);
-            ctx.stroke();
-            
-            // Add glow effect
-            ctx.shadowColor = flare.color;
-            ctx.shadowBlur = 30;
-            ctx.stroke();
-            
-            // Draw JaZeR character at the end of some flares
-            if (flare.activeTime > 0.3 && Math.random() < 0.1) { // 10% chance per frame after 0.3 seconds
-              ctx.font = 'bold 20px Arial';
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillStyle = flare.color;
-              ctx.shadowColor = flare.color;
-              ctx.shadowBlur = 15;
-              ctx.fillText(flare.textChar, endX, endY);
-            }
-          }
-        }
-      }
-      
-      // Draw JaZeR text in the center
-      ctx.font = 'bold 40px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      // Draw each character with different colors
-      const text = 'JaZeR';
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const color = palette[i % palette.length];
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 20;
-        ctx.fillText(char, center.x - 100 + i * 50, center.y);
-      }
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      sunMaterial.uniforms.uTime.value = elapsed;
+
+      const sparkPos = sparkGeometry.attributes.position.array;
+      for (let i = 0; i < sparkCount; i++) {
+        const angle = Math.atan2(sparkPos[i * 3 + 2], sparkPos[i * 3]) + sparkSpeed[i] * delta;
+        const radius = Math.sqrt(sparkPos[i * 3] ** 2 + sparkPos[i * 3 + 2] ** 2);
+        sparkPos[i * 3] = Math.cos(angle) * radius;
+        sparkPos[i * 3 + 2] = Math.sin(angle) * radius;
+      }
+      sparkGeometry.attributes.position.needsUpdate = true;
+
+      orbitRings.forEach((ring, idx) => {
+        ring.rotation.z = elapsed * (0.2 + idx * 0.1);
+      });
+
+      camera.position.x = Math.sin(elapsed * 0.2) * 0.4 + mouse.centeredX * 0.7;
+      camera.position.y = Math.sin(elapsed * 0.15) * 0.3 + mouse.centeredY * 0.5;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

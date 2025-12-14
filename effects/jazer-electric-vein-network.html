@@ -5,465 +5,173 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Electric Vein Network</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 20%, #020313, #010008 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      left: 2rem;
+      top: 2rem;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      letter-spacing: 0.35em;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Electric Vein Network</h1>
-      <p>Branching network of "veins" or lightning paths that glow and crackle with JaZeR electric energy.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Electric Vein Network</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010008, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x040020, 0.08);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+    camera.position.set(0, 0, 6);
 
-    // Electric vein network properties
-    const center = { x: width / 2, y: height / 2 };
-    const nodes = [];
-    const connections = [];
-    const nodeCount = 20;
-    const maxConnectionsPerNode = 5;
-    const pulseInterval = 0.5; // seconds between pulses
-    const activePulses = [];
+    const nodeCount = 200;
+    const nodeGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+    const nodeMaterial = new THREE.MeshBasicMaterial({ color: 0x55dfff, transparent: true, opacity: 0.8 });
+    const nodes = new THREE.InstancedMesh(nodeGeometry, nodeMaterial, nodeCount);
+    scene.add(nodes);
+    const nodeMatrix = new THREE.Matrix4();
+    const nodeData = [];
+    for (let i = 0; i < nodeCount; i++) {
+      const position = new THREE.Vector3((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 6);
+      nodeMatrix.identity().setPosition(position);
+      nodes.setMatrixAt(i, nodeMatrix);
+      nodeData.push({ position, velocity: new THREE.Vector3((Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2) });
+    }
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    const connectionMaterial = new THREE.LineBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.45 });
+    const connectionGeometry = new THREE.BufferGeometry();
+    const connectionMax = nodeCount * 3;
+    connectionGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(connectionMax * 6), 3));
+    const connections = new THREE.LineSegments(connectionGeometry, connectionMaterial);
+    scene.add(connections);
+
+    const lightningMaterial = new THREE.LineBasicMaterial({ color: 0xff2aff, transparent: true, opacity: 0.6 });
+    const lightningGeometry = new THREE.BufferGeometry();
+    lightningGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(60), 3));
+    const lightning = new THREE.Line(lightningGeometry, lightningMaterial);
+    scene.add(lightning);
+
+    const glowTexture = (() => {
+      const glowCanvas = document.createElement('canvas');
+      glowCanvas.width = glowCanvas.height = 256;
+      const ctx = glowCanvas.getContext('2d');
+      const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+      gradient.addColorStop(0, 'rgba(255,255,255,0.8)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 256, 256);
+      const texture = new THREE.CanvasTexture(glowCanvas);
+      texture.needsUpdate = true;
+      return texture;
+    })();
+    const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0x00f5ff, transparent: true }));
+    glowSprite.scale.set(8, 8, 1);
+    scene.add(glowSprite);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      
-      // Initialize network
-      initializeNetwork();
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function initializeNetwork() {
-      nodes.length = 0;
-      connections.length = 0;
-      activePulses.length = 0;
-      
-      // Create nodes in a roughly circular distribution
-      for (let i = 0; i < nodeCount; i++) {
-        const angle = (i / nodeCount) * Math.PI * 2;
-        const distance = 100 + Math.random() * (Math.min(width, height) / 2 - 100);
-        
-        nodes.push({
-          id: i,
-          x: center.x + Math.cos(angle) * distance,
-          y: center.y + Math.sin(angle) * distance,
-          connections: [],
-          color: palette[i % palette.length],
-          baseSize: 3 + Math.random() * 5,
-          pulsePhase: Math.random() * Math.PI * 2
-        });
-      }
-      
-      // Create connections between nearby nodes
-      for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i];
-        const possibleTargets = [];
-        
-        // Find nearby nodes that aren't already connected
-        for (let j = 0; j < nodes.length; j++) {
-          if (i === j) continue;
-          
-          const other = nodes[j];
-          const dist = distance(node.x, node.y, other.x, other.y);
-          
-          // Only connect to nodes within a certain distance and below max connections
-          if (dist < 300 && node.connections.length < maxConnectionsPerNode) {
-            possibleTargets.push({id: j, distance: dist});
-          }
-        }
-        
-        // Sort targets by distance and connect to closest ones
-        possibleTargets.sort((a, b) => a.distance - b.distance);
-        
-        for (let k = 0; k < Math.min(maxConnectionsPerNode, possibleTargets.length); k++) {
-          const targetId = possibleTargets[k].id;
-          if (!node.connections.includes(targetId)) {
-            node.connections.push(targetId);
-            
-            // Create a connection object
-            connections.push({
-              from: i,
-              to: targetId,
-              length: possibleTargets[k].distance,
-              glow: 0,
-              lastPulse: 0
-            });
-          }
-        }
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Sometimes trigger a pulse through the network
-      if (Math.random() < 0.05) { // 5% chance per frame
-        triggerRandomPulse();
-      }
-
-      // Clear with dark background
-      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#000020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw electric vein network
-      updateAndDrawNetwork();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function triggerRandomPulse() {
-      // Start a pulse from a random node
-      const startNode = nodes[Math.floor(Math.random() * nodes.length)];
-      
-      // Find connected nodes to propagate the pulse
-      for (const connId in connections) {
-        const conn = connections[connId];
-        if (conn.from === startNode.id) {
-          activePulses.push({
-            id: conn.id,
-            from: startNode.id,
-            to: conn.to,
-            progress: 0,
-            startTime: time,
-            duration: 0.3 + Math.random() * 0.4
-          });
-        }
-      }
-    }
-
-    function updateAndDrawNetwork() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      // Update and draw connections first (as background)
-      for (const conn of connections) {
-        const fromNode = nodes[conn.from];
-        const toNode = nodes[conn.to];
-        
-        if (!fromNode || !toNode) continue;
-        
-        // Draw the connection line
-        ctx.beginPath();
-        ctx.moveTo(fromNode.x, fromNode.y);
-        ctx.lineTo(toNode.x, toNode.y);
-        
-        // Calculate glow based on recent pulse activity
-        const timeSincePulse = time - conn.lastPulse;
-        if (timeSincePulse < 0.5) {
-          conn.glow = Math.max(conn.glow, 1 - timeSincePulse / 0.5);
-        } else {
-          conn.glow *= 0.9; // Decay glow over time
-        }
-        
-        // Create a gradient for the line
-        const gradient = ctx.createLinearGradient(fromNode.x, fromNode.y, toNode.x, toNode.y);
-        gradient.addColorStop(0, fromNode.color + '00');
-        gradient.addColorStop(0.5, fromNode.color + Math.floor(conn.glow * 200).toString(16).padStart(2, '0'));
-        gradient.addColorStop(1, toNode.color + '00');
-        
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 2 + conn.glow * 5;
-        ctx.stroke();
-        
-        // Add glow effect
-        ctx.shadowColor = fromNode.color;
-        ctx.shadowBlur = 15 * conn.glow;
-        ctx.stroke();
-      }
-      
-      // Update and draw active pulses
-      for (let i = activePulses.length - 1; i >= 0; i--) {
-        const pulse = activePulses[i];
-        const conn = connections[pulse.id];
-        const fromNode = nodes[conn.from];
-        const toNode = nodes[conn.to];
-        
-        if (!fromNode || !toNode) {
-          activePulses.splice(i, 1);
-          continue;
-        }
-        
-        // Update pulse progress
-        pulse.progress = (time - pulse.startTime) / pulse.duration;
-        
-        if (pulse.progress >= 1) {
-          // Pulse finished, update connection's last pulse time
-          conn.lastPulse = time;
-          conn.glow = 1;
-          
-          // Remove pulse
-          activePulses.splice(i, 1);
-          
-          // Potentially create more pulses down the network
-          if (Math.random() < 0.7) { // 70% chance to continue
-            for (const nextConn of connections) {
-              if (nextConn.from === toNode.id && Math.random() < 0.3) {
-                activePulses.push({
-                  id: nextConn.id,
-                  from: toNode.id,
-                  to: nextConn.to,
-                  progress: 0,
-                  startTime: time,
-                  duration: 0.3 + Math.random() * 0.4
-                });
-              }
-            }
-          }
-          
-          continue;
-        }
-        
-        // Draw the moving pulse
-        const pulseX = fromNode.x + (toNode.x - fromNode.x) * pulse.progress;
-        const pulseY = fromNode.y + (toNode.y - fromNode.y) * pulse.progress;
-        
-        ctx.beginPath();
-        ctx.arc(pulseX, pulseY, 5, 0, Math.PI * 2);
-        ctx.fillStyle = fromNode.color;
-        ctx.shadowColor = fromNode.color;
-        ctx.shadowBlur = 20;
-        ctx.fill();
-      }
-      
-      // Draw the nodes
-      for (const node of nodes) {
-        const pulse = Math.sin(time * 3 + node.pulsePhase) * 0.2 + 0.8;
-        const size = node.baseSize * pulse;
-        
-        // Draw node with glow
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
-        
-        // Create radial gradient for the node
-        const nodeGradient = ctx.createRadialGradient(
-          node.x, node.y, 0,
-          node.x, node.y, size * 2
-        );
-        nodeGradient.addColorStop(0, node.color + 'FF');
-        nodeGradient.addColorStop(0.5, node.color + 'AA');
-        nodeGradient.addColorStop(1, node.color + '00');
-        
-        ctx.fillStyle = nodeGradient;
-        ctx.shadowColor = node.color;
-        ctx.shadowBlur = 20;
-        ctx.fill();
-        
-        // Draw a center core
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, size * 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fill();
-      }
-      
-      // Draw JaZeR text in the center
-      ctx.font = 'bold 40px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = palette[0];
-      ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 20;
-      ctx.fillText('JaZeR', center.x, center.y);
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      const posArray = connectionGeometry.attributes.position.array;
+      let posIndex = 0;
+      for (let i = 0; i < nodeCount; i++) {
+        const data = nodeData[i];
+        data.position.addScaledVector(data.velocity, delta);
+        ['x', 'y', 'z'].forEach((axis, axisIndex) => {
+          const bound = axis === 'y' ? 2 : 3;
+          if (data.position[axis] > bound || data.position[axis] < -bound) {
+            data.velocity[axis] *= -1;
+          }
+        });
+        nodeMatrix.identity().setPosition(data.position);
+        nodes.setMatrixAt(i, nodeMatrix);
+
+        for (let j = i + 1; j < nodeCount; j++) {
+          if (posIndex >= connectionMax * 6) break;
+          const other = nodeData[j].position;
+          const dist = data.position.distanceTo(other);
+          if (dist < 1.5) {
+            posArray[posIndex++] = data.position.x;
+            posArray[posIndex++] = data.position.y;
+            posArray[posIndex++] = data.position.z;
+            posArray[posIndex++] = other.x;
+            posArray[posIndex++] = other.y;
+            posArray[posIndex++] = other.z;
+          }
+        }
+      }
+      nodes.instanceMatrix.needsUpdate = true;
+      connectionGeometry.attributes.position.needsUpdate = true;
+      connectionGeometry.setDrawRange(0, posIndex / 3);
+
+      const lightningPositions = lightningGeometry.attributes.position.array;
+      const start = nodeData[Math.floor(Math.random() * nodeCount)].position;
+      const end = nodeData[Math.floor(Math.random() * nodeCount)].position;
+      for (let i = 0; i < 10; i++) {
+        const t = i / 9;
+        const mid = new THREE.Vector3().lerpVectors(start, end, t);
+        mid.x += (Math.random() - 0.5) * 0.2;
+        mid.y += (Math.random() - 0.5) * 0.2;
+        mid.z += (Math.random() - 0.5) * 0.2;
+        lightningPositions[i * 3] = mid.x;
+        lightningPositions[i * 3 + 1] = mid.y;
+        lightningPositions[i * 3 + 2] = mid.z;
+      }
+      lightningGeometry.attributes.position.needsUpdate = true;
+
+      glowSprite.position.set(Math.sin(elapsed * 0.6) * 0.5, Math.cos(elapsed * 0.5) * 0.5, 0);
+
+      camera.position.x = mouse.centeredX * 0.8;
+      camera.position.y = mouse.centeredY * 0.8;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

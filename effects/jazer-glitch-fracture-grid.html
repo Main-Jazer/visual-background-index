@@ -5,413 +5,190 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Glitch Fracture Grid</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 30%, #030312, #010006 70%);
+      color: #f8fbff;
+      min-height: 100vh;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      left: 2rem;
+      bottom: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Glitch Fracture Grid</h1>
-      <p>A grid that occasionally fractures into offset strips and glitch blocks, with JaZeR text appearing in the broken shards.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Glitch Fracture Grid</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010007, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x05001a, 0.06);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
+    camera.position.set(0, 0.3, 5);
 
-    // Grid properties
-    const cellSize = 40;
-    const gridOffset = { x: 0, y: 0 };
-    let lastGlitchTime = 0;
-    const glitchInterval = 3; // seconds between glitches
-    let isGlitching = false;
-    let glitchTimer = 0;
-    const glitchDuration = 0.5; // seconds
-    const glitchCells = [];
-    const textCells = [];
+    const gridMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColorA: { value: new THREE.Color(0xff2aff) },
+        uColorB: { value: new THREE.Color(0x00f5ff) }
+      },
+      vertexShader: /* glsl */`
+        uniform float uTime;
+        varying vec2 vUv;
+        varying vec3 vPos;
+        void main(){
+          vUv = uv;
+          vec3 pos = position;
+          pos.y += sin((pos.x + pos.z) * 0.8 + uTime * 2.0) * 0.2;
+          vPos = pos;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */`
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        uniform float uTime;
+        varying vec2 vUv;
+        varying vec3 vPos;
+        float grid(float v, float scale){
+          float line = abs(fract(v * scale) - 0.5);
+          return smoothstep(0.48, 0.5, line);
+        }
+        void main(){
+          float glitch = step(0.98, fract(sin(dot(vPos.xz, vec2(12.9898, 78.233))) * 43758.5453 + sin(uTime + vPos.y)));
+          vec3 color = mix(uColorA, uColorB, vUv.x + glitch * 0.05);
+          float lines = grid(vUv.x, 25.0) + grid(vUv.y, 12.0);
+          color *= lines;
+          color += vec3(0.02,0.02,0.03) * abs(vPos.y);
+          gl_FragColor = vec4(color, lines);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const grid = new THREE.Mesh(new THREE.PlaneGeometry(18, 18, 200, 200), gridMaterial);
+    grid.rotation.x = -Math.PI / 3;
+    grid.position.y = -2;
+    scene.add(grid);
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    const shardsGeometry = new THREE.BufferGeometry();
+    const shardCount = 600;
+    const shardPositions = new Float32Array(shardCount * 3);
+    const shardOffsets = new Float32Array(shardCount);
+    for (let i = 0; i < shardCount; i++) {
+      shardPositions[i * 3] = (Math.random() - 0.5) * 12;
+      shardPositions[i * 3 + 1] = (Math.random() * 2);
+      shardPositions[i * 3 + 2] = (Math.random() - 0.5) * 12;
+      shardOffsets[i] = Math.random() * Math.PI * 2;
+    }
+    shardsGeometry.setAttribute('position', new THREE.BufferAttribute(shardPositions, 3));
+    shardsGeometry.setAttribute('offset', new THREE.BufferAttribute(shardOffsets, 1));
+    const shardsMaterial = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */`
+        attribute float offset;
+        uniform float uTime;
+        varying float vAlpha;
+        void main(){
+          vec3 pos = position;
+          pos.y += sin(uTime * 2.0 + offset) * 0.4;
+          pos.x += sin(uTime * 1.5 + offset) * 0.2;
+          vAlpha = fract(offset);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = 18.0 / gl_Position.w;
+        }
+      `,
+      fragmentShader: /* glsl */`
+        varying float vAlpha;
+        void main(){
+          float d = length(gl_PointCoord - 0.5);
+          float alpha = smoothstep(0.5, 0.0, d) * (0.3 + vAlpha * 0.7);
+          gl_FragColor = vec4(1.0, 0.7, 0.4, alpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const shards = new THREE.Points(shardsGeometry, shardsMaterial);
+    scene.add(shards);
+
+    const glitchPlanes = [];
+    const planeGeometry = new THREE.PlaneGeometry(6, 0.2);
+    for (let i = 0; i < 12; i++) {
+      const planeMaterial = new THREE.MeshBasicMaterial({ color: i % 2 === 0 ? 0xff2aff : 0x00f5ff, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending });
+      const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+      plane.position.set((Math.random() - 0.5) * 4, (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 4);
+      plane.rotation.z = (Math.random() - 0.5) * Math.PI;
+      scene.add(plane);
+      glitchPlanes.push({ mesh: plane, speed: 4 + Math.random() * 8 });
+    }
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Check for glitch triggers
-      checkForGlitch();
-
-      // Clear with dark background
-      ctx.fillStyle = '#000011';
-      ctx.fillRect(0, 0, width, height);
-
-      // Draw the grid
-      drawGrid();
-
-      // Draw glitch effects if active
-      if (isGlitching) {
-        drawGlitchEffect();
-      }
-
-      // Draw JaZeR text in the grid
-      drawJaZeRText();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function checkForGlitch() {
-      // Random glitch trigger
-      if (!isGlitching && time - lastGlitchTime > glitchInterval) {
-        if (Math.random() < 0.1) { // 10% chance per second
-          triggerGlitch();
-        }
-      }
-
-      // Update glitch timer
-      if (isGlitching) {
-        glitchTimer += 1/60;
-        if (glitchTimer >= glitchDuration) {
-          isGlitching = false;
-          glitchTimer = 0;
-          lastGlitchTime = time;
-        }
-      }
-    }
-
-    function triggerGlitch() {
-      isGlitching = true;
-      glitchTimer = 0;
-
-      // Create random glitch cells
-      glitchCells.length = 0;
-      const glitchCellCount = Math.floor(10 + Math.random() * 15);
-      
-      for (let i = 0; i < glitchCellCount; i++) {
-        const col = Math.floor(Math.random() * Math.ceil(width / cellSize));
-        const row = Math.floor(Math.random() * Math.ceil(height / cellSize));
-        
-        glitchCells.push({
-          col, row,
-          offsetX: (Math.random() - 0.5) * 80,
-          offsetY: (Math.random() - 0.5) * 80,
-          rotation: (Math.random() - 0.5) * 0.5,
-          opacity: 1.0,
-          duration: Math.random() * 0.3 + 0.2
-        });
-      }
-    }
-
-    function drawGrid() {
-      ctx.strokeStyle = 'rgba(100, 100, 200, 0.2)';
-      ctx.lineWidth = 1;
-      
-      // Draw vertical lines
-      for (let x = gridOffset.x % cellSize; x < width; x += cellSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-      
-      // Draw horizontal lines
-      for (let y = gridOffset.y % cellSize; y < height; y += cellSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-    }
-
-    function drawGlitchEffect() {
-      // Apply glitch effects to cells
-      for (const glitchCell of glitchCells) {
-        const x = glitchCell.col * cellSize + gridOffset.x;
-        const y = glitchCell.row * cellSize + gridOffset.y;
-        
-        // Save current context
-        ctx.save();
-        
-        // Apply transformation
-        ctx.translate(x + cellSize/2, y + cellSize/2);
-        ctx.rotate(glitchCell.rotation);
-        ctx.translate(-(x + cellSize/2), -(y + cellSize/2));
-        
-        // Draw glitched cell with offset
-        ctx.fillStyle = palette[Math.floor(time * 3) % palette.length] + '44';
-        ctx.fillRect(x + glitchCell.offsetX, y + glitchCell.offsetY, cellSize, cellSize);
-        
-        // Draw original cell with reduced opacity
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = palette[Math.floor(time * 5) % palette.length] + '88';
-        ctx.fillRect(x, y, cellSize, cellSize);
-        
-        // Restore context
-        ctx.restore();
-      }
-      
-      // RGB split effect
-      if (Math.random() < 0.3) {
-        // Red channel offset
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.7;
-        ctx.fillStyle = '#ff0055';
-        ctx.translate(Math.random() * 5 - 2.5, Math.random() * 5 - 2.5);
-        ctx.fillRect(0, 0, width, height);
-        ctx.restore();
-        
-        // Green channel offset
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.7;
-        ctx.fillStyle = '#00f5ff';
-        ctx.translate(Math.random() * 5 - 2.5, Math.random() * 5 - 2.5);
-        ctx.fillRect(0, 0, width, height);
-        ctx.restore();
-        
-        // Blue channel offset
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.7;
-        ctx.fillStyle = '#ff2aff';
-        ctx.translate(Math.random() * 5 - 2.5, Math.random() * 5 - 2.5);
-        ctx.fillRect(0, 0, width, height);
-        ctx.restore();
-      }
-    }
-
-    function drawJaZeRText() {
-      // Draw "JaZeR" text using grid cells
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      // Draw text with grid alignment
-      const text = "JaZeR";
-      const fontSize = 80;
-      ctx.font = `bold ${fontSize}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      // Calculate position to center text
-      const textWidth = ctx.measureText(text).width;
-      const textX = width / 2;
-      const textY = height / 2;
-      
-      // Draw text in a grid pattern
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        const charX = textX - textWidth/2 + (i * fontSize * 0.8) + fontSize * 0.4;
-        
-        // Draw character with grid effect when glitching
-        if (isGlitching) {
-          // Draw glitched version of the character
-          for (let j = 0; j < 3; j++) {
-            ctx.save();
-            ctx.globalAlpha = 0.3;
-            ctx.fillStyle = palette[j % palette.length];
-            ctx.translate((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10);
-            ctx.fillText(char, charX, textY);
-            ctx.restore();
-          }
-        }
-        
-        // Draw main character
-        ctx.fillStyle = palette[i % palette.length];
-        ctx.shadowColor = palette[i % palette.length];
-        ctx.shadowBlur = 20;
-        ctx.fillText(char, charX, textY);
-      }
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      gridMaterial.uniforms.uTime.value = elapsed;
+      shardsMaterial.uniforms.uTime.value = elapsed;
+
+      glitchPlanes.forEach(planeObj => {
+        planeObj.mesh.position.z += planeObj.speed * delta;
+        if (planeObj.mesh.position.z > 5) {
+          planeObj.mesh.position.z = -5;
+          planeObj.mesh.position.y = (Math.random() - 0.5) * 3;
+        }
+      });
+
+      camera.position.x = mouse.centeredX * 0.6;
+      camera.position.y = 0.3 + mouse.centeredY * 0.6;
+      camera.lookAt(0, -1, -5);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

@@ -5,392 +5,157 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Infinite Mirror Corridor</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 20%, #050118, #010007 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      right: 2rem;
+      top: 2rem;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      letter-spacing: 0.35em;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Infinite Mirror Corridor</h1>
-      <p>Corridor of mirrors reflecting the JaZeR logo infinitely in both directions.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Infinite Mirror Corridor</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010007, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x040018, 0.06);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(65, 1, 0.1, 400);
+    camera.position.set(0, 0, 2);
 
-    // Infinite mirror corridor properties
-    const corridor = {
-      x: width / 2,
-      y: height / 2,
-      width: 300,
-      height: 500,
-      depth: 20
-    };
-    const mirrors = [];
-    const mirrorCount = 10;
-    const movementSpeed = 2; // Movement speed for the corridor effect
-    const logoSize = 60;
-    const reflections = [];
+    const corridorLength = 20;
+    const mirrorGroup = new THREE.Group();
+    scene.add(mirrorGroup);
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    const mirrorMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.12, side: THREE.DoubleSide });
+    for (let i = 0; i < corridorLength; i++) {
+      const frame = new THREE.Mesh(new THREE.PlaneGeometry(4, 3), mirrorMaterial.clone());
+      frame.position.z = -i * 2;
+      frame.position.y = Math.sin(i * 0.2) * 0.4;
+      mirrorGroup.add(frame);
+    }
+
+    const neonLines = new THREE.Group();
+    scene.add(neonLines);
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.2 });
+    for (let i = 0; i < corridorLength * 2; i++) {
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(6);
+      positions[0] = -2; positions[1] = -1; positions[2] = -i;
+      positions[3] = 2; positions[4] = 1; positions[5] = -i;
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const line = new THREE.Line(geometry, lineMaterial.clone());
+      neonLines.add(line);
+    }
+
+    const lightSprites = [];
+    const glowTexture = (() => {
+      const glowCanvas = document.createElement('canvas');
+      glowCanvas.width = glowCanvas.height = 128;
+      const ctx = glowCanvas.getContext('2d');
+      const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(glowCanvas);
+    })();
+    for (let i = 0; i < corridorLength; i++) {
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: i % 2 === 0 ? 0xff2aff : 0x00f5ff, transparent: true }));
+      sprite.position.set(0, 0, -i * 2);
+      sprite.scale.set(1.2, 1.2, 1);
+      scene.add(sprite);
+      lightSprites.push(sprite);
+    }
+
+    const starGeometry = new THREE.BufferGeometry();
+    const starCount = 800;
+    const starPositions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      starPositions[i * 3] = (Math.random() - 0.5) * 15;
+      starPositions[i * 3 + 1] = (Math.random() - 0.5) * 10;
+      starPositions[i * 3 + 2] = -Math.random() * 60;
+    }
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({ size: 0.04, color: 0xffffff, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
+    scene.add(stars);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update corridor
-      corridor.x = width / 2;
-      corridor.y = height / 2;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    // Function to initialize the mirror corridor
-    function initializeMirrorCorridor() {
-      mirrors.length = 0;
-      reflections.length = 0;
-      
-      // Create mirrored surfaces at different depths
-      for (let i = 0; i < mirrorCount; i++) {
-        mirrors.push({
-          id: i,
-          x: corridor.x,
-          y: corridor.y,
-          z: i * 60, // Position in depth
-          width: corridor.width * (1 - i * 0.05),
-          height: corridor.height * (1 - i * 0.05),
-          rotation: (Math.random() - 0.5) * 0.1, // Slight rotation variations
-          opacity: 1 - i * 0.08,
-          color: palette[i % palette.length],
-          text: "JaZeR",
-          textScale: 0.8 - i * 0.05
-        });
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Clear with dark background
-      const bgGradient = ctx.createLinearGradient(0, 0, width, height);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#100020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw infinite mirror corridor
-      updateAndDrawMirrorCorridor();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function updateAndDrawMirrorCorridor() {
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      // Draw side walls of the corridor (left and right)
-      const wallGradient = ctx.createLinearGradient(0, 0, width, 0);
-      wallGradient.addColorStop(0, palette[0] + '22');
-      wallGradient.addColorStop(0.5, palette[1] + '22');
-      wallGradient.addColorStop(1, palette[0] + '22');
-      
-      // Left wall
-      ctx.fillStyle = wallGradient;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(corridor.x - corridor.width/2, 0);
-      ctx.lineTo(corridor.x - corridor.width/2, height);
-      ctx.lineTo(0, height);
-      ctx.closePath();
-      ctx.fill();
-      
-      // Right wall
-      ctx.beginPath();
-      ctx.moveTo(width, 0);
-      ctx.lineTo(corridor.x + corridor.width/2, 0);
-      ctx.lineTo(corridor.x + corridor.width/2, height);
-      ctx.lineTo(width, height);
-      ctx.closePath();
-      ctx.fill();
-      
-      // Draw mirrors and reflections
-      for (let i = mirrors.length - 1; i >= 0; i--) {
-        const mirror = mirrors[i];
-        
-        // Calculate perspective scaling
-        const scale = 1 / (1 + mirror.z / 100);
-        const currentWidth = mirror.width * scale;
-        const currentHeight = mirror.height * scale;
-        
-        // Calculate position with perspective
-        const posX = corridor.x;
-        const posY = corridor.y + (mirror.z / mirrors.length) * 0.5; // Slight vertical offset
-        
-        // Draw mirror frame
-        ctx.strokeStyle = mirror.color + Math.floor(mirror.opacity * 200).toString(16).padStart(2, '0');
-        ctx.lineWidth = 4 * scale;
-        
-        // Create frame glow
-        ctx.shadowColor = mirror.color;
-        ctx.shadowBlur = 20 * scale;
-        ctx.strokeRect(posX - currentWidth/2, posY - currentHeight/2, currentWidth, currentHeight);
-        
-        // Draw mirror reflection with JaZeR logo
-        ctx.save();
-        ctx.clip();
-        
-        // Create mirror surface effect
-        const mirrorGradient = ctx.createLinearGradient(
-          posX - currentWidth/2, posY,
-          posX + currentWidth/2, posY
-        );
-        mirrorGradient.addColorStop(0, mirror.color + '00');
-        mirrorGradient.addColorStop(0.5, mirror.color + Math.floor(mirror.opacity * 100).toString(16).padStart(2, '0'));
-        mirrorGradient.addColorStop(1, mirror.color + '00');
-        
-        ctx.fillStyle = mirrorGradient;
-        ctx.fillRect(posX - currentWidth/2, posY - currentHeight/2, currentWidth, currentHeight);
-        
-        // Draw JaZeR logo/text in the mirror
-        const textGradient = ctx.createLinearGradient(
-          posX - currentWidth/2, posY,
-          posX + currentWidth/2, posY
-        );
-        textGradient.addColorStop(0, palette[i % palette.length]);
-        textGradient.addColorStop(1, palette[(i + 1) % palette.length]);
-        
-        ctx.font = `bold ${logoSize * mirror.textScale}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = textGradient;
-        ctx.shadowColor = palette[i % palette.length];
-        ctx.shadowBlur = 20 * mirror.opacity;
-        ctx.fillText(mirror.text, posX, posY);
-        
-        // Draw smaller reflections
-        for (let j = 0; j < 3; j++) {
-          const reflectionSize = logoSize * mirror.textScale * (0.5 - j * 0.1);
-          ctx.font = `bold ${reflectionSize}px Arial`;
-          ctx.globalAlpha = mirror.opacity * (0.3 - j * 0.1);
-          ctx.fillText(mirror.text, posX - currentWidth/4 + j * 20, posY - currentHeight/4 + j * 20);
-        }
-        
-        ctx.globalAlpha = 1.0;
-        ctx.restore();
-      }
-      
-      // Draw center pathway effect
-      const pathGradient = ctx.createLinearGradient(0, 0, 0, height);
-      pathGradient.addColorStop(0, '#00000000');
-      pathGradient.addColorStop(0.5, '#00f5ff22');
-      pathGradient.addColorStop(1, '#00000000');
-      
-      ctx.fillStyle = pathGradient;
-      ctx.fillRect(
-        corridor.x - corridor.width/2 + 20, 
-        0, 
-        corridor.width - 40, 
-        height
-      );
-      
-      // Draw JaZeR text in the center with pulsing effect
-      const pulse = Math.sin(time * 2) * 0.2 + 0.8;
-      ctx.font = `bold ${logoSize * pulse}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = palette[0];
-      ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 30;
-      ctx.fillText('JaZeR', corridor.x, corridor.y);
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    initializeMirrorCorridor();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      mirrorGroup.children.forEach((frame, index) => {
+        frame.material.opacity = 0.15 + Math.sin(elapsed * 0.4 + index) * 0.05;
+        frame.rotation.y = Math.sin(elapsed * 0.1 + index) * 0.1;
+      });
+
+      neonLines.children.forEach((line, index) => {
+        line.material.opacity = 0.1 + Math.sin(elapsed + index) * 0.05;
+      });
+
+      lightSprites.forEach((sprite, index) => {
+        sprite.position.y = Math.sin(elapsed * 1.5 + index) * 0.5;
+      });
+
+      const pos = starGeometry.attributes.position.array;
+      for (let i = 0; i < starCount; i++) {
+        pos[i * 3 + 2] += delta * 20;
+        if (pos[i * 3 + 2] > 0) pos[i * 3 + 2] = -60;
+      }
+      starGeometry.attributes.position.needsUpdate = true;
+
+      camera.position.x = mouse.centeredX * 1.2;
+      camera.position.y = mouse.centeredY * 0.8;
+      camera.lookAt(0, 0, -10);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

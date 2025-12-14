@@ -5,376 +5,149 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Hyperspace Streaks</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: #010009;
+      color: #f8fbff;
+      min-height: 100vh;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      right: 2rem;
+      bottom: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Hyperspace Streaks</h1>
-      <p>Classic warp speed effect; stars stretch into lines, with JaZeR text occasionally streaking past.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Hyperspace Streaks</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010009, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x020016, 0.08);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 400);
+    camera.position.set(0, 0, 0);
 
-    // Hyperspace streaks properties
-    const center = { x: width / 2, y: height / 2 };
-    const stars = [];
-    const starCount = 200;
-    const movementSpeed = 5;
-    const boostSpeed = 15; // Speed when boosted
-    let currentSpeed = movementSpeed;
-    const hyperspaceTexts = [];
+    const streakGeometry = new THREE.BufferGeometry();
+    const streakCount = 2000;
+    const streakPositions = new Float32Array(streakCount * 3);
+    const streakVelocities = new Float32Array(streakCount);
+    const streakColors = new Float32Array(streakCount * 3);
+    const palette = [new THREE.Color('#00f5ff'), new THREE.Color('#ff2aff'), new THREE.Color('#ffd25b')];
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    for (let i = 0; i < streakCount; i++) {
+      streakPositions[i * 3] = (Math.random() - 0.5) * 60;
+      streakPositions[i * 3 + 1] = (Math.random() - 0.5) * 60;
+      streakPositions[i * 3 + 2] = -Math.random() * 200 - 2;
+      streakVelocities[i] = 80 + Math.random() * 80;
+      const color = palette[i % palette.length];
+      streakColors[i * 3] = color.r;
+      streakColors[i * 3 + 1] = color.g;
+      streakColors[i * 3 + 2] = color.b;
+    }
+    streakGeometry.setAttribute('position', new THREE.BufferAttribute(streakPositions, 3));
+    streakGeometry.setAttribute('color', new THREE.BufferAttribute(streakColors, 3));
+
+    const streakMaterial = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */`
+        attribute vec3 color;
+        varying vec3 vColor;
+        void main(){
+          vColor = color;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+          gl_PointSize = 60.0 / -mvPosition.z;
+        }
+      `,
+      fragmentShader: /* glsl */`
+        varying vec3 vColor;
+        void main(){
+          float dist = length(gl_PointCoord - vec2(0.5));
+          float alpha = smoothstep(0.5, 0.0, dist);
+          gl_FragColor = vec4(vColor, alpha);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      vertexColors: true
+    });
+    const streaks = new THREE.Points(streakGeometry, streakMaterial);
+    scene.add(streaks);
+
+    const tunnelGeometry = new THREE.CylinderGeometry(8, 8, 200, 32, 1, true);
+    tunnelGeometry.rotateZ(Math.PI / 2);
+    const tunnelMaterial = new THREE.MeshBasicMaterial({ color: 0x040216, wireframe: true, transparent: true, opacity: 0.1 });
+    const tunnel = new THREE.Mesh(tunnelGeometry, tunnelMaterial);
+    tunnel.position.z = -100;
+    scene.add(tunnel);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      
-      // Initialize stars
-      initializeStars();
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function initializeStars() {
-      stars.length = 0;
-      for (let i = 0; i < starCount; i++) {
-        stars.push({
-          id: i,
-          x: (Math.random() - 0.5) * width,
-          y: (Math.random() - 0.5) * height,
-          z: Math.random() * 1000, // Depth (0 = close, 1000 = far)
-          originalX: (Math.random() - 0.5) * width,
-          originalY: (Math.random() - 0.5) * height,
-          size: 1 + Math.random() * 3,
-          color: palette[Math.floor(Math.random() * palette.length)],
-          opacity: 0.5 + Math.random() * 0.5
-        });
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Check for boost (speed up when mouse is pressed)
-      if (mouse.isPressed) {
-        currentSpeed = boostSpeed;
-      } else {
-        currentSpeed = movementSpeed;
-      }
-
-      // Clear with dark background
-      const bgGradient = ctx.createLinearGradient(0, 0, width, height);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#100020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw hyperspace streaks
-      updateAndDrawStars();
-
-      // Draw JaZeR text occasionally streaking by
-      drawHyperspaceText();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function updateAndDrawStars() {
-      for (const star of stars) {
-        // Move star toward viewer (decrease z)
-        star.z -= currentSpeed * 20;
-        
-        // Reset star if it passes the viewer
-        if (star.z <= 0) {
-          star.z = 1000;
-          star.originalX = (Math.random() - 0.5) * width;
-          star.originalY = (Math.random() - 0.5) * height;
-        }
-        
-        // Calculate screen position based on perspective
-        const scale = 1000 / (star.z + 1000);
-        const screenX = center.x + star.originalX * scale;
-        const screenY = center.y + star.originalY * scale;
-        
-        // Calculate streak length based on speed and depth
-        const streakLength = map(star.z, 0, 1000, 100, 1) * (currentSpeed / movementSpeed);
-        
-        // Only draw if the star is in front of the viewer and on screen
-        if (scale > 0 && screenX > -100 && screenX < width + 100 && screenY > -100 && screenY < height + 100) {
-          ctx.save();
-          ctx.globalCompositeOperation = 'lighter';
-          
-          // Draw a line from the previous position to the current position (streak effect)
-          const prevScale = 1000 / (star.z + 1000 + currentSpeed * 20);
-          const prevX = center.x + star.originalX * prevScale;
-          const prevY = center.y + star.originalY * prevScale;
-          
-          // Create gradient for the streak
-          const gradient = ctx.createLinearGradient(prevX, prevY, screenX, screenY);
-          gradient.addColorStop(0, star.color + '00');
-          gradient.addColorStop(0.5, star.color + Math.floor(star.opacity * 255).toString(16).padStart(2, '0'));
-          gradient.addColorStop(1, star.color + '00');
-          
-          ctx.strokeStyle = gradient;
-          ctx.lineWidth = star.size * scale * 2;
-          ctx.beginPath();
-          ctx.moveTo(prevX, prevY);
-          ctx.lineTo(screenX, screenY);
-          ctx.stroke();
-          
-          // Add glow effect
-          ctx.shadowColor = star.color;
-          ctx.shadowBlur = 15 * scale;
-          ctx.stroke();
-          
-          ctx.restore();
-        }
-      }
-    }
-
-    function drawHyperspaceText() {
-      // Occasionally spawn JaZeR text
-      if (Math.random() < 0.01) { // 1% chance per frame
-        hyperspaceTexts.push({
-          x: Math.random() * width,
-          y: Math.random() * height,
-          speedX: (Math.random() - 0.5) * 20,
-          speedY: (Math.random() - 0.5) * 20,
-          rotation: Math.random() * Math.PI * 2,
-          rotationSpeed: (Math.random() - 0.5) * 0.2,
-          scale: 0.5 + Math.random() * 1.5,
-          life: 100,
-          color: palette[Math.floor(Math.random() * palette.length)]
-        });
-      }
-      
-      // Update and draw hyperspace texts
-      for (let i = hyperspaceTexts.length - 1; i >= 0; i--) {
-        const text = hyperspaceTexts[i];
-        
-        text.x += text.speedX;
-        text.y += text.speedY;
-        text.rotation += text.rotationSpeed;
-        text.life--;
-        
-        // Remove text if it's off screen or life is over
-        if (text.life <= 0 || 
-            text.x < -200 || text.x > width + 200 || 
-            text.y < -100 || text.y > height + 100) {
-          hyperspaceTexts.splice(i, 1);
-          continue;
-        }
-        
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        
-        ctx.translate(text.x, text.y);
-        ctx.rotate(text.rotation);
-        ctx.scale(text.scale, text.scale);
-        
-        ctx.font = 'bold 40px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = text.color;
-        ctx.shadowColor = text.color;
-        ctx.shadowBlur = 20;
-        ctx.fillText('JaZeR', 0, 0);
-        
-        ctx.restore();
-      }
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      const pos = streakGeometry.attributes.position.array;
+      for (let i = 0; i < streakCount; i++) {
+        pos[i * 3 + 2] += streakVelocities[i] * delta;
+        pos[i * 3] += mouse.centeredX * delta * 20;
+        pos[i * 3 + 1] += mouse.centeredY * delta * 20;
+        if (pos[i * 3 + 2] > 5) {
+          pos[i * 3 + 2] = -200;
+          pos[i * 3] = (Math.random() - 0.5) * 60;
+          pos[i * 3 + 1] = (Math.random() - 0.5) * 60;
+        }
+      }
+      streakGeometry.attributes.position.needsUpdate = true;
+
+      tunnel.rotation.y = elapsed * 0.1;
+      camera.position.x = mouse.centeredX * 2;
+      camera.position.y = mouse.centeredY * 2;
+      camera.lookAt(0, 0, -50);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>

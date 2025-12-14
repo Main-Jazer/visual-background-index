@@ -5,346 +5,193 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Echoing Logo Orbits</title>
   <style>
-    * {
-      box-sizing: border-box;
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
       margin: 0;
-      padding: 0;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
+      font-family: "Inter", system-ui, sans-serif;
+      background: radial-gradient(circle at 50% 10%, #050120, #010009 70%);
+      color: #f8fbff;
       overflow: hidden;
-      background: #000;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
-      color: #f5f5ff;
+      min-height: 100vh;
     }
-
-    canvas#effectCanvas {
+    canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100vw;
       height: 100vh;
       display: block;
     }
-
-    /* Optional overlay content - delete if not needed */
-    .overlay {
+    .label {
       position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .overlay .card {
-      text-align: center;
-      padding: 2rem 3rem;
-      border-radius: 20px;
-      background: rgba(6, 10, 24, 0.75);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(150, 190, 255, 0.25);
-      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.7);
-      pointer-events: auto;
-    }
-
-    .overlay h1 {
-      font-size: 2.4rem;
-      letter-spacing: 0.08em;
+      right: 2rem;
+      top: 2rem;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
-      margin-bottom: 0.75rem;
-      background: linear-gradient(135deg, #00f5ff, #ff2aff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .overlay p {
-      opacity: 0.82;
-      max-width: 36rem;
-      margin: 0 auto;
-    }
-
-    /* FPS counter - optional */
-    .fps-counter {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      font-size: 12px;
-      font-family: monospace;
-      color: rgba(255, 255, 255, 0.5);
-      z-index: 100;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.45);
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <canvas id="effectCanvas"></canvas>
-
-  <!-- Optional: Overlay content (delete if not needed) -->
-  <div class="overlay">
-    <div class="card">
-      <h1>JaZeR Echoing Logo Orbits</h1>
-      <p>Multiple copies of the JaZeR logo orbiting around a center point at different radii and speeds, leaving light trails.</p>
-    </div>
-  </div>
-
-  <!-- Optional: FPS counter (delete if not needed) -->
-  <div class="fps-counter" id="fps"></div>
-
-  <!-- Load Three.js if using WebGL effects -->
-  <script src="Three.js"></script>
-
+  <div class="label">Echoing Logo Orbits</div>
   <script type="module">
-    // Import JaZeR engine utilities
-    import {
-      // Core
-      initJazerBackground,
-      CONFIG,
-      QualityAutoTuner,
+    import * as THREE from '../lib/Three.js';
+    import { mouse } from '../lib/jazer-background-engine.js';
 
-      // Noise (for procedural effects)
-      SimplexNoise,
-      noise2D,
-      noise3D,
-      noise4D,
-      fbm2D,
-      fbm3D,
-
-      // Animation
-      Easing,
-
-      // Interactivity
-      mouse,
-      MouseTracker,
-
-      // Colors
-      ColorPalettes,
-      getRandomPalette,
-      getPaletteColor,
-      lerpColor,
-      cycleColor,
-      hexToRgb,
-      rgbToHex,
-      hslToRgb,
-      rgbToHsl,
-
-      // Math utilities
-      map,
-      clamp,
-      smoothstep,
-      smootherstep,
-      fract,
-      mod,
-      mix,
-      step,
-      pulse,
-      inverseLerp,
-      remap,
-      wrap,
-      pingPong,
-      degToRad,
-      radToDeg,
-      distance,
-      distance3D,
-      normalize2D,
-      normalize3D,
-      dot2D,
-      dot3D
-    } from '../lib/jazer-background-engine.js';
-
-    // Optional: Import shader utilities for custom WebGL effects
-    // import { createShaderEffect, NOISE_FUNCTIONS } from '../lib/jazer-shaders.js';
-
-    // =====================================================
-    // CONFIGURATION
-    // =====================================================
     const canvas = document.getElementById('effectCanvas');
-    const fpsEl = document.getElementById('fps');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x010008, 1);
 
-    // Choose your palette
-    const palette = ColorPalettes.jazer; // or: cyberpunk, vapor, galaxy, etc.
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x070028, 0.04);
 
-    // =====================================================
-    // CANVAS SETUP
-    // =====================================================
-    const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let width, height;
-    let time = 0;
-    let frameCount = 0;
-    let lastFpsUpdate = 0;
+    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+    camera.position.set(0, 0.6, 6);
 
-    // Echoing logo orbits properties
-    const center = { x: width / 2, y: height / 2 };
-    const logos = [];
-    const logoCount = 12;
-    const baseRadius = 80;
-    const maxRadius = 250;
+    function createLogoTexture(scale = 1) {
+      const size = Math.floor(512 * scale);
+      const texCanvas = document.createElement('canvas');
+      texCanvas.width = texCanvas.height = size;
+      const ctx = texCanvas.getContext('2d');
+      ctx.fillStyle = 'rgba(0,0,0,0)';
+      ctx.fillRect(0, 0, size, size);
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#00f5ff');
+      gradient.addColorStop(1, '#ff2aff');
+      ctx.fillStyle = gradient;
+      ctx.shadowColor = '#00f5ff';
+      ctx.shadowBlur = size * 0.08;
+      ctx.font = `bold ${size * 0.45}px "Inter", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('JaZeR', size / 2, size / 2 + size * 0.04);
+      const texture = new THREE.CanvasTexture(texCanvas);
+      texture.flipY = false;
+      return texture;
+    }
 
-    // Simplex noise instance
-    const simplex = new SimplexNoise();
+    const logoTexture = createLogoTexture();
+
+    const corePlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.5, 1.2),
+      new THREE.MeshBasicMaterial({ map: logoTexture, transparent: true })
+    );
+    corePlane.position.set(0, 0, 0);
+    scene.add(corePlane);
+
+    const orbitGroup = new THREE.Group();
+    scene.add(orbitGroup);
+
+    const orbitRingGeometry = new THREE.RingGeometry(2, 2.1, 128);
+    const orbitRingMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+    const orbitRing = new THREE.Mesh(orbitRingGeometry, orbitRingMaterial);
+    orbitRing.rotation.x = Math.PI / 2;
+    orbitGroup.add(orbitRing);
+
+    const orbitLogos = [];
+    for (let i = 0; i < 12; i++) {
+      const texture = createLogoTexture(0.5);
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.45), new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false }));
+      orbitGroup.add(mesh);
+      orbitLogos.push({ mesh, offset: i / 12, radius: 2.2, phase: Math.random() * Math.PI * 2 });
+    }
+
+    const sparkGeometry = new THREE.BufferGeometry();
+    const sparkCount = 800;
+    const sparkPositions = new Float32Array(sparkCount * 3);
+    const sparkVelocity = new Float32Array(sparkCount);
+    for (let i = 0; i < sparkCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 0.2 + Math.random() * 3.5;
+      const y = (Math.random() - 0.5) * 4;
+      sparkPositions[i * 3] = Math.cos(angle) * radius;
+      sparkPositions[i * 3 + 1] = y;
+      sparkPositions[i * 3 + 2] = Math.sin(angle) * radius;
+      sparkVelocity[i] = (Math.random() - 0.5) * 0.5;
+    }
+    sparkGeometry.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
+    const sparkMaterial = new THREE.PointsMaterial({
+      size: 0.08,
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.5,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const sparkPoints = new THREE.Points(sparkGeometry, sparkMaterial);
+    scene.add(sparkPoints);
+
+    const connectorGeometry = new THREE.BufferGeometry();
+    connectorGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(orbitLogos.length * 6), 3));
+    const connectorMaterial = new THREE.LineBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.18 });
+    const connectors = new THREE.LineSegments(connectorGeometry, connectorMaterial);
+    scene.add(connectors);
+
+    const clock = new THREE.Clock();
 
     function resize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      
-      // Update center
-      center.x = width / 2;
-      center.y = height / 2;
-      
-      // Initialize logos
-      initializeLogos();
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      renderer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
 
-    function initializeLogos() {
-      logos.length = 0;
-      for (let i = 0; i < logoCount; i++) {
-        const radius = baseRadius + (i * (maxRadius - baseRadius)) / logoCount;
-        const speed = 0.2 + (i * 0.1);
-        const angle = (i / logoCount) * Math.PI * 2;
-        
-        logos.push({
-          id: i,
-          radius: radius,
-          speed: speed,
-          angle: angle,
-          color: palette[i % palette.length],
-          trails: [],
-          trailLength: 20,
-          size: 30 + (i * 5), // Larger logos further out
-          tilt: (i % 3) * (Math.PI / 6) - (Math.PI / 6) // Tilt effect
-        });
-      }
-    }
-
-    // =====================================================
-    // EFFECT IMPLEMENTATION
-    // =====================================================
-    function render(now) {
-      const dt = 1/60; // Assume 60fps for calculations
-      time += dt;
-      frameCount++;
-
-      // Update mouse (for interactive effects)
-      mouse.update();
-
-      // Clear with dark background
-      const bgGradient = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, Math.max(width, height) / 2);
-      bgGradient.addColorStop(0, '#000010');
-      bgGradient.addColorStop(1, '#000020');
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Update and draw echoing logo orbits
-      updateAndDrawLogos();
-
-      // FPS counter
-      if (now - lastFpsUpdate > 1000) {
-        fpsEl.textContent = `${frameCount} FPS`;
-        frameCount = 0;
-        lastFpsUpdate = now;
-      }
-
-      requestAnimationFrame(render);
-    }
-
-    function updateAndDrawLogos() {
-      for (let i = 0; i < logos.length; i++) {
-        const logo = logos[i];
-        
-        // Update position based on time and speed
-        logo.angle += logo.speed * 0.01;
-        
-        // Calculate current position
-        const x = center.x + Math.cos(logo.angle) * logo.radius;
-        const y = center.y + Math.sin(logo.angle) * logo.radius;
-        
-        // Add to trail
-        logo.trails.push({x: x, y: y});
-        if (logo.trails.length > logo.trailLength) {
-          logo.trails.shift();
-        }
-        
-        // Draw trail
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        
-        for (let j = 1; j < logo.trails.length; j++) {
-          const point = logo.trails[j];
-          const prevPoint = logo.trails[j-1];
-          const trailAlpha = j / logo.trails.length;
-          
-          ctx.beginPath();
-          ctx.moveTo(prevPoint.x, prevPoint.y);
-          ctx.lineTo(point.x, point.y);
-          ctx.strokeStyle = logo.color + Math.floor(trailAlpha * 100).toString(16).padStart(2, '0');
-          ctx.lineWidth = 2 * trailAlpha;
-          ctx.stroke();
-        }
-        
-        // Draw the logo itself
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(logo.angle + logo.tilt); // Add tilt for visual interest
-        
-        // Draw "J" as a representative for the JaZeR logo
-        ctx.font = `bold ${logo.size}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = logo.color;
-        ctx.shadowColor = logo.color;
-        ctx.shadowBlur = 20;
-        ctx.fillText('J', 0, 0);
-        
-        // Occasionally draw full "JaZeR"
-        if (Math.floor(time * 0.2) % (logo.id + 1) === 0) {
-          ctx.font = `bold ${Math.max(10, logo.size * 0.7)}px Arial`;
-          ctx.globalAlpha = 0.6;
-          ctx.fillText('JaZeR', 0, 0);
-        }
-        
-        ctx.restore();
-        ctx.restore();
-      }
-      
-      // Draw central core
-      ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
-      
-      const coreGradient = ctx.createRadialGradient(
-        center.x, center.y, 0,
-        center.x, center.y, 30
-      );
-      coreGradient.addColorStop(0, palette[0] + 'FF');
-      coreGradient.addColorStop(1, palette[0] + '00');
-      
-      ctx.fillStyle = coreGradient;
-      ctx.beginPath();
-      ctx.arc(center.x, center.y, 30, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Add glow
-      ctx.shadowColor = palette[0];
-      ctx.shadowBlur = 30;
-      ctx.fill();
-      
-      ctx.restore();
-    }
-
-    // =====================================================
-    // INITIALIZATION
-    // =====================================================
     window.addEventListener('resize', resize);
     resize();
-    requestAnimationFrame(render);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+      mouse.update();
+
+      orbitGroup.rotation.y = elapsed * 0.2 + mouse.centeredX * 0.4;
+      orbitGroup.rotation.x = Math.sin(elapsed * 0.2) * 0.2 + mouse.centeredY * 0.2;
+
+      orbitLogos.forEach((logo, index) => {
+        const angle = elapsed * 0.5 + logo.offset * Math.PI * 2;
+        const radius = logo.radius + Math.sin(elapsed * 0.4 + index) * 0.2;
+        logo.mesh.position.set(Math.cos(angle) * radius, Math.sin(angle * 1.2) * 0.5, Math.sin(angle) * radius);
+        logo.mesh.lookAt(camera.position);
+        logo.mesh.scale.setScalar(0.8 + Math.sin(elapsed + index) * 0.05);
+      });
+
+      const posArray = connectorGeometry.attributes.position.array;
+      for (let i = 0; i < orbitLogos.length; i++) {
+        const a = orbitLogos[i].mesh.position;
+        const b = orbitLogos[(i + 1) % orbitLogos.length].mesh.position;
+        posArray[i * 6] = a.x; posArray[i * 6 + 1] = a.y; posArray[i * 6 + 2] = a.z;
+        posArray[i * 6 + 3] = b.x; posArray[i * 6 + 4] = b.y; posArray[i * 6 + 5] = b.z;
+      }
+      connectorGeometry.attributes.position.needsUpdate = true;
+
+      const sparkPos = sparkGeometry.attributes.position.array;
+      for (let i = 0; i < sparkCount; i++) {
+        const radius = Math.sqrt(sparkPos[i * 3] ** 2 + sparkPos[i * 3 + 2] ** 2) + sparkVelocity[i] * delta;
+        const angle = Math.atan2(sparkPos[i * 3 + 2], sparkPos[i * 3]) + delta * 0.5;
+        sparkPos[i * 3] = Math.cos(angle) * radius;
+        sparkPos[i * 3 + 2] = Math.sin(angle) * radius;
+        sparkPos[i * 3 + 1] += Math.sin(elapsed + i) * delta * 0.2;
+        if (radius > 4) {
+          sparkPos[i * 3] *= 0.5;
+          sparkPos[i * 3 + 2] *= 0.5;
+        }
+      }
+      sparkGeometry.attributes.position.needsUpdate = true;
+
+      camera.position.x = Math.sin(elapsed * 0.2) * 0.5 + mouse.centeredX * 0.8;
+      camera.position.y = Math.sin(elapsed * 0.15) * 0.3 + mouse.centeredY * 0.6;
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
   </script>
 </body>
 </html>
