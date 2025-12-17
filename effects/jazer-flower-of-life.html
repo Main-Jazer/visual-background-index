@@ -49,9 +49,9 @@
     <div class="watermark">JaZeR</div>
     <script type="module">
         import {
-            noise2D, SimplexNoise, mouse,
-            ColorPalettes, hexToRgb, lerpColor,
-            map, smoothstep, degToRad
+            noise2D, noise3D, SimplexNoise, mouse,
+            ColorPalettes, hexToRgb, lerpColor, cycleColor,
+            map, smoothstep, degToRad, clamp
         } from '../lib/jazer-background-engine.js';
 
         const canvas = document.getElementById('c');
@@ -60,9 +60,14 @@
         let W, H, cx, cy;
         let time = 0;
 
-        const palette = ['#ffd700', '#ff6b35', '#ff2aff', '#00f5ff', '#b37cff'];
+        // Use JaZeR galaxy palette for sacred geometry
+        const palette = ColorPalettes.galaxy;
         const layerCount = 12;
         const petalsPerRing = 6;
+
+        // Particle system for energy trails
+        const particles = [];
+        const maxParticles = 150;
 
         function resize() {
             W = window.innerWidth;
@@ -74,41 +79,136 @@
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        // Draw a single circle (seed of flower of life)
-        function drawCircle(x, y, radius, alpha, color) {
+        // Particle class for energy trails
+        class Particle {
+            constructor(x, y, z, colorIndex) {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.life = 1.0;
+                this.decay = 0.005 + Math.random() * 0.01;
+                this.colorIndex = colorIndex;
+                this.size = 1 + Math.random() * 2;
+            }
+
+            update() {
+                this.life -= this.decay;
+                this.x += this.vx;
+                this.y += this.vy;
+                // Organic drift with noise
+                const drift = noise2D(this.x * 0.01, this.y * 0.01 + time * 0.1);
+                this.x += drift * 0.3;
+                this.y += drift * 0.2;
+            }
+
+            draw() {
+                if (this.life <= 0) return;
+
+                const scale = 1 / (1 + this.z * 2);
+                const alpha = this.life * scale;
+                const size = this.size * scale;
+
+                const color = palette[this.colorIndex % palette.length];
+                const rgb = hexToRgb(color);
+
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.6})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Glow
+                ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.2})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, size * 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+
+        // Draw a single circle with organic motion
+        function drawCircle(x, y, radius, alpha, color, timeOffset = 0) {
+            // Add noise-based organic distortion
+            const noiseScale = 0.002;
+            const noiseAmp = radius * 0.05;
+
             const rgb = hexToRgb(color);
             ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
             ctx.lineWidth = 1.5;
+
             ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            const segments = 60;
+            for (let i = 0; i <= segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                const noiseVal = noise2D(
+                    x * noiseScale + Math.cos(angle) * 0.5,
+                    y * noiseScale + Math.sin(angle) * 0.5 + time * 0.1 + timeOffset
+                );
+                const distortedRadius = radius + noiseVal * noiseAmp;
+                const px = x + Math.cos(angle) * distortedRadius;
+                const py = y + Math.sin(angle) * distortedRadius;
+
+                if (i === 0) {
+                    ctx.moveTo(px, py);
+                } else {
+                    ctx.lineTo(px, py);
+                }
+            }
+            ctx.closePath();
             ctx.stroke();
+
+            // Spawn particles occasionally
+            if (Math.random() < 0.03 && particles.length < maxParticles) {
+                const angle = Math.random() * Math.PI * 2;
+                const px = x + Math.cos(angle) * radius;
+                const py = y + Math.sin(angle) * radius;
+                const colorIdx = Math.floor(Math.random() * palette.length);
+                particles.push(new Particle(px, py, 0.5, colorIdx));
+            }
         }
 
-        // Draw Flower of Life pattern at position
-        function drawFlowerOfLife(x, y, baseRadius, rotation, alpha, colorOffset) {
-            const r = baseRadius;
+        // Draw Flower of Life pattern with pulsing and smooth colors
+        function drawFlowerOfLife(x, y, baseRadius, rotation, alpha, colorOffset, z) {
+            // Add breathing/pulsing effect
+            const pulse = Math.sin(time * 2 + z * 3) * 0.08 + 1;
+            const r = baseRadius * pulse;
 
-            // Center circle
-            const color1 = palette[Math.floor((colorOffset) % palette.length)];
-            drawCircle(x, y, r, alpha * 0.8, color1);
+            // Dynamic distortion based on depth
+            const distort = noise2D(x * 0.001, y * 0.001 + time * 0.05) * 5;
+
+            // Center circle with smooth color cycling
+            const centerColor = cycleColor(palette, time * 0.3 + colorOffset, 0.5);
+            drawCircle(x + distort, y + distort, r, alpha * 0.8, centerColor, z);
 
             // First ring - 6 circles
             for (let i = 0; i < 6; i++) {
                 const angle = rotation + (i / 6) * Math.PI * 2;
-                const px = x + Math.cos(angle) * r;
-                const py = y + Math.sin(angle) * r;
-                const color = palette[Math.floor((colorOffset + i * 0.5) % palette.length)];
-                drawCircle(px, py, r, alpha * 0.6, color);
+                const localPulse = Math.sin(time * 2.5 + i * 0.5 + z * 3) * 0.05 + 1;
+                const px = x + Math.cos(angle) * r * localPulse + distort * 0.5;
+                const py = y + Math.sin(angle) * r * localPulse + distort * 0.5;
+
+                // Smooth color transition
+                const colorPhase = time * 0.3 + colorOffset + i * 0.3;
+                const color = cycleColor(palette, colorPhase, 0.5);
+                drawCircle(px, py, r, alpha * 0.6, color, z + i * 0.1);
             }
 
             // Second ring - 12 circles
             for (let i = 0; i < 12; i++) {
                 const angle = rotation + (i / 12) * Math.PI * 2;
                 const dist = r * 1.732; // sqrt(3)
-                const px = x + Math.cos(angle) * dist;
-                const py = y + Math.sin(angle) * dist;
-                const color = palette[Math.floor((colorOffset + i * 0.3) % palette.length)];
-                drawCircle(px, py, r, alpha * 0.4, color);
+                const localPulse = Math.sin(time * 3 + i * 0.3 + z * 2) * 0.05 + 1;
+                const px = x + Math.cos(angle) * dist * localPulse + distort * 0.3;
+                const py = y + Math.sin(angle) * dist * localPulse + distort * 0.3;
+
+                // Smooth color transition
+                const colorPhase = time * 0.3 + colorOffset + i * 0.2;
+                const color = cycleColor(palette, colorPhase, 0.5);
+                drawCircle(px, py, r, alpha * 0.4, color, z + i * 0.05);
             }
         }
 
@@ -138,14 +238,14 @@
                 const baseRadius = 60 * scale;
                 const rotation = time * this.rotationSpeed + this.index * 0.3;
 
-                // Mouse influence for parallax
+                // Enhanced mouse influence for parallax
                 const parallax = this.z * 0.5;
                 const offsetX = mouse.centeredX * 100 * parallax;
                 const offsetY = mouse.centeredY * 100 * parallax;
 
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
-                drawFlowerOfLife(cx + offsetX, cy + offsetY, baseRadius, rotation, alpha, this.colorOffset);
+                drawFlowerOfLife(cx + offsetX, cy + offsetY, baseRadius, rotation, alpha, this.colorOffset, this.z);
                 ctx.restore();
             }
         }
@@ -163,20 +263,37 @@
             ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, W, H);
 
-            // Trail effect
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            // Enhanced trail effect for smoother motion blur
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
             ctx.fillRect(0, 0, W, H);
 
             const dt = 1 / 60;
+
+            // Update and draw particles (behind geometry)
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].isDead()) {
+                    particles.splice(i, 1);
+                }
+            }
+            ctx.restore();
 
             // Sort and draw back to front
             layers.sort((a, b) => b.z - a.z);
             layers.forEach(l => { l.update(dt); l.draw(); });
 
-            // Central glow
+            // Enhanced central glow with color cycling
+            const glowColor1 = cycleColor(palette, time * 0.2, 0.3);
+            const glowColor2 = cycleColor(palette, time * 0.2 + 0.5, 0.3);
+            const rgb1 = hexToRgb(glowColor1);
+            const rgb2 = hexToRgb(glowColor2);
+
             const centerGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 150);
-            centerGlow.addColorStop(0, 'rgba(255, 215, 0, 0.15)');
-            centerGlow.addColorStop(0.5, 'rgba(255, 42, 255, 0.05)');
+            centerGlow.addColorStop(0, `rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, 0.15)`);
+            centerGlow.addColorStop(0.5, `rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, 0.05)`);
             centerGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = centerGlow;
             ctx.fillRect(0, 0, W, H);

@@ -1,13 +1,13 @@
 # 🎨 JaZeR Visual Effects - 73 Stunning Effects ✨
 
-**🌐 [View Live Demo](https://main-jazer.github.io/visual-background-index/)** | **All effects are now working!** See [docs/FIXES-APPLIED.md](docs/FIXES-APPLIED.md) for details.
+**🌐 [View Live Demo](https://main-jazer.github.io/Three-JS-Custom-Visuals/)** | **All effects are now working!** See [docs/FIXES-APPLIED.md](docs/FIXES-APPLIED.md) for details.
 
 Stunning infinite 3D visual effects for web backgrounds. Powered by the JaZeR Background Engine with Three.js r160.
 
 ## 🚀 Quick Start
 
 ### Option 1: View Online (Easiest!)
-Visit the live demo: **[https://main-jazer.github.io/visual-background-index/](https://main-jazer.github.io/visual-background-index/)**
+Visit the live demo: **[https://main-jazer.github.io/Three-JS-Custom-Visuals/](https://main-jazer.github.io/Three-JS-Custom-Visuals/)**
 
 ### Option 2: Run Locally
 
@@ -108,7 +108,7 @@ Click any effect to launch it!
 ## 📁 Project Structure
 
 ```
-visual-background-index/
+Three-JS-Custom-Visuals/
 ├── 📄 index.html                    # Main gallery page (73 effects)
 ├── 📄 README.md                     # This file
 ├── 📄 LICENSE                       # MIT License
@@ -231,7 +231,7 @@ Contributions are welcome! Feel free to:
 
 ## 🎉 Enjoy!
 
-All 73 effects are working perfectly. Explore the gallery at [https://main-jazer.github.io/visual-background-index/](https://main-jazer.github.io/visual-background-index/)!
+All 73 effects are working perfectly. Explore the gallery at [https://main-jazer.github.io/Three-JS-Custom-Visuals/](https://main-jazer.github.io/Three-JS-Custom-Visuals/)!
 
 ---
 
