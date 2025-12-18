@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>JaZeR Radiant 4D Jello — Canvas-Driven</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; overflow:hidden; background:#000; font-family: Inter, system-ui, sans-serif; }
+    canvas { display:block; width:100vw; height:100vh; }
+    .ui-overlay{position:fixed;top:30px;left:30px;pointer-events:none;z-index:10}
+    .title{font-size:10px;letter-spacing:.8em;text-transform:uppercase;color:#00f5ff;margin-bottom:4px;font-weight:700;text-shadow:0 0 10px rgba(0,245,255,.5)}
+    .status{font-size:28px;color:#fff;font-weight:900;letter-spacing:-.02em;text-shadow:0 0 20px rgba(255,0,255,1),0 0 40px rgba(0,245,255,.6)}
+    .vignette{position:fixed;inset:0;background:radial-gradient(circle,transparent 10%,rgba(0,0,0,.95) 100%);pointer-events:none}
+    .controls-hint{position:fixed;bottom:30px;width:100%;text-align:center;font-size:10px;color:rgba(255,255,255,.6);letter-spacing:.3em;pointer-events:none;text-transform:uppercase}
+  </style>
+
+  <!-- Single-file module imports via importmap -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div class="vignette"></div>
+  <div class="ui-overlay">
+    <div class="title">Quantum Core</div>
+    <div class="status">JaZeR // SUPER-RADIANT</div>
+  </div>
+  <div class="controls-hint">DRAG TO SHAKE • SCROLL TO ZOOM • JaZeR CORE ACTIVE</div>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+    import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+    import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+    import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+    import { FXAAShader } from "three/addons/shaders/FXAAShader.js";
+    import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+    // --------------------------------------------
+    // Canvas engines (TEXT + NOISE/DISP + SPRITES)
+    // --------------------------------------------
+
+    function makeTextCanvasTexture(text = "JaZeR") {
+      const c = document.createElement("canvas");
+      c.width = 1024; c.height = 512;
+      const g = c.getContext("2d");
+
+      const draw = () => {
+        g.clearRect(0, 0, c.width, c.height);
+        g.textAlign = "center";
+        g.textBaseline = "middle";
+        g.font = '900 260px "Arial Black", "Inter", system-ui, sans-serif';
+
+        // neon stack
+        g.shadowBlur = 110; g.shadowColor = "#00f5ff";
+        g.fillStyle = "#ffffff";
+        g.fillText(text, 512, 256);
+
+        g.shadowBlur = 60; g.shadowColor = "#ff00ff";
+        g.fillText(text, 512, 256);
+
+        // crisp core + chrome stroke
+        g.shadowBlur = 0;
+        g.lineWidth = 12;
+        g.strokeStyle = "rgba(255,255,255,0.95)";
+        g.strokeText(text, 512, 256);
+
+        g.fillStyle = "#ffffff";
+        g.fillText(text, 512, 256);
+
+        // subtle scanlines (high-end “screen” vibe)
+        g.globalAlpha = 0.12;
+        g.fillStyle = "#000";
+        for (let y = 0; y < c.height; y += 6) g.fillRect(0, y, c.width, 1);
+        g.globalAlpha = 1;
+      };
+
+      draw();
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      tex.needsUpdate = true;
+
+      return { canvas: c, ctx: g, tex, redraw: draw };
+    }
+
+    // small animated noise canvas that becomes a displacement + “energy field”
+    function makeNoiseCanvasTexture(size = 256) {
+      const c = document.createElement("canvas");
+      c.width = size; c.height = size;
+      const g = c.getContext("2d", { willReadFrequently: false });
+
+      const img = g.createImageData(size, size);
+      const data = img.data;
+
+      // simple hash noise (fast, stable, good enough for “energy field”)
+      const hash = (x, y, s) => {
+        let n = x * 374761393 + y * 668265263 + s * 982451653;
+        n = (n ^ (n >> 13)) * 1274126177;
+        return ((n ^ (n >> 16)) >>> 0) / 4294967295;
+      };
+
+      const fbm = (x, y, t) => {
+        let v = 0, a = 0.5, f = 1;
+        for (let i = 0; i < 4; i++) {
+          const ix = Math.floor(x * f);
+          const iy = Math.floor(y * f);
+          const h = hash(ix, iy, Math.floor(t * 60) + i * 97);
+          v += h * a;
+          a *= 0.5;
+          f *= 2;
+        }
+        return v;
+      };
+
+      const draw = (time) => {
+        const s = size;
+        // build a high-contrast “field” (good for displacement + emissive modulation)
+        for (let y = 0; y < s; y++) {
+          for (let x = 0; x < s; x++) {
+            const u = x / s;
+            const v = y / s;
+
+            // swirl coordinates (fake “flow”)
+            const cx = u - 0.5, cy = v - 0.5;
+            const ang = Math.atan2(cy, cx) + time * 0.35;
+            const r = Math.sqrt(cx*cx + cy*cy);
+            const uu = 0.5 + Math.cos(ang) * r;
+            const vv = 0.5 + Math.sin(ang) * r;
+
+            let n = fbm(uu * 8, vv * 8, time);
+            n = Math.pow(n, 1.8); // contrast
+
+            // add “rings”
+            const ring = 0.5 + 0.5 * Math.sin((r * 22 - time * 3.2));
+            const val = Math.min(1, n * 0.75 + ring * 0.25);
+
+            const i = (y * s + x) * 4;
+            const cval = Math.floor(val * 255);
+            data[i+0] = cval;
+            data[i+1] = cval;
+            data[i+2] = cval;
+            data[i+3] = 255;
+          }
+        }
+        g.putImageData(img, 0, 0);
+
+        // add neon “filaments” on top (cheap draw calls)
+        g.globalCompositeOperation = "lighter";
+        g.globalAlpha = 0.30;
+        g.lineWidth = 1.2;
+        g.strokeStyle = "#00f5ff";
+        g.beginPath();
+        for (let i = 0; i < 14; i++) {
+          const a = time * 0.9 + i * 0.6;
+          g.moveTo((0.5 + 0.45*Math.cos(a)) * s, (0.5 + 0.45*Math.sin(a)) * s);
+          g.quadraticCurveTo(0.5*s, 0.5*s, (0.5 + 0.45*Math.cos(a+1.2)) * s, (0.5 + 0.45*Math.sin(a+1.2)) * s);
+        }
+        g.stroke();
+        g.globalAlpha = 1;
+        g.globalCompositeOperation = "source-over";
+      };
+
+      draw(0);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.needsUpdate = true;
+
+      return { canvas: c, ctx: g, tex, draw };
+    }
+
+    function makeRadialSpriteTexture(colorA = "#00f5ff", colorB = "#ff00ff", size = 128) {
+      const c = document.createElement("canvas");
+      c.width = size; c.height = size;
+      const g = c.getContext("2d");
+      const r = size / 2;
+
+      const grad = g.createRadialGradient(r, r, 0, r, r, r);
+      grad.addColorStop(0.0, "rgba(255,255,255,1)");
+      grad.addColorStop(0.15, colorA);
+      grad.addColorStop(0.45, colorB);
+      grad.addColorStop(1.0, "rgba(0,0,0,0)");
+
+      g.fillStyle = grad;
+      g.fillRect(0, 0, size, size);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    // --------------------------------------------
+    // Three.js Scene
+    // --------------------------------------------
+
+    let scene, camera, renderer, composer, clock;
+    let blob, textCore, textGlow, starField, energySparks;
+    let wobble = 0;
+    let zoomLevel = 6.0;
+
+    const mouse = new THREE.Vector2();
+    const targetMouse = new THREE.Vector2();
+
+    const textTex = makeTextCanvasTexture("JaZeR");
+    const noiseTex = makeNoiseCanvasTexture(256);
+    const spriteTex = makeRadialSpriteTexture("#00f5ff", "#ff00ff", 128);
+
+    init();
+    animate();
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x000000, 0.09);
+
+      camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = zoomLevel;
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.65;
+      renderer.physicallyCorrectLights = true;
+      document.body.appendChild(renderer.domElement);
+
+      // Environment for transmission/refraction “pop”
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+
+      clock = new THREE.Clock();
+
+      createStarfield();
+      createEnergySparks();
+      createSuperRadiantBlob();
+
+      // Lights (still useful even with env)
+      const light1 = new THREE.PointLight(0x00f5ff, 80, 60);
+      light1.position.set(10, 10, 10);
+      scene.add(light1);
+
+      const light2 = new THREE.PointLight(0xff00ff, 80, 60);
+      light2.position.set(-10, -10, 5);
+      scene.add(light2);
+
+      const spot = new THREE.SpotLight(0xffffff, 80, 140, Math.PI * 0.25, 0.6);
+      spot.position.set(0, 0, 18);
+      scene.add(spot);
+
+      // Controls (optional; comment out if you want pure mouse-lerp camera)
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.enablePan = false;
+      controls.minDistance = 3;
+      controls.maxDistance = 12;
+      controls.target.set(0, 0, 0);
+
+      // Post-processing (Bloom + FXAA)
+      composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+
+      const bloom = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        1.25,  // strength
+        0.55,  // radius
+        0.10   // threshold
+      );
+      composer.addPass(bloom);
+
+      const fxaa = new ShaderPass(FXAAShader);
+      fxaa.material.uniforms["resolution"].value.set(1 / (window.innerWidth * renderer.getPixelRatio()), 1 / (window.innerHeight * renderer.getPixelRatio()));
+      composer.addPass(fxaa);
+
+      // Events
+      window.addEventListener("resize", () => onResize(fxaa));
+      window.addEventListener("pointermove", onPointerMove, { passive: true });
+      window.addEventListener("wheel", onWheel, { passive: true });
+
+      window.addEventListener("pointerdown", () => { wobble = Math.max(wobble, 4.8); }, { passive: true });
+      window.addEventListener("pointerup", () => { wobble = Math.max(wobble, 1.0); }, { passive: true });
+    }
+
+    function createSuperRadiantBlob() {
+      // Reasonable detail; GPU does displacement (no CPU vertex loops).
+      const geo = new THREE.IcosahedronGeometry(2, 24);
+
+      const mat = new THREE.MeshPhysicalMaterial({
+        color: 0x050510,
+        emissive: 0x220044,
+        emissiveIntensity: 1.0,
+        metalness: 0.12,
+        roughness: 0.02,
+        transmission: 0.96,
+        thickness: 0.65,
+        ior: 1.45,
+        transparent: true,
+        opacity: 0.45,
+        envMapIntensity: 1.25
+      });
+
+      // Canvas-driven “4D” displacement + emissive modulation in shader
+      mat.onBeforeCompile = (shader) => {
+        shader.uniforms.uTime = { value: 0 };
+        shader.uniforms.uWobble = { value: 0 };
+        shader.uniforms.uNoise = { value: noiseTex.tex };
+
+        // inject uniforms
+        shader.vertexShader = shader.vertexShader
+          .replace(
+            "#include <common>",
+            `#include <common>
+             uniform float uTime;
+             uniform float uWobble;
+             uniform sampler2D uNoise;`
+          )
+          .replace(
+            "#include <begin_vertex>",
+            `#include <begin_vertex>
+             // vUv exists for icosa geometry; if absent, this still compiles but effect is reduced.
+             vec2 uvv = uv;
+             // sample animated canvas noise
+             float n = texture2D(uNoise, uvv * 1.8 + vec2(uTime * 0.03, uTime * 0.02)).r;
+             float n2 = texture2D(uNoise, uvv * 3.2 - vec2(uTime * 0.02, uTime * 0.05)).r;
+
+             // “4D” wobble: time is the 4th dimension
+             float wave =
+               sin((position.x * 1.8 + uTime * 3.4)) * 0.10 +
+               cos((position.y * 2.5 + uTime * 2.7)) * 0.10 +
+               sin((position.z * 3.1 + uTime * 4.1)) * 0.07;
+
+             float disp = (wave + (n - 0.5) * 0.35 + (n2 - 0.5) * 0.20) * (0.55 + uWobble * 0.22);
+
+             transformed += normal * disp;`
+          );
+
+        shader.fragmentShader = shader.fragmentShader
+          .replace(
+            "#include <common>",
+            `#include <common>
+             uniform float uTime;
+             uniform float uWobble;
+             uniform sampler2D uNoise;`
+          )
+          .replace(
+            "#include <emissivemap_fragment>",
+            `
+              // Canvas-driven emissive modulation: makes the blob feel alive
+              vec2 uvv = vUv;
+              float n = texture2D(uNoise, uvv * 1.4 + vec2(uTime * 0.02, -uTime * 0.03)).r;
+              float pulse = 0.55 + 0.45 * sin(uTime * 3.0);
+              float e = (0.6 + n * 0.8) * (0.8 + uWobble * 0.25) * pulse;
+              totalEmissiveRadiance *= e;
+            `
+          );
+
+        mat.userData.shader = shader;
+      };
+
+      blob = new THREE.Mesh(geo, mat);
+      scene.add(blob);
+
+      // Text core: canvas texture, but rendered “inside” with better depth behavior
+      const textGeo = new THREE.PlaneGeometry(5, 2.5);
+
+      const textMatCore = new THREE.MeshBasicMaterial({
+        map: textTex.tex,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        depthTest: true,
+        opacity: 1.0,
+        side: THREE.DoubleSide
+      });
+
+      textCore = new THREE.Mesh(textGeo, textMatCore);
+      textCore.position.z = 0.08;
+      blob.add(textCore);
+
+      const textMatGlow = textMatCore.clone();
+      textMatGlow.opacity = 0.45;
+      textGlow = new THREE.Mesh(textGeo, textMatGlow);
+      textGlow.scale.setScalar(1.14);
+      textGlow.position.z = -0.10;
+      blob.add(textGlow);
+    }
+
+    function createStarfield() {
+      const geometry = new THREE.BufferGeometry();
+      const vertices = new Float32Array(starCount * 3);
+      const colors = new Float32Array(starCount * 3);
+
+      const c = new THREE.Color();
+
+      for (let i = 0; i < starCount; i++) {
+        const i3 = i * 3;
+        vertices[i3+0] = THREE.MathUtils.randFloatSpread(240);
+        vertices[i3+1] = THREE.MathUtils.randFloatSpread(240);
+        vertices[i3+2] = THREE.MathUtils.randFloatSpread(240);
+
+        c.setHSL(Math.random(), 1, 0.72);
+        colors[i3+0] = c.r; colors[i3+1] = c.g; colors[i3+2] = c.b;
+      }
+
+      geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+      const material = new THREE.PointsMaterial({
+        map: spriteTex,
+        vertexColors: true,
+        size: 0.40,
+        sizeAttenuation: true,
+        transparent: true,
+        opacity: 0.30,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      starField = new THREE.Points(geometry, material);
+      scene.add(starField);
+    }
+
+    function createEnergySparks() {
+      const geometry = new THREE.BufferGeometry();
+      const pos = new Float32Array(sparkCount * 3);
+
+      for (let i = 0; i < sparkCount; i++) {
+        const i3 = i * 3;
+        pos[i3+0] = THREE.MathUtils.randFloatSpread(42);
+        pos[i3+1] = THREE.MathUtils.randFloatSpread(42);
+        pos[i3+2] = THREE.MathUtils.randFloatSpread(42);
+      }
+
+      geometry.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+
+      const material = new THREE.PointsMaterial({
+        map: spriteTex,
+        color: 0x00f5ff,
+        size: 0.28,
+        sizeAttenuation: true,
+        transparent: true,
+        opacity: 0.65,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+
+      energySparks = new THREE.Points(geometry, material);
+      scene.add(energySparks);
+    }
+
+    function onPointerMove(e) {
+      targetMouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      targetMouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    }
+
+    function onWheel(e) {
+      zoomLevel = Math.max(3, Math.min(12, zoomLevel + e.deltaY * 0.005));
+    }
+
+    function onResize(fxaaPass) {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      composer.setSize(window.innerWidth, window.innerHeight);
+
+      const pr = renderer.getPixelRatio();
+      fxaaPass.material.uniforms["resolution"].value.set(1 / (window.innerWidth * pr), 1 / (window.innerHeight * pr));
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = clock.getDelta();
+      const time = clock.getElapsedTime();
+
+      // Animate noise canvas (drives shader displacement + emissive)
+      noiseTex.draw(time);
+      noiseTex.tex.needsUpdate = true;
+
+      // Kinetic camera (keeps your original feel)
+      mouse.lerp(targetMouse, 0.06);
+      camera.position.z = THREE.MathUtils.lerp(camera.position.z, zoomLevel, 0.06);
+      camera.position.x += (mouse.x * 4 - camera.position.x) * 0.06;
+      camera.position.y += (mouse.y * 3 - camera.position.y) * 0.06;
+      camera.lookAt(0, 0, 0);
+
+      // Blob motion
+      blob.rotation.y += 0.35 * dt;
+      blob.rotation.z += 0.22 * dt;
+
+      // Wobble decay + shader uniforms
+      wobble *= 0.94;
+      const s = blob.material.userData.shader;
+      if (s) {
+        s.uniforms.uTime.value = time;
+        s.uniforms.uWobble.value = wobble;
+      }
+
+      // Hue cycle (keeps your hyper-color idea)
+      const hue = (time * 0.08) % 1.0;
+      const primary = new THREE.Color().setHSL(hue, 1, 0.6);
+      blob.material.emissive.lerp(primary, 0.06);
+      blob.material.emissiveIntensity = 0.95 + Math.sin(time * 3) * 0.35 + (wobble * 0.25);
+
+      // Text readability + subtle sway (still “inside”)
+      if (textCore) {
+        textCore.quaternion.copy(camera.quaternion);
+        textGlow.quaternion.copy(camera.quaternion);
+
+        textCore.position.x = Math.sin(time * 0.8) * 0.10;
+        textCore.position.y = Math.cos(time * 0.5) * 0.10;
+
+        const scale = 1 + Math.sin(time * 4) * 0.05 + wobble * 0.06;
+        textCore.scale.setScalar(scale);
+        textGlow.scale.setScalar(scale * 1.12);
+
+        textCore.material.opacity = 0.86 + Math.sin(time * 18) * 0.06 + wobble * 0.06;
+        textGlow.material.opacity = 0.42 + Math.sin(time * 11) * 0.05;
+      }
+
+      // Sparks & stars drift
+      starField.rotation.y += 0.05 * dt;
+      energySparks.rotation.y += (0.55 + wobble * 0.08) * dt;
+
+      // Render
+      composer.render();
+    }
+  </script>
+</body>
+</html>
