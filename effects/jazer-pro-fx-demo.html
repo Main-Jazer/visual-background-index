@@ -64,7 +64,7 @@
 <body>
     <canvas id="c"></canvas>
     <div class="intro-overlay">
-        <div style="color: #ff2aff; font-weight: bold; margin-bottom: 8px;">🎬 PRO FX DEMO</div>
+        <div style="color: #ff2aff; font-weight: bold; margin-bottom: 8px;">ðŸŽ¬ PRO FX DEMO</div>
         <div>Press <span style="color: #ffd700">[</span> or <span style="color: #ffd700">]</span> to cycle presets</div>
         <div>Press <span style="color: #ffd700">P</span> to toggle effects</div>
         <div>Press <span style="color: #ffd700">H</span> to toggle HUD</div>
@@ -78,12 +78,13 @@
 
         const __jazerEffectFile = location.pathname.split('/').pop() || '';
         const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
-        const { ui, expose } = attachEffectUI({
+        const { ui, expose, ready } = attachEffectUI({
             title: document.title,
             schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
         });
         window.JAZER_UI = ui;
         window.JAZER_EXPOSE = expose;
+        window.JAZER_UI_READY = ready;
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');

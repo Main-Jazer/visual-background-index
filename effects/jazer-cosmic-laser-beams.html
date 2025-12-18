@@ -58,12 +58,13 @@
 
         const __jazerEffectFile = location.pathname.split('/').pop() || '';
         const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
-        const { ui, expose } = attachEffectUI({
+        const { ui, expose, ready } = attachEffectUI({
             title: document.title,
             schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
         });
         window.JAZER_UI = ui;
         window.JAZER_EXPOSE = expose;
+        window.JAZER_UI_READY = ready;
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
