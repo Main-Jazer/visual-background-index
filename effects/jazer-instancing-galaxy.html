@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Instanced Galaxy - JaZeR</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            text-shadow: 0 0 10px #0ff;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        #title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ff0;
+            text-shadow: 0 0 10px #ff0;
+        }
+
+        #fps {
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="c"></canvas>
+    <div id="info">
+        <div id="title">INSTANCED GALAXY</div>
+        Objects: <span id="count">0</span><br>
+        <span id="fps">FPS: 60</span><br>
+        <br>
+        100K+ objects at 60fps<br>
+        GPU Instancing Demo
+    </div>
+
+    <script type="module">
+        import * as THREE from '../lib/Three.js';
+        import { createInstancedMesh } from '../lib/engine/jazer-instancing.js';
+        import '../lib/engine/jazer-navigation.js';
+        window.THREE = THREE;
+        const canvas = document.getElementById('c');
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000510);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 50, 150);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: false }); // Disable for performance
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.5);
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 1, 0);
+        pointLight.position.set(0, 0, 0);
+        scene.add(pointLight);
+
+        // Create multiple instanced mesh systems for different galaxy arms
+
+        // Main galaxy stars (100K stars)
+        const starCount = 100000;
+        const starGeometry = new THREE.SphereGeometry(0.1, 4, 4);
+        const starMaterial = new THREE.MeshBasicMaterial({
+            vertexColors: true
+        });
+
+        const stars = createInstancedMesh(THREE, starGeometry, starMaterial, starCount, {
+            castShadow: false,
+            useColors: true,
+            useVelocities: true,
+            useUserData: true
+        });
+
+        scene.add(stars.mesh);
+
+        // Initialize galaxy - spiral formation
+        const arms = 3;
+        for (let i = 0; i < starCount; i++) {
+            const arm = i % arms;
+            const armAngle = (arm / arms) * Math.PI * 2;
+
+            // Spiral parameters
+            const t = (i / starCount) * 4; // How far along spiral
+            const angle = armAngle + t * Math.PI * 2;
+            const radius = t * 30;
+
+            // Add randomness for organic look
+            const spread = 3 + t * 0.5;
+            const x = Math.cos(angle) * radius + (Math.random() - 0.5) * spread;
+            const y = (Math.random() - 0.5) * (2 + t * 0.1);
+            const z = Math.sin(angle) * radius + (Math.random() - 0.5) * spread;
+
+            stars.setPosition(i, x, y, z);
+
+            // Rotation for each star
+            const rotX = Math.random() * Math.PI * 2;
+            const rotY = Math.random() * Math.PI * 2;
+            const rotZ = Math.random() * Math.PI * 2;
+            stars.setRotationFromEuler(i, rotX, rotY, rotZ);
+
+            // Size variation
+            const size = 0.3 + Math.random() * 0.7;
+            stars.setScale(i, size, size, size);
+
+            // Color based on distance from center
+            const distanceFromCenter = Math.sqrt(x * x + z * z);
+            const hue = 0.55 + (distanceFromCenter / 120) * 0.3; // Blue to red
+            const saturation = 0.6 + Math.random() * 0.4;
+            const lightness = 0.5 + Math.random() * 0.3;
+            stars.setColorFromHSL(i, hue, saturation, lightness);
+
+            // Orbital velocity (perpendicular to radius)
+            const orbitSpeed = 0.2 / (1 + distanceFromCenter * 0.1);
+            const vx = -Math.sin(angle) * orbitSpeed;
+            const vz = Math.cos(angle) * orbitSpeed;
+            stars.setVelocity(i, vx, 0, vz);
+
+            // User data for rotation speeds
+            stars.setUserData(i, {
+                rotationSpeed: {
+                    x: (Math.random() - 0.5) * 0.5,
+                    y: (Math.random() - 0.5) * 0.5,
+                    z: (Math.random() - 0.5) * 0.5
+                }
+            });
+        }
+
+        stars.update();
+
+        // Central bright core (5K bright stars)
+        const coreCount = 5000;
+        const coreGeometry = new THREE.SphereGeometry(0.2, 6, 6);
+        const coreMaterial = new THREE.MeshBasicMaterial({
+            vertexColors: true
+        });
+
+        const core = createInstancedMesh(THREE, coreGeometry, coreMaterial, coreCount, {
+            useColors: true
+        });
+
+        scene.add(core.mesh);
+
+        // Initialize core
+        for (let i = 0; i < coreCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(Math.random() * 2 - 1);
+            const r = Math.pow(Math.random(), 2) * 15; // Concentrated at center
+
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = r * Math.sin(phi) * Math.sin(theta);
+            const z = r * Math.cos(phi);
+
+            core.setPosition(i, x, y, z);
+
+            const size = 0.5 + Math.random() * 1.0;
+            core.setScale(i, size, size, size);
+
+            // Bright yellow-white core
+            const hue = 0.1 + Math.random() * 0.1;
+            const sat = 0.3 + Math.random() * 0.3;
+            const light = 0.8 + Math.random() * 0.2;
+            core.setColorFromHSL(i, hue, sat, light);
+        }
+
+        core.update();
+
+        // Dust clouds (10K particles)
+        const dustCount = 10000;
+        const dustGeometry = new THREE.PlaneGeometry(0.5, 0.5);
+        const dustMaterial = new THREE.MeshBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+        });
+
+        const dust = createInstancedMesh(THREE, dustGeometry, dustMaterial, dustCount, {
+            useColors: true
+        });
+
+        scene.add(dust.mesh);
+
+        // Initialize dust
+        for (let i = 0; i < dustCount; i++) {
+            const arm = i % arms;
+            const armAngle = (arm / arms) * Math.PI * 2;
+            const t = (i / dustCount) * 4;
+            const angle = armAngle + t * Math.PI * 2;
+            const radius = t * 35;
+
+            const spread = 5 + t;
+            const x = Math.cos(angle) * radius + (Math.random() - 0.5) * spread;
+            const y = (Math.random() - 0.5) * (3 + t * 0.2);
+            const z = Math.sin(angle) * radius + (Math.random() - 0.5) * spread;
+
+            dust.setPosition(i, x, y, z);
+
+            const size = 2 + Math.random() * 3;
+            dust.setScale(i, size, size, 1);
+
+            // Reddish-purple dust
+            const hue = 0.8 + Math.random() * 0.15;
+            const sat = 0.5 + Math.random() * 0.3;
+            const light = 0.2 + Math.random() * 0.2;
+            dust.setColorFromHSL(i, hue, sat, light);
+
+            // Random rotation
+            dust.setRotationFromEuler(i, 0, 0, Math.random() * Math.PI * 2);
+        }
+
+        dust.update();
+
+        // Update counters
+        document.getElementById('count').textContent = (starCount + coreCount + dustCount).toLocaleString();
+
+        // Animation
+        let time = 0;
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let lastFpsUpdate = performance.now();
+
+        const tempPos = new THREE.Vector3();
+        const tempVel = new THREE.Vector3();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const now = performance.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+
+            time += deltaTime;
+
+            // Update galaxy rotation
+            stars.forEach((i) => {
+                // Get current position and velocity
+                stars.getPosition(i, tempPos);
+                stars.getVelocity(i, tempVel);
+
+                // Apply velocity
+                tempPos.add(tempVel.clone().multiplyScalar(deltaTime));
+                stars.setPosition(i, tempPos.x, tempPos.y, tempPos.z);
+
+                // Rotate star
+                const userData = stars.getUserData(i);
+                if (userData) {
+                    const euler = new THREE.Euler(
+                        userData.rotationSpeed.x * time,
+                        userData.rotationSpeed.y * time,
+                        userData.rotationSpeed.z * time
+                    );
+                    const quat = new THREE.Quaternion().setFromEuler(euler);
+                    stars.setRotation(i, quat.x, quat.y, quat.z, quat.w);
+                }
+            });
+
+            stars.update();
+
+            // Rotate core slowly
+            core.mesh.rotation.y = time * 0.1;
+
+            // Animate camera orbit
+            const camRadius = 150;
+            const camHeight = 50;
+            camera.position.x = Math.cos(time * 0.1) * camRadius;
+            camera.position.y = camHeight + Math.sin(time * 0.05) * 20;
+            camera.position.z = Math.sin(time * 0.1) * camRadius;
+            camera.lookAt(0, 0, 0);
+
+            // Render
+            renderer.render(scene, camera);
+
+            // Update FPS
+            frameCount++;
+            if (now - lastFpsUpdate > 1000) {
+                const fps = Math.round(frameCount * 1000 / (now - lastFpsUpdate));
+                document.getElementById('fps').textContent = 'FPS: ' + fps;
+                frameCount = 0;
+                lastFpsUpdate = now;
+            }
+        }
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+
+</html>

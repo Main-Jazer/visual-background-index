@@ -1,25 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Metatron's Cube Unfolding - JaZeR</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-        canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
     </style>
 </head>
+
 <body>
     <canvas id="effectCanvas"></canvas>
     <script type="module">
         import * as THREE from '../lib/Three.js';
+        import '../lib/engine/jazer-navigation.js';
         import {
             mouse, ColorPalettes, lerpColor, fract
-        } from '../lib/jazer-background-engine.js';
+        } from '../lib/engine/jazer-background-engine.js';
 
         window.THREE = THREE;
-        
+
         if (typeof THREE === 'undefined') {
             document.body.innerHTML = 'Error: Three.js failed to load. Please check the path.';
         }
@@ -65,7 +86,7 @@
             centers.push(new THREE.Vector3(Math.cos(angle) * fruitOfLifeRadius, Math.sin(angle) * fruitOfLifeRadius, 0));
             centers.push(new THREE.Vector3(Math.cos(angle) * fruitOfLifeRadius * 2, Math.sin(angle) * fruitOfLifeRadius * 2, 0));
         }
-        
+
         // Connect all centers to form Metatron's Cube lines
         const lines = [];
         for (let i = 0; i < centers.length; i++) {
@@ -76,7 +97,7 @@
         const metatronGeometry = new THREE.BufferGeometry().setFromPoints(lines);
         const metatronLines = new THREE.LineSegments(metatronGeometry, lineMaterial);
         metatronGroup.add(metatronLines);
-        
+
         // Add circles for Fruit of Life
         const circleGeom = new THREE.TorusGeometry(fruitOfLifeRadius, 0.05, 16, 100);
         centers.forEach(center => {
@@ -84,7 +105,7 @@
             circle.position.copy(center);
             metatronGroup.add(circle);
         });
-        
+
         scene.add(metatronGroup);
 
 
@@ -110,7 +131,7 @@
             material.color = new THREE.Color(palette[i % palette.length]);
             material.emissive = material.color.clone().multiplyScalar(0.4);
             const mesh = new THREE.Mesh(item.geom, material);
-            
+
             const angle = (i / solidGeometries.length) * Math.PI * 2;
             mesh.position.set(Math.cos(angle) * 12, Math.sin(angle) * 12, 0);
             mesh.userData.basePosition = mesh.position.clone();
@@ -156,7 +177,7 @@
             camera.position.z = 15 + Math.sin(time * 0.1) * 10;
             camera.position.x = Math.cos(time * 0.2) * 5;
             camera.lookAt(scene.position);
-            
+
             // Animate lights
             pointLights[0].position.set(Math.cos(time * 0.5) * 15, Math.sin(time * 0.3) * 15, Math.sin(time * 0.4) * 10);
             pointLights[1].position.set(Math.sin(time * 0.3) * -15, Math.cos(time * 0.5) * 15, Math.cos(time * 0.2) * -10);
@@ -175,12 +196,12 @@
 
                 const pulse = Math.sin(time * 2 + i) * 0.5 + 0.5;
                 mesh.material.emissiveIntensity = pulse * 1.5;
-                
+
                 const t = time * 0.5 + i * 2;
                 mesh.position.x = mesh.userData.basePosition.x + Math.sin(t) * 3;
                 mesh.position.y = mesh.userData.basePosition.y + Math.cos(t) * 3;
             });
-            
+
             // Animate particles
             particles.rotation.y = time * 0.02;
 
@@ -198,4 +219,5 @@
 
     </script>
 </body>
+
 </html>

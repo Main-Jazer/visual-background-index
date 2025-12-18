@@ -39,7 +39,8 @@
   <div class="label">Holographic Logo Shards</div>
   <script type="module">
     import * as THREE from '../lib/Three.js';
-    import { mouse } from '../lib/jazer-background-engine.js';
+        import '../lib/engine/jazer-navigation.js';
+    import { mouse } from '../lib/engine/jazer-background-engine.js';
 
     const canvas = document.getElementById('effectCanvas');
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });

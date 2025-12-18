@@ -38,7 +38,8 @@
             noise2D, mouse, Easing,
             ColorPalettes, cycleColor, hexToRgb,
             map, clamp, smoothstep, distance
-        } from '../lib/jazer-background-engine.js';
+        } from '../lib/engine/jazer-background-engine.js';
+        import '../lib/engine/jazer-navigation.js';
 
         // =====================================================
         // CONFIGURATION
@@ -51,11 +52,11 @@
 
         // Neon color palette
         const neonPalette = ['#00ffff', '#ff00ff', '#9d00ff', '#00ccff', '#ff1aff'];
-        
+
         // Orbit parameters
-        const orbitCount = 8;           // Number of concentric rings
-        const textPerRing = 12;         // "JaZeR" instances per ring
-        
+        const orbitCount = 12;           // More concentric rings
+        const textPerRing = 16;          // More "JaZeR" instances per ring
+
         // Orbit rings array
         const orbits = [];
 
@@ -98,7 +99,7 @@
             update(dt) {
                 // Rotate the ring
                 this.angle += this.speed * dt;
-                
+
                 // Oscillate radius slightly for breathing effect
                 this.radius = this.baseRadius + Math.sin(time * 0.5 + this.depthPhase) * 10;
             }
@@ -111,66 +112,66 @@
                 const depthOscillation = Math.sin(time * 0.8 + this.depthPhase);
                 const depthScale = 1 + depthOscillation * 0.15;
                 const actualRadius = this.radius * depthScale;
-                
+
                 // Calculate opacity based on depth (closer = brighter)
                 const alpha = map(depthScale, 0.85, 1.15, 0.4, 1.0);
-                
+
                 // Get color from palette
                 const colorIndex = Math.floor((time * 0.5 + this.colorOffset * 5) % neonPalette.length);
                 const color = neonPalette[colorIndex];
                 const rgb = hexToRgb(color);
-                
+
                 // Mouse-reactive tilt - creates 3D perspective shift
                 const tiltX = mouse.centeredX * 100;  // Horizontal tilt
                 const tiltY = mouse.centeredY * 100;  // Vertical tilt
-                
+
                 // Configure text rendering
                 const fontSize = Math.max(14, 20 + this.index * 2);
                 ctx.font = `bold ${fontSize}px "Arial", sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                
+
                 // Draw each "JaZeR" text around the ring
                 for (let i = 0; i < this.textCount; i++) {
                     const segmentAngle = (i / this.textCount) * Math.PI * 2 + this.angle;
-                    
+
                     // Calculate position with 3D perspective tilt
                     const cosAngle = Math.cos(segmentAngle);
                     const sinAngle = Math.sin(segmentAngle);
-                    
+
                     // Apply perspective transformation (tilt toward mouse)
                     const x = cx + cosAngle * actualRadius + tiltX * (this.index / orbitCount);
                     const y = cy + sinAngle * actualRadius * 0.8 + tiltY * (this.index / orbitCount);
-                    
+
                     // Calculate depth-based scale (items further away appear smaller)
                     const depthFactor = 0.5 + sinAngle * 0.3 + depthOscillation * 0.2;
                     const textScale = map(depthFactor, 0.2, 1.0, 0.6, 1.2);
                     const textAlpha = alpha * map(depthFactor, 0.2, 1.0, 0.5, 1.0);
-                    
+
                     // Skip if too faint
                     if (textAlpha < 0.1) continue;
-                    
+
                     // Add subtle wave using noise
                     const wave = noise2D(segmentAngle * 2 + this.index, time * 0.3) * 8;
-                    
+
                     // Draw text with glow
                     ctx.save();
                     ctx.translate(x, y + wave);
                     ctx.scale(textScale, textScale);
-                    
+
                     // Rotate text to face outward from center
                     ctx.rotate(segmentAngle + Math.PI / 2);
-                    
+
                     // Glow effect
                     ctx.shadowColor = color;
                     ctx.shadowBlur = 15 + depthFactor * 10;
                     ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${textAlpha})`;
-                    
+
                     // Draw text multiple times for stronger glow
                     for (let g = 0; g < 2; g++) {
                         ctx.fillText('JaZeR', 0, 0);
                     }
-                    
+
                     ctx.restore();
                 }
             }
@@ -199,14 +200,14 @@
         function render(now) {
             const dt = 1 / 60; // Assume 60fps
             time += dt;
-            
+
             // Update mouse tracking
             mouse.update();
-            
+
             // Clear canvas with slight fade for motion blur
             ctx.fillStyle = 'rgba(0, 0, 20, 0.15)';
             ctx.fillRect(0, 0, W, H);
-            
+
             // Draw central glow point
             const centerGlow = cycleColor(neonPalette, time * 0.5);
             const centerRgb = hexToRgb(centerGlow);
@@ -219,13 +220,37 @@
             ctx.arc(cx, cy, 10, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
-            
+
             // Update and draw all orbits
             for (const orbit of orbits) {
                 orbit.update(dt);
                 orbit.draw();
             }
-            
+
+            // Draw particle trails from center
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            for (let i = 0; i < 30; i++) {
+                const angle = (i / 30) * Math.PI * 2 + time * 0.2;
+                const dist = 50 + Math.sin(time * 2 + i) * 30;
+                const size = 2 + Math.sin(time * 3 + i) * 1;
+                const pColor = cycleColor(neonPalette, time * 0.3 + i / 30);
+                const pRgb = hexToRgb(pColor);
+
+                ctx.fillStyle = `rgba(${pRgb.r}, ${pRgb.g}, ${pRgb.b}, 0.4)`;
+                ctx.beginPath();
+                ctx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // Vignette effect
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.3, cx, cy, Math.max(W, H) * 0.7);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 20, 0.6)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
             requestAnimationFrame(render);
         }
 

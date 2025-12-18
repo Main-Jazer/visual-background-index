@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -145,6 +146,27 @@
             color: #00f5ff;
         }
 
+        .fav-count {
+            display: inline-block;
+            min-width: 20px;
+            padding: 2px 6px;
+            background: rgba(255, 215, 0, 0.3);
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-left: 6px;
+            font-weight: 700;
+        }
+
+        .filter-btn[data-filter="favorites"].active {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #ffd700;
+            color: #ffd700;
+        }
+
+        .filter-btn[data-filter="favorites"]:hover {
+            border-color: #ffd700;
+        }
+
         /* === GRID === */
         .grid {
             display: grid;
@@ -174,13 +196,29 @@
             transform: translateY(-5px) scale(1.02);
             border-color: rgba(0, 245, 255, 0.5);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5),
-                        0 0 30px rgba(0, 245, 255, 0.2);
+                0 0 30px rgba(0, 245, 255, 0.2);
         }
 
         .card-preview {
             height: 180px;
             position: relative;
             overflow: hidden;
+        }
+
+        .card-favorite-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #ffd700;
+            color: #ffd700;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 16px;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
         }
 
         .card-preview::after {
@@ -275,18 +313,22 @@
             body {
                 padding: 1rem;
             }
+
             .grid {
                 grid-template-columns: 1fr;
             }
+
             .controls {
                 flex-direction: column;
             }
+
             .search-box {
                 max-width: 100%;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -309,15 +351,13 @@
         </header>
 
         <div class="controls">
-            <input 
-                type="text" 
-                class="search-box" 
-                id="search" 
-                placeholder="🔍 Search effects..."
-                autocomplete="off"
-            />
+            <input type="text" class="search-box" id="search" placeholder="🔍 Search effects..." autocomplete="off" />
             <div class="filter-buttons">
                 <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="favorites" id="favorites-filter">
+                    ★ Favorites
+                    <span class="fav-count" id="fav-count">0</span>
+                </button>
                 <button class="filter-btn" data-filter="intense">🔥 Intense</button>
                 <button class="filter-btn" data-filter="cosmic">🌌 Cosmic</button>
                 <button class="filter-btn" data-filter="tech">⚡ Tech</button>
@@ -339,6 +379,8 @@
     </div>
 
     <script type="module">
+        import favorites from './lib/engine/jazer-favorites.js';
+
         // === EFFECTS DATABASE ===
         const effects = [
             // 🔥 INTENSE EFFECTS
@@ -447,6 +489,15 @@
             { title: "Matrix Rain 3D", file: "jazer-matrix-rain.html", description: "Classic digital rain with true 3D depth and Japanese characters.", icon: "📟", category: "tech", type: "canvas2d", colors: ["#00ff00", "#003300"] },
             { title: "Möbius Infinity", file: "jazer-mobius-infinity.html", description: "Non-orientable surface with flowing edge particles and color gradients.", icon: "∞", category: "sacred", type: "threejs", colors: ["#ff00ff", "#00ffff"] },
             { title: "Fractal Cubes", file: "jazer-fractal-cubes.html", description: "Recursive cubes within cubes with continuous zoom and ambient particles.", icon: "🔲", category: "sacred", type: "threejs", colors: ["#39ff14", "#ff073a"] },
+
+            // 🆕 NEW EFFECTS
+            { title: "Audio Reactive Universe", file: "jazer-audio-reactive-universe.html", description: "Immersive audio-reactive visualization responding to sound frequencies.", icon: "🎵", category: "cosmic", type: "threejs", colors: ["#ff00ff", "#00f5ff"] },
+            { title: "Cinematic Chase", file: "jazer-cinematic-chase.html", description: "High-speed cinematic pursuit through neon-lit environments.", icon: "🎬", category: "intense", type: "canvas2d", colors: ["#ff0055", "#00f5ff"] },
+            { title: "GPU Particle Tornado", file: "jazer-gpu-particle-tornado.html", description: "GPU-accelerated tornado of particles with physics simulation.", icon: "🌪️", category: "tech", type: "threejs", colors: ["#39ff14", "#ff2aff"] },
+            { title: "Instanced Galaxy", file: "jazer-instancing-galaxy.html", description: "Massive galaxy with millions of instanced stars and nebula clouds.", icon: "🌌", category: "cosmic", type: "threejs", colors: ["#b37cff", "#ff0055"] },
+            { title: "Materials Showcase", file: "jazer-materials-showcase.html", description: "Demonstration of advanced Three.js materials and lighting techniques.", icon: "💠", category: "tech", type: "threejs", colors: ["#00f5ff", "#ffd700"] },
+            { title: "Volumetric Cathedral", file: "jazer-volumetric-cathedral.html", description: "Gothic cathedral with volumetric light rays and sacred geometry.", icon: "⛪", category: "sacred", type: "threejs", colors: ["#ffd700", "#b37cff"] },
+            { title: "Pro FX Demo", file: "jazer-pro-fx-demo.html", description: "Showcase of the Pro FX post-processing wrapper with preset cycling.", icon: "🎬", category: "jazer", type: "canvas2d", colors: ["#ff2aff", "#00f5ff"] },
         ];
 
         // === STATE ===
@@ -456,15 +507,19 @@
         // === RENDER FUNCTIONS ===
         function renderCard(effect) {
             const gradient = `linear-gradient(45deg, ${effect.colors[0]}, ${effect.colors[1]})`;
-            
+            const isFavorite = favorites.isFavorite(effect.file);
+            const favoriteBadge = isFavorite ? '<span class="card-favorite-badge">★</span>' : '';
+
             return `
-                <a href="effects/${effect.file}" 
-                   class="card" 
+                <a href="effects/${effect.file}"
+                   class="card"
                    data-category="${effect.category}"
                    data-type="${effect.type}"
                    data-title="${effect.title.toLowerCase()}"
-                   data-description="${effect.description.toLowerCase()}">
+                   data-description="${effect.description.toLowerCase()}"
+                   data-file="${effect.file}">
                     <div class="card-preview" style="background: ${gradient};">
+                        ${favoriteBadge}
                         <span class="card-icon">${effect.icon}</span>
                     </div>
                     <div class="card-content">
@@ -493,13 +548,19 @@
                 const type = card.dataset.type;
                 const title = card.dataset.title;
                 const description = card.dataset.description;
+                const file = card.dataset.file;
 
-                const matchesFilter = 
-                    currentFilter === 'all' || 
-                    category === currentFilter || 
-                    type === currentFilter;
+                let matchesFilter;
+                if (currentFilter === 'favorites') {
+                    matchesFilter = favorites.isFavorite(file);
+                } else {
+                    matchesFilter =
+                        currentFilter === 'all' ||
+                        category === currentFilter ||
+                        type === currentFilter;
+                }
 
-                const matchesSearch = 
+                const matchesSearch =
                     searchQuery === '' ||
                     title.includes(searchQuery) ||
                     description.includes(searchQuery);
@@ -520,6 +581,20 @@
             document.getElementById('visible-effects').textContent = effects.length;
         }
 
+        function updateFavoritesCount() {
+            const count = favorites.count();
+            const countElement = document.getElementById('fav-count');
+            if (countElement) {
+                countElement.textContent = count;
+            }
+        }
+
+        function refreshGallery() {
+            renderGallery();
+            filterCards();
+            updateFavoritesCount();
+        }
+
         // === EVENT LISTENERS ===
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -535,8 +610,15 @@
             filterCards();
         });
 
+        // Listen for favorites changes (e.g., from other tabs or effects pages)
+        favorites.onChange(() => {
+            refreshGallery();
+        });
+
         // === INITIALIZE ===
         renderGallery();
+        updateFavoritesCount();
     </script>
 </body>
+
 </html>
