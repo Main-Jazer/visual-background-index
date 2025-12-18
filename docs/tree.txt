@@ -1,0 +1,221 @@
+C:\Users\JaZeR\ACTIVE PROJECTS\Three JS Custom JaZeR Visuals
+├── docs/
+│   ├── v2/
+│   │   ├── effects.manifest.v2.json
+│   │   └── index.html
+│   ├── CLEANUP-SUMMARY.md
+│   ├── effects.manifest.json
+│   ├── effects.manifest.md
+│   ├── FIXES-APPLIED.md
+│   ├── High-Quality-JaZeR-Background-Atmosphere-Generator.md
+│   ├── index.html
+│   ├── MIGRATION-GUIDE.md
+│   ├── START-HERE.md
+│   └── tree.txt
+├── effects/
+│   ├── gallery.html
+│   ├── jazer-anamorphic-logo-waves.html
+│   ├── jazer-audio-reactive-universe.html
+│   ├── jazer-aurora-borealis.html
+│   ├── jazer-aurora-veil.html
+│   ├── jazer-binary-star-tunnel.html
+│   ├── jazer-celestial-logo-haloes.html
+│   ├── jazer-chromatic-glitch-tunnel.html
+│   ├── jazer-chromatic-wavefield.html
+│   ├── jazer-cinematic-chase.html
+│   ├── jazer-cosmic-laser-beams.html
+│   ├── jazer-cosmic-nebula-enhanced.html
+│   ├── jazer-cosmic-nebula.html
+│   ├── jazer-cosmic-stardust.html
+│   ├── jazer-crystal-cave.html
+│   ├── jazer-crystal-lattice-network.html
+│   ├── jazer-crystal-shard-tunnel.html
+│   ├── jazer-cyber-glitch.html
+│   ├── jazer-cyber-glyph-rain.html
+│   ├── jazer-digital-lattice-tunnel.html
+│   ├── jazer-digital-sandstorm.html
+│   ├── jazer-dna-helix.html
+│   ├── jazer-echoing-logo-orbits.html
+│   ├── jazer-eclipse-ring-halo.html
+│   ├── jazer-electric-vein-network.html
+│   ├── jazer-energy-reactor.html
+│   ├── jazer-floating-monoliths.html
+│   ├── jazer-flower-of-life-mandala.html
+│   ├── jazer-flower-of-life.html
+│   ├── jazer-flux-ribbon-trails.html
+│   ├── jazer-fractal-bloom.html
+│   ├── jazer-fractal-cubes.html
+│   ├── jazer-galactic-highway.html
+│   ├── jazer-glitch-fracture-grid.html
+│   ├── jazer-gpu-particle-tornado.html
+│   ├── jazer-gravity-well-spiral.html
+│   ├── jazer-gridfall.html
+│   ├── jazer-hex-tunnel-cascade.html
+│   ├── jazer-hexagon-tunnel.html
+│   ├── jazer-hologram-echoes.html
+│   ├── jazer-holographic-city-tunnel.html
+│   ├── jazer-holographic-logo-shards.html
+│   ├── jazer-hypercube-drift.html
+│   ├── jazer-hyperspace-streaks.html
+│   ├── jazer-hyperspace-tunnel.html
+│   ├── jazer-infinite-city-grid.html
+│   ├── jazer-infinite-logo-kaleidoscope.html
+│   ├── jazer-infinite-mirror-corridor.html
+│   ├── jazer-instancing-galaxy.html
+│   ├── jazer-laser-fountain-columns.html
+│   ├── jazer-laser-grid-sphere.html
+│   ├── jazer-laser-lattice-cage.html
+│   ├── jazer-liquid-neon-ripple.html
+│   ├── jazer-logo-constellation-field.html
+│   ├── jazer-magnetic-particle-swirl.html
+│   ├── jazer-materials-showcase.html
+│   ├── jazer-matrix-rain.html
+│   ├── jazer-metatrons-cube.html
+│   ├── jazer-mobius-infinity.html
+│   ├── jazer-nebula-pulse.html
+│   ├── jazer-neon-circuit-maze.html
+│   ├── jazer-neon-city.html
+│   ├── jazer-neon-ocean.html
+│   ├── jazer-neon-smoke-vortex.html
+│   ├── jazer-neon-tunnel.html
+│   ├── jazer-neon-vine-growth.html
+│   ├── jazer-neural-network.html
+│   ├── jazer-orbit-rings.html
+│   ├── jazer-oscillating-wave-tunnel.html
+│   ├── jazer-parallax-starfield-drift.html
+│   ├── jazer-particle-galaxy.html
+│   ├── jazer-particle-warp.html
+│   ├── jazer-plasma-storm-corridor.html
+│   ├── jazer-plasma-storm-enhanced.html
+│   ├── jazer-plasma-storm.html
+│   ├── jazer-plasma-vortex.html
+│   ├── jazer-prism-shard-swarm.html
+│   ├── jazer-pro-fx-demo.html
+│   ├── jazer-quantum-foam.html
+│   ├── jazer-quantum-lattice.html
+│   ├── jazer-quantum-logo-particles.html
+│   ├── jazer-quantum-wormhole.html
+│   ├── jazer-radiant-pulse-rings.html
+│   ├── jazer-rainbow-wireframe-tunnel.html
+│   ├── jazer-sacred-tesseract.html
+│   ├── jazer-seed-of-life.html
+│   ├── jazer-singularity-swirl.html
+│   ├── jazer-singularity.html
+│   ├── jazer-sonic-pulse-lines.html
+│   ├── jazer-sri-yantra.html
+│   ├── jazer-starfall-conveyor.html
+│   ├── jazer-supernova-shockwave.html
+│   ├── jazer-suspended-light-orbs.html
+│   ├── jazer-synthwave-grid.html
+│   ├── jazer-synthwave-sun-grid.html
+│   ├── jazer-time-ripple-rings.html
+│   ├── jazer-torus-knot-tunnel.html
+│   ├── jazer-vaporwave-horizon-ride.html
+│   ├── jazer-void-bloom-portal.html
+│   ├── jazer-volumetric-cathedral.html
+│   ├── jazer-vortex-spiral.html
+│   ├── jazer-warp-grid-twister.html
+│   ├── jazer-zero-gravity-logo-cloud.html
+│   └── README.md
+├── lib/
+│   ├── base/
+│   │   ├── CanvasEffectBase.js
+│   │   ├── EffectBase.js
+│   │   ├── EffectLoader.js
+│   │   ├── EffectRegistry.js
+│   │   └── ThreeEffectBase.js
+│   ├── canvas/
+│   │   └── PlasmaStorm.js
+│   ├── core/
+│   │   ├── CanvasEffectBase.js
+│   │   ├── EffectBase.js
+│   │   ├── EffectLoader.js
+│   │   ├── EffectRegistry.js
+│   │   ├── test.js
+│   │   └── ThreeEffectBase.js
+│   ├── engine/
+│   │   ├── jazer-audio.js
+│   │   ├── jazer-background-engine.js
+│   │   ├── jazer-canvas-fx.js
+│   │   ├── jazer-cinematic-fx.js
+│   │   ├── jazer-favorites.js
+│   │   ├── jazer-gpu-particles.js
+│   │   ├── jazer-instancing.js
+│   │   ├── jazer-materials.js
+│   │   ├── jazer-navigation.js
+│   │   ├── jazer-post-fx.js
+│   │   ├── jazer-pro-fx.js
+│   │   ├── jazer-shaders.js
+│   │   ├── jazer-spatial.js
+│   │   ├── jazer-three-fx.js
+│   │   └── jazer-volumetric.js
+│   ├── fx/
+│   │   ├── cinematic/
+│   │   │   └── jazer-cinematic-fx.js
+│   │   ├── post/
+│   │   │   └── jazer-post-fx.js
+│   │   └── shaders/
+│   │       └── jazer-shaders.js
+│   ├── math/
+│   │   └── jazer-math.js
+│   ├── motion/
+│   │   └── jazer-motion.js
+│   ├── palette/
+│   │   └── jazer-palette.js
+│   ├── runtime/
+│   │   ├── navigation/
+│   │   │   ├── jazer-favorites.js
+│   │   │   └── jazer-navigation.js
+│   │   └── jazer-background-engine.js
+│   ├── sacred-geometry/
+│   │   ├── FlowerOfLife.js
+│   │   ├── MetatronsCube.js
+│   │   ├── SacredGeometry3D.js
+│   │   ├── SeedOfLife.js
+│   │   └── SriYantra.js
+│   ├── systems/
+│   │   ├── audio/
+│   │   │   └── jazer-audio.js
+│   │   ├── math/
+│   │   │   ├── jazer-math.js
+│   │   │   └── jazer-spatial.js
+│   │   ├── motion/
+│   │   │   └── jazer-motion.js
+│   │   ├── palette/
+│   │   │   └── jazer-palette.js
+│   │   └── timing/
+│   │       └── jazer-timing.js
+│   ├── three/
+│   │   ├── NeonOcean.js
+│   │   └── QuantumFoam.js
+│   ├── timing/
+│   │   └── jazer-timing.js
+│   └── Three.js
+├── scripts/
+│   ├── add-navigation.js
+│   ├── CREATE-AND-PUSH-REPO.bat
+│   ├── move-effects.js
+│   ├── PUSH-TO-GITHUB.bat
+│   └── START-SERVER.bat
+├── templates/
+│   ├── jazer-effect-template-std.html
+│   └── jazer-effect-template.html
+├── tests/
+│   ├── lib-modules-test.html
+│   ├── TEST-FIXES.html
+│   └── TEST-GALLERY.html
+├── tools/
+│   ├── v2/
+│   │   └── build_index_app_v2.py
+│   ├── build_index_app.py
+│   ├── build_site.py
+│   ├── generate_effect_manifest.py
+│   └── tree_scan.py
+├── .gitignore
+├── AGENTS.md
+├── CLAUDE.md
+├── GEMINI.md
+├── index.html
+├── LICENSE
+├── README.md
+└── tree.txt

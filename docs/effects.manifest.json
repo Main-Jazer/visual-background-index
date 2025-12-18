@@ -1,0 +1,2622 @@
+{
+  "schema_version": 1,
+  "generated_utc": "2025-12-18T06:05:11.148580+00:00",
+  "root": ".",
+  "ignore_dirs": [
+    ".cache",
+    ".git",
+    ".idea",
+    ".next",
+    ".vite",
+    ".vscode",
+    "__pycache__",
+    "build",
+    "coverage",
+    "dist",
+    "node_modules",
+    "out"
+  ],
+  "max_bytes_per_file": 450000,
+  "effects": [
+    {
+      "id": "jazer-gallery",
+      "name": "JaZeR Effects Gallery",
+      "title": "JaZeR Effects Gallery",
+      "type": "three",
+      "path": "effects/gallery.html",
+      "size_bytes": 14434,
+      "modified_utc": "2025-12-17T22:48:28.060915+00:00",
+      "categories": [
+        "cyberpunk",
+        "ocean",
+        "plasma",
+        "sacred"
+      ],
+      "tags": [
+        "cyberpunk",
+        "ocean",
+        "plasma",
+        "sacred"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-anamorphic-logo-waves",
+      "name": "JaZeR Anamorphic Logo Waves",
+      "title": "JaZeR Anamorphic Logo Waves",
+      "type": "three",
+      "path": "effects/jazer-anamorphic-logo-waves.html",
+      "size_bytes": 9235,
+      "modified_utc": "2025-12-17T22:48:28.064655+00:00",
+      "categories": [
+        "cyberpunk",
+        "ocean",
+        "plasma"
+      ],
+      "tags": [
+        "cyberpunk",
+        "fog",
+        "ocean",
+        "plasma"
+      ],
+      "features": [
+        "noise",
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-audio-reactive-universe",
+      "name": "Audio Reactive Universe - JaZeR",
+      "title": "Audio Reactive Universe - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-audio-reactive-universe.html",
+      "size_bytes": 11994,
+      "modified_utc": "2025-12-18T00:49:27.790581+00:00",
+      "categories": [
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "cosmic",
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "audio-reactive",
+        "noise",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-aurora-borealis",
+      "name": "Aurora Borealis - JaZeR",
+      "title": "Aurora Borealis - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-aurora-borealis.html",
+      "size_bytes": 10315,
+      "modified_utc": "2025-12-17T22:48:28.072087+00:00",
+      "categories": [
+        "ocean",
+        "plasma"
+      ],
+      "tags": [
+        "ocean",
+        "plasma"
+      ],
+      "features": [
+        "noise"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-aurora-veil",
+      "name": "JaZeR Aurora Veil",
+      "title": "JaZeR Aurora Veil",
+      "type": "three",
+      "path": "effects/jazer-aurora-veil.html",
+      "size_bytes": 8853,
+      "modified_utc": "2025-12-17T22:48:28.075177+00:00",
+      "categories": [
+        "ocean",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "ocean",
+        "plasma"
+      ],
+      "features": [
+        "noise",
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-binary-star-tunnel",
+      "name": "JaZeR Binary Star Tunnel",
+      "title": "JaZeR Binary Star Tunnel",
+      "type": "three",
+      "path": "effects/jazer-binary-star-tunnel.html",
+      "size_bytes": 8274,
+      "modified_utc": "2025-12-17T22:48:28.078268+00:00",
+      "categories": [
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-celestial-logo-haloes",
+      "name": "JaZeR Celestial Logo Haloes",
+      "title": "JaZeR Celestial Logo Haloes",
+      "type": "three",
+      "path": "effects/jazer-celestial-logo-haloes.html",
+      "size_bytes": 7936,
+      "modified_utc": "2025-12-17T22:48:28.081572+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-chromatic-glitch-tunnel",
+      "name": "JaZeR Chromatic Glitch Tunnel",
+      "title": "JaZeR Chromatic Glitch Tunnel",
+      "type": "three",
+      "path": "effects/jazer-chromatic-glitch-tunnel.html",
+      "size_bytes": 7611,
+      "modified_utc": "2025-12-17T22:48:28.085398+00:00",
+      "categories": [
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "fog",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-chromatic-wavefield",
+      "name": "Chromatic Wavefield - JaZeR",
+      "title": "Chromatic Wavefield - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-chromatic-wavefield.html",
+      "size_bytes": 9433,
+      "modified_utc": "2025-12-17T22:48:28.088947+00:00",
+      "categories": [
+        "cyberpunk",
+        "ocean",
+        "plasma"
+      ],
+      "tags": [
+        "cyberpunk",
+        "ocean",
+        "plasma"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-cinematic-chase",
+      "name": "Cinematic Chase - JaZeR",
+      "title": "Cinematic Chase - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-cinematic-chase.html",
+      "size_bytes": 12220,
+      "modified_utc": "2025-12-17T22:48:28.092598+00:00",
+      "categories": [
+        "ambient",
+        "cyberpunk",
+        "tunnel"
+      ],
+      "tags": [
+        "ambient",
+        "cyberpunk",
+        "fog",
+        "tunnel"
+      ],
+      "features": [
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-cosmic-laser-beams",
+      "name": "Cosmic Laser Beams - JaZeR",
+      "title": "Cosmic Laser Beams - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-cosmic-laser-beams.html",
+      "size_bytes": 8899,
+      "modified_utc": "2025-12-17T22:48:28.095146+00:00",
+      "categories": [
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "bloom",
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-cosmic-nebula-enhanced",
+      "name": "Cosmic Nebula Voyage - JaZeR",
+      "title": "Cosmic Nebula Voyage - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-cosmic-nebula-enhanced.html",
+      "size_bytes": 16139,
+      "modified_utc": "2025-12-18T02:04:26.797608+00:00",
+      "categories": [
+        "ambient",
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "cosmic",
+        "filmic",
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-cosmic-nebula",
+      "name": "Cosmic Nebula Voyage - JaZeR",
+      "title": "Cosmic Nebula Voyage - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-cosmic-nebula.html",
+      "size_bytes": 14553,
+      "modified_utc": "2025-12-18T00:48:26.619606+00:00",
+      "categories": [
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-cosmic-stardust",
+      "name": "Cosmic Stardust - JaZeR",
+      "title": "Cosmic Stardust - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-cosmic-stardust.html",
+      "size_bytes": 8011,
+      "modified_utc": "2025-12-17T22:48:28.106404+00:00",
+      "categories": [
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "noise",
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-crystal-cave",
+      "name": "Crystal Cave - JaZeR",
+      "title": "Crystal Cave - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-crystal-cave.html",
+      "size_bytes": 8660,
+      "modified_utc": "2025-12-18T00:49:27.792726+00:00",
+      "categories": [
+        "ambient",
+        "particles"
+      ],
+      "tags": [
+        "ambient",
+        "fog",
+        "particles"
+      ],
+      "features": [
+        "noise",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-crystal-lattice-network",
+      "name": "Crystal Lattice Network - JaZeR",
+      "title": "Crystal Lattice Network - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-crystal-lattice-network.html",
+      "size_bytes": 15178,
+      "modified_utc": "2025-12-18T02:04:26.798126+00:00",
+      "categories": [
+        "ambient",
+        "cyberpunk",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "cyberpunk",
+        "filmic",
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-crystal-shard-tunnel",
+      "name": "JaZeR Crystal Shard Tunnel",
+      "title": "JaZeR Crystal Shard Tunnel",
+      "type": "three",
+      "path": "effects/jazer-crystal-shard-tunnel.html",
+      "size_bytes": 6880,
+      "modified_utc": "2025-12-17T22:48:28.115508+00:00",
+      "categories": [
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "instancing",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-cyber-glitch",
+      "name": "Cyber Glitch Tunnel - JaZeR",
+      "title": "Cyber Glitch Tunnel - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-cyber-glitch.html",
+      "size_bytes": 10238,
+      "modified_utc": "2025-12-17T22:48:28.121846+00:00",
+      "categories": [
+        "cyberpunk",
+        "tunnel"
+      ],
+      "tags": [
+        "cyberpunk",
+        "tunnel"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-cyber-glyph-rain",
+      "name": "Cyber Glyph Rain - JaZeR",
+      "title": "Cyber Glyph Rain - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-cyber-glyph-rain.html",
+      "size_bytes": 10518,
+      "modified_utc": "2025-12-17T22:48:28.125022+00:00",
+      "categories": [
+        "cyberpunk"
+      ],
+      "tags": [
+        "cyberpunk"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-digital-lattice-tunnel",
+      "name": "Digital Lattice Tunnel - JaZeR",
+      "title": "Digital Lattice Tunnel - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-digital-lattice-tunnel.html",
+      "size_bytes": 10612,
+      "modified_utc": "2025-12-17T22:48:28.128126+00:00",
+      "categories": [
+        "cyberpunk",
+        "particles",
+        "tunnel"
+      ],
+      "tags": [
+        "cyberpunk",
+        "particles",
+        "tunnel"
+      ],
+      "features": [
+        "noise",
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-digital-sandstorm",
+      "name": "JaZeR Digital Sandstorm",
+      "title": "JaZeR Digital Sandstorm",
+      "type": "three",
+      "path": "effects/jazer-digital-sandstorm.html",
+      "size_bytes": 6591,
+      "modified_utc": "2025-12-17T22:48:28.130769+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-dna-helix",
+      "name": "DNA Helix Infinity - JaZeR",
+      "title": "DNA Helix Infinity - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-dna-helix.html",
+      "size_bytes": 9260,
+      "modified_utc": "2025-12-17T22:48:28.133876+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-echoing-logo-orbits",
+      "name": "JaZeR Echoing Logo Orbits",
+      "title": "JaZeR Echoing Logo Orbits",
+      "type": "three",
+      "path": "effects/jazer-echoing-logo-orbits.html",
+      "size_bytes": 7666,
+      "modified_utc": "2025-12-17T22:48:28.137589+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-eclipse-ring-halo",
+      "name": "JaZeR Eclipse Ring Halo",
+      "title": "JaZeR Eclipse Ring Halo",
+      "type": "three",
+      "path": "effects/jazer-eclipse-ring-halo.html",
+      "size_bytes": 6491,
+      "modified_utc": "2025-12-18T00:49:27.795442+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-electric-vein-network",
+      "name": "JaZeR Electric Vein Network",
+      "title": "JaZeR Electric Vein Network",
+      "type": "three",
+      "path": "effects/jazer-electric-vein-network.html",
+      "size_bytes": 6978,
+      "modified_utc": "2025-12-18T00:49:27.796996+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "instancing",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-energy-reactor",
+      "name": "Energy Reactor Core - JaZeR",
+      "title": "Energy Reactor Core - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-energy-reactor.html",
+      "size_bytes": 15053,
+      "modified_utc": "2025-12-18T02:04:26.798638+00:00",
+      "categories": [
+        "ambient",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "filmic",
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-floating-monoliths",
+      "name": "JaZeR Floating Monoliths",
+      "title": "JaZeR Floating Monoliths",
+      "type": "three",
+      "path": "effects/jazer-floating-monoliths.html",
+      "size_bytes": 6756,
+      "modified_utc": "2025-12-18T00:49:27.799509+00:00",
+      "categories": [
+        "ambient",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "instancing",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-flower-of-life-mandala",
+      "name": "Flower of Life Tunnel - JaZeR",
+      "title": "Flower of Life Tunnel - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-flower-of-life-mandala.html",
+      "size_bytes": 25355,
+      "modified_utc": "2025-12-18T03:52:22.565825+00:00",
+      "categories": [
+        "ocean",
+        "particles",
+        "plasma",
+        "sacred",
+        "tunnel"
+      ],
+      "tags": [
+        "filmic",
+        "fog",
+        "ocean",
+        "particles",
+        "plasma",
+        "sacred",
+        "tunnel"
+      ],
+      "features": [
+        "instancing",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": []
+    },
+    {
+      "id": "jazer-flower-of-life",
+      "name": "Flower of Life Vortex - JaZeR",
+      "title": "Flower of Life Vortex - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-flower-of-life.html",
+      "size_bytes": 11848,
+      "modified_utc": "2025-12-17T22:48:28.155855+00:00",
+      "categories": [
+        "ambient",
+        "cosmic",
+        "ocean",
+        "particles",
+        "plasma",
+        "sacred"
+      ],
+      "tags": [
+        "ambient",
+        "cosmic",
+        "ocean",
+        "particles",
+        "plasma",
+        "sacred"
+      ],
+      "features": [
+        "noise",
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-flux-ribbon-trails",
+      "name": "JaZeR Flux Ribbon Trails",
+      "title": "JaZeR Flux Ribbon Trails",
+      "type": "three",
+      "path": "effects/jazer-flux-ribbon-trails.html",
+      "size_bytes": 5843,
+      "modified_utc": "2025-12-17T22:48:28.158364+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-fractal-bloom",
+      "name": "Fractal Bloom - JaZeR",
+      "title": "Fractal Bloom - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-fractal-bloom.html",
+      "size_bytes": 8590,
+      "modified_utc": "2025-12-17T22:48:28.161456+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "bloom",
+        "plasma"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-fractal-cubes",
+      "name": "Fractal Cube Recursion - JaZeR",
+      "title": "Fractal Cube Recursion - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-fractal-cubes.html",
+      "size_bytes": 9478,
+      "modified_utc": "2025-12-18T00:49:27.800556+00:00",
+      "categories": [
+        "ambient",
+        "particles"
+      ],
+      "tags": [
+        "ambient",
+        "particles"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-galactic-highway",
+      "name": "Galactic Highway - JaZeR",
+      "title": "Galactic Highway - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-galactic-highway.html",
+      "size_bytes": 10540,
+      "modified_utc": "2025-12-17T22:48:28.168769+00:00",
+      "categories": [
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "plasma",
+        "tunnel"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-glitch-fracture-grid",
+      "name": "JaZeR Glitch Fracture Grid",
+      "title": "JaZeR Glitch Fracture Grid",
+      "type": "three",
+      "path": "effects/jazer-glitch-fracture-grid.html",
+      "size_bytes": 6791,
+      "modified_utc": "2025-12-17T22:48:28.172405+00:00",
+      "categories": [
+        "cyberpunk",
+        "plasma"
+      ],
+      "tags": [
+        "cyberpunk",
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-gpu-particle-tornado",
+      "name": "GPU Particle Tornado - JaZeR",
+      "title": "GPU Particle Tornado - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-gpu-particle-tornado.html",
+      "size_bytes": 6999,
+      "modified_utc": "2025-12-18T00:49:27.802399+00:00",
+      "categories": [
+        "ambient",
+        "cyberpunk",
+        "particles"
+      ],
+      "tags": [
+        "ambient",
+        "cyberpunk",
+        "fog",
+        "particles"
+      ],
+      "features": [
+        "noise",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-gravity-well-spiral",
+      "name": "JaZeR Gravity Well Spiral",
+      "title": "JaZeR Gravity Well Spiral",
+      "type": "three",
+      "path": "effects/jazer-gravity-well-spiral.html",
+      "size_bytes": 6253,
+      "modified_utc": "2025-12-18T00:49:27.802913+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-gridfall",
+      "name": "JaZeR Gridfall - Infinite Loop",
+      "title": "JaZeR Gridfall - Infinite Loop",
+      "type": "canvas",
+      "path": "effects/jazer-gridfall.html",
+      "size_bytes": 12809,
+      "modified_utc": "2025-12-17T22:48:28.183223+00:00",
+      "categories": [
+        "cyberpunk",
+        "ocean"
+      ],
+      "tags": [
+        "cyberpunk",
+        "ocean"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-hex-tunnel-cascade",
+      "name": "JaZeR Hex Tunnel Cascade",
+      "title": "JaZeR Hex Tunnel Cascade",
+      "type": "three",
+      "path": "effects/jazer-hex-tunnel-cascade.html",
+      "size_bytes": 5925,
+      "modified_utc": "2025-12-17T22:48:28.186503+00:00",
+      "categories": [
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "fog",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "instancing",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-hexagon-tunnel",
+      "name": "Neon Hexagon Tunnel - JaZeR",
+      "title": "Neon Hexagon Tunnel - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-hexagon-tunnel.html",
+      "size_bytes": 7184,
+      "modified_utc": "2025-12-17T22:48:28.191216+00:00",
+      "categories": [
+        "ambient",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "ambient",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-hologram-echoes",
+      "name": "Hologram Echoes - JaZeR",
+      "title": "Hologram Echoes - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-hologram-echoes.html",
+      "size_bytes": 10737,
+      "modified_utc": "2025-12-17T22:48:28.194232+00:00",
+      "categories": [
+        "cyberpunk"
+      ],
+      "tags": [
+        "cyberpunk"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-holographic-city-tunnel",
+      "name": "Holographic City Tunnel - JaZeR",
+      "title": "Holographic City Tunnel - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-holographic-city-tunnel.html",
+      "size_bytes": 14298,
+      "modified_utc": "2025-12-18T00:49:27.804423+00:00",
+      "categories": [
+        "cyberpunk",
+        "particles",
+        "tunnel"
+      ],
+      "tags": [
+        "cyberpunk",
+        "fog",
+        "particles",
+        "tunnel"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-holographic-logo-shards",
+      "name": "JaZeR Holographic Logo Shards",
+      "title": "JaZeR Holographic Logo Shards",
+      "type": "three",
+      "path": "effects/jazer-holographic-logo-shards.html",
+      "size_bytes": 6590,
+      "modified_utc": "2025-12-17T22:48:28.201639+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "instancing",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-hypercube-drift",
+      "name": "Hypercube Drift - JaZeR",
+      "title": "Hypercube Drift - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-hypercube-drift.html",
+      "size_bytes": 9350,
+      "modified_utc": "2025-12-17T22:48:28.204719+00:00",
+      "categories": [
+        "ambient",
+        "cyberpunk",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "cyberpunk",
+        "plasma"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-hyperspace-streaks",
+      "name": "JaZeR Hyperspace Streaks",
+      "title": "JaZeR Hyperspace Streaks",
+      "type": "three",
+      "path": "effects/jazer-hyperspace-streaks.html",
+      "size_bytes": 5242,
+      "modified_utc": "2025-12-17T22:48:28.207746+00:00",
+      "categories": [
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "fog",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-hyperspace-tunnel",
+      "name": "Hyperspace Tunnel - JaZeR",
+      "title": "Hyperspace Tunnel - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-hyperspace-tunnel.html",
+      "size_bytes": 7620,
+      "modified_utc": "2025-12-17T22:48:28.210878+00:00",
+      "categories": [
+        "cyberpunk",
+        "tunnel"
+      ],
+      "tags": [
+        "cyberpunk",
+        "tunnel"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-infinite-city-grid",
+      "name": "Infinite City Grid - JaZeR",
+      "title": "Infinite City Grid - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-infinite-city-grid.html",
+      "size_bytes": 10560,
+      "modified_utc": "2025-12-17T22:48:28.213993+00:00",
+      "categories": [
+        "cyberpunk"
+      ],
+      "tags": [
+        "cyberpunk"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-infinite-logo-kaleidoscope",
+      "name": "JaZeR Infinite Logo Kaleidoscope",
+      "title": "JaZeR Infinite Logo Kaleidoscope",
+      "type": "three",
+      "path": "effects/jazer-infinite-logo-kaleidoscope.html",
+      "size_bytes": 6351,
+      "modified_utc": "2025-12-17T22:48:28.217504+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-infinite-mirror-corridor",
+      "name": "JaZeR Infinite Mirror Corridor",
+      "title": "JaZeR Infinite Mirror Corridor",
+      "type": "three",
+      "path": "effects/jazer-infinite-mirror-corridor.html",
+      "size_bytes": 5846,
+      "modified_utc": "2025-12-17T22:48:28.220500+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-instancing-galaxy",
+      "name": "Instanced Galaxy - JaZeR",
+      "title": "Instanced Galaxy - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-instancing-galaxy.html",
+      "size_bytes": 11222,
+      "modified_utc": "2025-12-18T00:49:27.805429+00:00",
+      "categories": [
+        "ambient",
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "instancing",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-laser-fountain-columns",
+      "name": "JaZeR Laser Fountain Columns",
+      "title": "JaZeR Laser Fountain Columns",
+      "type": "three",
+      "path": "effects/jazer-laser-fountain-columns.html",
+      "size_bytes": 5716,
+      "modified_utc": "2025-12-17T22:48:28.226703+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-laser-grid-sphere",
+      "name": "Laser Grid Sphere - JaZeR",
+      "title": "Laser Grid Sphere - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-laser-grid-sphere.html",
+      "size_bytes": 11168,
+      "modified_utc": "2025-12-18T00:49:27.807931+00:00",
+      "categories": [
+        "cyberpunk",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "cyberpunk",
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-laser-lattice-cage",
+      "name": "JaZeR Laser Lattice Cage",
+      "title": "JaZeR Laser Lattice Cage",
+      "type": "three",
+      "path": "effects/jazer-laser-lattice-cage.html",
+      "size_bytes": 5536,
+      "modified_utc": "2025-12-17T22:48:28.233501+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-liquid-neon-ripple",
+      "name": "Liquid Neon Ripple - JaZeR",
+      "title": "Liquid Neon Ripple - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-liquid-neon-ripple.html",
+      "size_bytes": 10835,
+      "modified_utc": "2025-12-18T00:55:39.069451+00:00",
+      "categories": [
+        "ocean",
+        "plasma"
+      ],
+      "tags": [
+        "ocean",
+        "plasma"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-logo-constellation-field",
+      "name": "JaZeR Logo Constellation Field",
+      "title": "JaZeR Logo Constellation Field",
+      "type": "three",
+      "path": "effects/jazer-logo-constellation-field.html",
+      "size_bytes": 6100,
+      "modified_utc": "2025-12-17T22:48:28.239500+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-magnetic-particle-swirl",
+      "name": "JaZeR Magnetic Particle Swirl",
+      "title": "JaZeR Magnetic Particle Swirl",
+      "type": "three",
+      "path": "effects/jazer-magnetic-particle-swirl.html",
+      "size_bytes": 4970,
+      "modified_utc": "2025-12-17T22:48:28.241541+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-materials-showcase",
+      "name": "Advanced Materials Showcase - JaZeR",
+      "title": "Advanced Materials Showcase - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-materials-showcase.html",
+      "size_bytes": 11470,
+      "modified_utc": "2025-12-18T00:49:27.808935+00:00",
+      "categories": [
+        "ambient",
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "ambient",
+        "fog",
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-matrix-rain",
+      "name": "Matrix Rain 3D - JaZeR",
+      "title": "Matrix Rain 3D - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-matrix-rain.html",
+      "size_bytes": 6831,
+      "modified_utc": "2025-12-17T22:48:28.248777+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "plasma"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-metatrons-cube",
+      "name": "Metatron's Cube Unfolding - JaZeR",
+      "title": "Metatron's Cube Unfolding - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-metatrons-cube.html",
+      "size_bytes": 8489,
+      "modified_utc": "2025-12-18T00:49:27.810442+00:00",
+      "categories": [
+        "ambient",
+        "cyberpunk",
+        "ocean",
+        "particles",
+        "sacred"
+      ],
+      "tags": [
+        "ambient",
+        "cyberpunk",
+        "fog",
+        "ocean",
+        "particles",
+        "sacred"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-mobius-infinity",
+      "name": "Möbius Infinity - JaZeR",
+      "title": "Möbius Infinity - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-mobius-infinity.html",
+      "size_bytes": 10438,
+      "modified_utc": "2025-12-18T00:49:27.811990+00:00",
+      "categories": [
+        "ambient",
+        "cyberpunk",
+        "ocean",
+        "particles"
+      ],
+      "tags": [
+        "ambient",
+        "cyberpunk",
+        "ocean",
+        "particles"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-nebula-pulse",
+      "name": "Nebula Pulse - JaZeR",
+      "title": "Nebula Pulse - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-nebula-pulse.html",
+      "size_bytes": 9385,
+      "modified_utc": "2025-12-17T22:48:28.260614+00:00",
+      "categories": [
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-neon-circuit-maze",
+      "name": "JaZeR Neon Circuit Maze",
+      "title": "JaZeR Neon Circuit Maze",
+      "type": "three",
+      "path": "effects/jazer-neon-circuit-maze.html",
+      "size_bytes": 7666,
+      "modified_utc": "2025-12-17T22:48:28.263167+00:00",
+      "categories": [
+        "ambient",
+        "cyberpunk",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "cyberpunk",
+        "filmic",
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "instancing",
+        "noise",
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "high",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-neon-city",
+      "name": "Neon City Flythrough - JaZeR",
+      "title": "Neon City Flythrough - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-neon-city.html",
+      "size_bytes": 9908,
+      "modified_utc": "2025-12-18T00:48:26.668594+00:00",
+      "categories": [
+        "cyberpunk"
+      ],
+      "tags": [
+        "cyberpunk",
+        "fog"
+      ],
+      "features": [
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-neon-ocean",
+      "name": "Neon Wireframe Ocean - JaZeR",
+      "title": "Neon Wireframe Ocean - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-neon-ocean.html",
+      "size_bytes": 13957,
+      "modified_utc": "2025-12-18T00:49:27.815016+00:00",
+      "categories": [
+        "ocean",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "ocean",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-neon-smoke-vortex",
+      "name": "JaZeR Neon Smoke Vortex",
+      "title": "JaZeR Neon Smoke Vortex",
+      "type": "unknown",
+      "path": "effects/jazer-neon-smoke-vortex.html",
+      "size_bytes": 200,
+      "modified_utc": "2025-12-17T22:48:28.272788+00:00",
+      "categories": [],
+      "tags": [],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-neon-tunnel",
+      "name": "JaZeR Neon Tunnel - Infinite Loop",
+      "title": "JaZeR Neon Tunnel - Infinite Loop",
+      "type": "canvas",
+      "path": "effects/jazer-neon-tunnel.html",
+      "size_bytes": 8720,
+      "modified_utc": "2025-12-17T22:48:28.275901+00:00",
+      "categories": [
+        "ocean",
+        "tunnel"
+      ],
+      "tags": [
+        "ocean",
+        "tunnel"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-neon-vine-growth",
+      "name": "JaZeR Neon Vine Growth",
+      "title": "JaZeR Neon Vine Growth",
+      "type": "three",
+      "path": "effects/jazer-neon-vine-growth.html",
+      "size_bytes": 4503,
+      "modified_utc": "2025-12-17T22:48:28.278481+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-neural-network",
+      "name": "Neural Network Universe - JaZeR",
+      "title": "Neural Network Universe - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-neural-network.html",
+      "size_bytes": 11769,
+      "modified_utc": "2025-12-18T00:49:27.816536+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-orbit-rings",
+      "name": "JaZeR Orbit Rings - Infinite Loop",
+      "title": "JaZeR Orbit Rings - Infinite Loop",
+      "type": "canvas",
+      "path": "effects/jazer-orbit-rings.html",
+      "size_bytes": 10351,
+      "modified_utc": "2025-12-18T00:55:52.627945+00:00",
+      "categories": [
+        "ocean",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "ocean",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-oscillating-wave-tunnel",
+      "name": "JaZeR Oscillating Wave Tunnel",
+      "title": "JaZeR Oscillating Wave Tunnel",
+      "type": "three",
+      "path": "effects/jazer-oscillating-wave-tunnel.html",
+      "size_bytes": 4673,
+      "modified_utc": "2025-12-17T22:48:28.287750+00:00",
+      "categories": [
+        "ocean",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "fog",
+        "ocean",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-parallax-starfield-drift",
+      "name": "JaZeR Parallax Starfield Drift",
+      "title": "JaZeR Parallax Starfield Drift",
+      "type": "three",
+      "path": "effects/jazer-parallax-starfield-drift.html",
+      "size_bytes": 7353,
+      "modified_utc": "2025-12-17T22:48:28.290297+00:00",
+      "categories": [
+        "ambient",
+        "cosmic",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "cosmic",
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-particle-galaxy",
+      "name": "Particle Galaxy - JaZeR",
+      "title": "Particle Galaxy - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-particle-galaxy.html",
+      "size_bytes": 8643,
+      "modified_utc": "2025-12-18T00:48:26.676352+00:00",
+      "categories": [
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "cosmic",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-particle-warp",
+      "name": "JaZeR Particle Warp - Infinite Loop",
+      "title": "JaZeR Particle Warp - Infinite Loop",
+      "type": "canvas",
+      "path": "effects/jazer-particle-warp.html",
+      "size_bytes": 11370,
+      "modified_utc": "2025-12-17T22:48:28.296581+00:00",
+      "categories": [
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-plasma-storm-corridor",
+      "name": "Plasma Storm Corridor - JaZeR",
+      "title": "Plasma Storm Corridor - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-plasma-storm-corridor.html",
+      "size_bytes": 11049,
+      "modified_utc": "2025-12-17T22:48:28.300162+00:00",
+      "categories": [
+        "ocean",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "ocean",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-plasma-storm-enhanced",
+      "name": "Plasma Storm - JaZeR",
+      "title": "Plasma Storm - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-plasma-storm-enhanced.html",
+      "size_bytes": 14367,
+      "modified_utc": "2025-12-18T02:04:26.799642+00:00",
+      "categories": [
+        "ambient",
+        "ocean",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "ocean",
+        "plasma"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-plasma-storm",
+      "name": "Plasma Storm - JaZeR",
+      "title": "Plasma Storm - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-plasma-storm.html",
+      "size_bytes": 9748,
+      "modified_utc": "2025-12-17T22:48:28.307138+00:00",
+      "categories": [
+        "plasma"
+      ],
+      "tags": [
+        "plasma"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-plasma-vortex",
+      "name": "Plasma Vortex - JaZeR",
+      "title": "Plasma Vortex - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-plasma-vortex.html",
+      "size_bytes": 13934,
+      "modified_utc": "2025-12-18T00:45:35.424403+00:00",
+      "categories": [
+        "ambient",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-prism-shard-swarm",
+      "name": "Prism Shard Swarm - JaZeR",
+      "title": "Prism Shard Swarm - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-prism-shard-swarm.html",
+      "size_bytes": 12427,
+      "modified_utc": "2025-12-18T00:55:54.651700+00:00",
+      "categories": [
+        "particles"
+      ],
+      "tags": [
+        "particles"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-pro-fx-demo",
+      "name": "Pro FX Demo - JaZeR",
+      "title": "Pro FX Demo - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-pro-fx-demo.html",
+      "size_bytes": 8314,
+      "modified_utc": "2025-12-17T23:37:20.058639+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-quantum-foam",
+      "name": "Quantum Foam - JaZeR",
+      "title": "Quantum Foam - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-quantum-foam.html",
+      "size_bytes": 9863,
+      "modified_utc": "2025-12-18T00:49:27.817536+00:00",
+      "categories": [
+        "ambient",
+        "ocean",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "ocean",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-quantum-lattice",
+      "name": "Quantum Lattice - JaZeR",
+      "title": "Quantum Lattice - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-quantum-lattice.html",
+      "size_bytes": 8972,
+      "modified_utc": "2025-12-17T22:48:28.320302+00:00",
+      "categories": [
+        "cyberpunk",
+        "plasma"
+      ],
+      "tags": [
+        "cyberpunk",
+        "plasma"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-quantum-logo-particles",
+      "name": "JaZeR Quantum Logo Particles",
+      "title": "JaZeR Quantum Logo Particles",
+      "type": "three",
+      "path": "effects/jazer-quantum-logo-particles.html",
+      "size_bytes": 5435,
+      "modified_utc": "2025-12-17T22:48:28.325036+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-quantum-wormhole",
+      "name": "Quantum Wormhole Portal - JaZeR",
+      "title": "Quantum Wormhole Portal - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-quantum-wormhole.html",
+      "size_bytes": 11473,
+      "modified_utc": "2025-12-18T00:48:26.683078+00:00",
+      "categories": [
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-radiant-pulse-rings",
+      "name": "JaZeR Radiant Pulse Rings",
+      "title": "JaZeR Radiant Pulse Rings",
+      "type": "unknown",
+      "path": "effects/jazer-radiant-pulse-rings.html",
+      "size_bytes": 202,
+      "modified_utc": "2025-12-17T22:48:28.331255+00:00",
+      "categories": [],
+      "tags": [],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-rainbow-wireframe-tunnel",
+      "name": "Rainbow Wireframe Tunnel - JaZeR",
+      "title": "Rainbow Wireframe Tunnel - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-rainbow-wireframe-tunnel.html",
+      "size_bytes": 10183,
+      "modified_utc": "2025-12-17T22:48:28.334874+00:00",
+      "categories": [
+        "tunnel"
+      ],
+      "tags": [
+        "tunnel"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-sacred-tesseract",
+      "name": "Sacred Tesseract - JaZeR",
+      "title": "Sacred Tesseract - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-sacred-tesseract.html",
+      "size_bytes": 12317,
+      "modified_utc": "2025-12-18T00:49:27.818537+00:00",
+      "categories": [
+        "ocean",
+        "particles",
+        "plasma",
+        "sacred"
+      ],
+      "tags": [
+        "ocean",
+        "particles",
+        "plasma",
+        "sacred"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-seed-of-life",
+      "name": "Seed of Life Portal - JaZeR",
+      "title": "Seed of Life Portal - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-seed-of-life.html",
+      "size_bytes": 7385,
+      "modified_utc": "2025-12-17T22:48:28.340565+00:00",
+      "categories": [
+        "plasma",
+        "sacred",
+        "tunnel"
+      ],
+      "tags": [
+        "plasma",
+        "sacred",
+        "tunnel"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-singularity-swirl",
+      "name": "JaZeR Singularity Swirl",
+      "title": "JaZeR Singularity Swirl",
+      "type": "three",
+      "path": "effects/jazer-singularity-swirl.html",
+      "size_bytes": 4461,
+      "modified_utc": "2025-12-17T22:48:28.343593+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-singularity",
+      "name": "Singularity Vortex - JaZeR",
+      "title": "Singularity Vortex - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-singularity.html",
+      "size_bytes": 9339,
+      "modified_utc": "2025-12-18T00:51:33.806758+00:00",
+      "categories": [
+        "particles"
+      ],
+      "tags": [
+        "particles"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-sonic-pulse-lines",
+      "name": "JaZeR Sonic Pulse Lines",
+      "title": "JaZeR Sonic Pulse Lines",
+      "type": "three",
+      "path": "effects/jazer-sonic-pulse-lines.html",
+      "size_bytes": 5161,
+      "modified_utc": "2025-12-17T22:48:28.349900+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "instancing",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-sri-yantra",
+      "name": "Sri Yantra Vortex - JaZeR",
+      "title": "Sri Yantra Vortex - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-sri-yantra.html",
+      "size_bytes": 7665,
+      "modified_utc": "2025-12-17T22:48:28.352518+00:00",
+      "categories": [
+        "ocean",
+        "plasma",
+        "sacred"
+      ],
+      "tags": [
+        "ocean",
+        "plasma",
+        "sacred"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-starfall-conveyor",
+      "name": "JaZeR Starfall Conveyor",
+      "title": "JaZeR Starfall Conveyor",
+      "type": "three",
+      "path": "effects/jazer-starfall-conveyor.html",
+      "size_bytes": 5521,
+      "modified_utc": "2025-12-17T22:48:28.355992+00:00",
+      "categories": [
+        "ambient",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "fog",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-supernova-shockwave",
+      "name": "JaZeR Supernova Shockwave",
+      "title": "JaZeR Supernova Shockwave",
+      "type": "three",
+      "path": "effects/jazer-supernova-shockwave.html",
+      "size_bytes": 6907,
+      "modified_utc": "2025-12-17T22:48:28.358500+00:00",
+      "categories": [
+        "ocean",
+        "plasma"
+      ],
+      "tags": [
+        "fog",
+        "ocean",
+        "plasma"
+      ],
+      "features": [
+        "noise",
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-suspended-light-orbs",
+      "name": "JaZeR Suspended Light Orbs",
+      "title": "JaZeR Suspended Light Orbs",
+      "type": "three",
+      "path": "effects/jazer-suspended-light-orbs.html",
+      "size_bytes": 4438,
+      "modified_utc": "2025-12-17T22:48:28.361546+00:00",
+      "categories": [
+        "ambient",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-synthwave-grid",
+      "name": "Synthwave Grid - JaZeR",
+      "title": "Synthwave Grid - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-synthwave-grid.html",
+      "size_bytes": 9176,
+      "modified_utc": "2025-12-17T22:48:28.363628+00:00",
+      "categories": [
+        "cyberpunk",
+        "ocean",
+        "plasma"
+      ],
+      "tags": [
+        "cyberpunk",
+        "ocean",
+        "plasma"
+      ],
+      "features": [
+        "noise"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-synthwave-sun-grid",
+      "name": "JaZeR Synthwave Sun Grid",
+      "title": "JaZeR Synthwave Sun Grid",
+      "type": "three",
+      "path": "effects/jazer-synthwave-sun-grid.html",
+      "size_bytes": 8047,
+      "modified_utc": "2025-12-17T22:48:28.367731+00:00",
+      "categories": [
+        "cyberpunk",
+        "ocean",
+        "plasma"
+      ],
+      "tags": [
+        "cyberpunk",
+        "fog",
+        "ocean",
+        "plasma"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-time-ripple-rings",
+      "name": "Time Ripple Rings - JaZeR",
+      "title": "Time Ripple Rings - JaZeR",
+      "type": "canvas",
+      "path": "effects/jazer-time-ripple-rings.html",
+      "size_bytes": 11622,
+      "modified_utc": "2025-12-18T00:56:41.643653+00:00",
+      "categories": [
+        "cosmic",
+        "ocean"
+      ],
+      "tags": [
+        "cosmic",
+        "ocean"
+      ],
+      "features": [],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-torus-knot-tunnel",
+      "name": "Torus Knot Tunnel - JaZeR",
+      "title": "Torus Knot Tunnel - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-torus-knot-tunnel.html",
+      "size_bytes": 11659,
+      "modified_utc": "2025-12-18T02:04:26.800146+00:00",
+      "categories": [
+        "ambient",
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "ambient",
+        "filmic",
+        "fog",
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-vaporwave-horizon-ride",
+      "name": "JaZeR Vaporwave Horizon Ride",
+      "title": "JaZeR Vaporwave Horizon Ride",
+      "type": "three",
+      "path": "effects/jazer-vaporwave-horizon-ride.html",
+      "size_bytes": 9067,
+      "modified_utc": "2025-12-17T22:48:28.380181+00:00",
+      "categories": [
+        "cyberpunk",
+        "ocean",
+        "plasma"
+      ],
+      "tags": [
+        "cyberpunk",
+        "fog",
+        "ocean",
+        "plasma"
+      ],
+      "features": [
+        "instancing",
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "high",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-void-bloom-portal",
+      "name": "JaZeR Void Bloom Portal",
+      "title": "JaZeR Void Bloom Portal",
+      "type": "three",
+      "path": "effects/jazer-void-bloom-portal.html",
+      "size_bytes": 8502,
+      "modified_utc": "2025-12-17T22:48:28.383413+00:00",
+      "categories": [
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "bloom",
+        "fog",
+        "particles",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "instancing",
+        "noise",
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "high",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-volumetric-cathedral",
+      "name": "Volumetric Cathedral - JaZeR",
+      "title": "Volumetric Cathedral - JaZeR",
+      "type": "three",
+      "path": "effects/jazer-volumetric-cathedral.html",
+      "size_bytes": 10547,
+      "modified_utc": "2025-12-17T22:48:28.388503+00:00",
+      "categories": [
+        "ambient",
+        "cosmic",
+        "particles"
+      ],
+      "tags": [
+        "ambient",
+        "cosmic",
+        "fog",
+        "particles"
+      ],
+      "features": [
+        "noise",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-vortex-spiral",
+      "name": "JaZeR Vortex Spiral - Infinite Loop",
+      "title": "JaZeR Vortex Spiral - Infinite Loop",
+      "type": "canvas",
+      "path": "effects/jazer-vortex-spiral.html",
+      "size_bytes": 10470,
+      "modified_utc": "2025-12-18T00:56:44.043322+00:00",
+      "categories": [
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "low",
+      "notes": []
+    },
+    {
+      "id": "jazer-warp-grid-twister",
+      "name": "JaZeR Warp Grid Twister",
+      "title": "JaZeR Warp Grid Twister",
+      "type": "three",
+      "path": "effects/jazer-warp-grid-twister.html",
+      "size_bytes": 7747,
+      "modified_utc": "2025-12-17T22:48:28.395008+00:00",
+      "categories": [
+        "cyberpunk",
+        "plasma",
+        "tunnel"
+      ],
+      "tags": [
+        "cyberpunk",
+        "fog",
+        "plasma",
+        "tunnel"
+      ],
+      "features": [
+        "particles",
+        "shaders"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-zero-gravity-logo-cloud",
+      "name": "JaZeR Zero Gravity Logo Cloud",
+      "title": "JaZeR Zero Gravity Logo Cloud",
+      "type": "three",
+      "path": "effects/jazer-zero-gravity-logo-cloud.html",
+      "size_bytes": 8276,
+      "modified_utc": "2025-12-17T22:48:28.397521+00:00",
+      "categories": [
+        "ambient",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "ambient",
+        "fog",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-effect-template-std",
+      "name": "JaZeR Visual Effect",
+      "title": "JaZeR Visual Effect",
+      "type": "three",
+      "path": "templates/jazer-effect-template-std.html",
+      "size_bytes": 6461,
+      "modified_utc": "2025-12-17T22:48:28.404728+00:00",
+      "categories": [
+        "cosmic",
+        "cyberpunk",
+        "plasma"
+      ],
+      "tags": [
+        "cosmic",
+        "cyberpunk",
+        "plasma"
+      ],
+      "features": [
+        "noise"
+      ],
+      "gpu_tier": "low",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    },
+    {
+      "id": "jazer-effect-template",
+      "name": "JaZeR Effect Template",
+      "title": "JaZeR Effect Template",
+      "type": "three",
+      "path": "templates/jazer-effect-template.html",
+      "size_bytes": 8037,
+      "modified_utc": "2025-12-17T22:48:28.406244+00:00",
+      "categories": [
+        "cosmic",
+        "cyberpunk",
+        "particles",
+        "plasma"
+      ],
+      "tags": [
+        "cosmic",
+        "cyberpunk",
+        "particles",
+        "plasma"
+      ],
+      "features": [
+        "noise",
+        "particles"
+      ],
+      "gpu_tier": "med",
+      "notes": [
+        "mixed_three_and_canvas_detected"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JaZeR Engine - Module Test Harness</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #0a0510;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+        }
+
+        header {
+            padding: 20px 40px;
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.1), rgba(255, 42, 255, 0.1));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            color: #00f5ff;
+        }
+
+        header p {
+            opacity: 0.6;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        main {
+            padding: 40px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 30px;
+        }
+
+        .test-section {
+            background: rgba(20, 15, 30, 0.8);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .test-section h2 {
+            padding: 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #b37cff;
+        }
+
+        .test-content {
+            padding: 20px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 300px;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .test-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+        }
+
+        .test-info .label {
+            color: #888;
+            display: inline-block;
+            width: 100px;
+        }
+
+        .test-info .value {
+            color: #00f5ff;
+        }
+
+        .test-info .good {
+            color: #39ff14;
+        }
+
+        .test-info .warn {
+            color: #ffd86b;
+        }
+
+        #three-container {
+            width: 100%;
+            height: 300px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .palette-swatch {
+            height: 40px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            color: rgba(0, 0, 0, 0.7);
+            font-weight: bold;
+        }
+
+        .gradient-preview {
+            height: 60px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>JAZER ENGINE — MODULE TEST HARNESS</h1>
+        <p>Visual verification for timing, motion, and palette modules</p>
+    </header>
+
+    <main>
+        <!-- Timing Module Test -->
+        <section class="test-section">
+            <h2>1. Timing Module — LoopClock</h2>
+            <div class="test-content">
+                <canvas id="timing-canvas"></canvas>
+                <div class="test-info" id="timing-info">
+                    <div><span class="label">Loop Time:</span> <span class="value" id="timing-t">0.000</span></div>
+                    <div><span class="label">Elapsed:</span> <span class="value" id="timing-elapsed">0.00s</span></div>
+                    <div><span class="label">Cycles:</span> <span class="value" id="timing-cycles">0</span></div>
+                    <div><span class="label">Loop Status:</span> <span class="value"
+                            id="timing-status">Running...</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Motion Module Test -->
+        <section class="test-section">
+            <h2>2. Motion Module — CinematicCamera</h2>
+            <div class="test-content">
+                <div id="three-container"></div>
+                <div class="test-info" id="motion-info">
+                    <div><span class="label">Shot:</span> <span class="value" id="motion-shot">dollyGlide</span></div>
+                    <div><span class="label">Position:</span> <span class="value" id="motion-pos">0, 0, 0</span></div>
+                    <div><span class="label">Motion Type:</span> <span class="value good"
+                            id="motion-type">Cinematic</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Palette Module Test -->
+        <section class="test-section">
+            <h2>3. Palette Module — Color Discipline</h2>
+            <div class="test-content">
+                <div class="palette-grid" id="palette-grid"></div>
+                <canvas id="gradient-canvas" class="gradient-preview"></canvas>
+                <div class="test-info" id="palette-info">
+                    <div><span class="label">Palette:</span> <span class="value" id="palette-name">cosmic</span></div>
+                    <div><span class="label">Primary:</span> <span class="value" id="palette-primary">#7b2cbf</span>
+                    </div>
+                    <div><span class="label">Accent:</span> <span class="value" id="palette-accent">#f72585</span></div>
+                    <div><span class="label">Random (weighted):</span> <span class="value" id="palette-random">—</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Timing Helpers Test -->
+        <section class="test-section">
+            <h2>4. Timing Helpers — breathe, pulse, drift</h2>
+            <div class="test-content">
+                <canvas id="helpers-canvas"></canvas>
+                <div class="test-info" id="helpers-info">
+                    <div><span class="label">Breathe:</span> <span class="value" id="helper-breathe">0.00</span></div>
+                    <div><span class="label">Pulse:</span> <span class="value" id="helper-pulse">0.00</span></div>
+                    <div><span class="label">Drift:</span> <span class="value" id="helper-drift">0.00</span></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Three.js for motion test -->
+    <script src="../lib/Three.js"></script>
+
+    <script type="module">
+        // Import our new modules
+        import { LoopClock, breathe, pulse, drift, wave } from '../lib/systems/timing/jazer-timing.js';
+        import { CinematicCamera, Shot } from '../lib/systems/motion/jazer-motion.js';
+        import { Palette, Gradient, hexToRgba } from '../lib/systems/palette/jazer-palette.js';
+
+        // ========================================
+        // 1. TIMING MODULE TEST
+        // ========================================
+        const timingCanvas = document.getElementById('timing-canvas');
+        const timingCtx = timingCanvas.getContext('2d');
+
+        // Set canvas size
+        function resizeCanvas(canvas) {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * 2;
+            canvas.height = 300 * 2;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = '300px';
+        }
+        resizeCanvas(timingCanvas);
+
+        // Create a 5-second loop clock
+        const loopClock = new LoopClock({ duration: 5 });
+
+        // Track loop reset detection
+        let lastLoopCycle = 0;
+        let loopTestPassed = false;
+
+        function renderTimingTest(dt) {
+            loopClock.update(dt);
+
+            const ctx = timingCtx;
+            const w = timingCanvas.width;
+            const h = timingCanvas.height;
+            const t = loopClock.t;
+
+            // Clear
+            ctx.fillStyle = '#0a0510';
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw pulsing circle that returns to exact start position
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const baseRadius = 40;
+            const maxRadius = 150;
+
+            // Use seamless wave for radius
+            const radiusT = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
+            const radius = baseRadius + radiusT * (maxRadius - baseRadius);
+
+            // Position also moves in circle
+            const orbitalRadius = 80;
+            const angle = t * Math.PI * 2;
+            const x = centerX + Math.cos(angle) * orbitalRadius;
+            const y = centerY + Math.sin(angle) * orbitalRadius;
+
+            // Draw glow
+            const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+            grad.addColorStop(0, 'rgba(0, 245, 255, 0.8)');
+            grad.addColorStop(0.5, 'rgba(179, 124, 255, 0.4)');
+            grad.addColorStop(1, 'rgba(255, 42, 255, 0)');
+
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Core
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+
+            // Loop indicator arc
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 180, 0, t * Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0, 245, 255, 0.3)';
+            ctx.lineWidth = 8;
+            ctx.stroke();
+
+            // Update info
+            document.getElementById('timing-t').textContent = t.toFixed(3);
+            document.getElementById('timing-elapsed').textContent = loopClock.elapsed.toFixed(2) + 's';
+            document.getElementById('timing-cycles').textContent = loopClock.cycles;
+
+            // Detect seamless loop
+            if (loopClock.justLooped) {
+                loopTestPassed = true;
+            }
+
+            const statusEl = document.getElementById('timing-status');
+            if (loopTestPassed) {
+                statusEl.textContent = '✓ Seamless loop verified!';
+                statusEl.className = 'value good';
+            } else {
+                statusEl.textContent = 'Waiting for first loop...';
+            }
+        }
+
+        // ========================================
+        // 2. MOTION MODULE TEST (Three.js)
+        // ========================================
+        const threeContainer = document.getElementById('three-container');
+        const rect = threeContainer.getBoundingClientRect();
+
+        // Create scene
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0510);
+        scene.fog = new THREE.FogExp2(0x0a0510, 0.1);
+
+        // Create camera
+        const camera = new THREE.PerspectiveCamera(60, rect.width / rect.height, 0.1, 100);
+
+        // Create renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(rect.width, rect.height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        threeContainer.appendChild(renderer.domElement);
+
+        // Create test geometry - a grid of cubes
+        const cubeGeom = new THREE.BoxGeometry(1, 1, 1);
+        for (let x = -3; x <= 3; x++) {
+            for (let z = -3; z <= 3; z++) {
+                const color = new THREE.Color().setHSL(
+                    (x + z + 6) / 12,
+                    0.8,
+                    0.5
+                );
+                const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5 });
+                const cube = new THREE.Mesh(cubeGeom, mat);
+                cube.position.set(x * 3, 0, z * 3);
+                scene.add(cube);
+            }
+        }
+
+        // Add lighting
+        const ambient = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambient);
+
+        const point = new THREE.PointLight(0x00f5ff, 2);
+        point.position.set(5, 10, 5);
+        scene.add(point);
+
+        // Create CinematicCamera with shots
+        const motionClock = new LoopClock({ duration: 15 });
+
+        const cinematicCam = new CinematicCamera(camera, {
+            THREE: THREE,
+            driftAmount: 0.02,
+            driftSpeed: 0.5,
+            maxRoll: 0.01,
+            shots: [
+                Shot.dollyGlide({ from: [0, 5, 20], to: [0, 3, 8], lookAt: [0, 0, 0], duration: 1 }),
+                Shot.arcPush({ center: [0, 0, 0], radius: 12, arc: Math.PI / 3, height: 4, duration: 1.5 }),
+                Shot.parallaxWeave({ position: [8, 4, 8], lookAt: [0, 0, 0], weaveAmount: 2, duration: 1 }),
+                Shot.lockedHero({ position: [0, 6, 12], lookAt: [0, 0, 0], duration: 1 })
+            ]
+        });
+
+        const shotNames = ['dollyGlide', 'arcPush', 'parallaxWeave', 'lockedHero'];
+
+        function renderMotionTest(dt) {
+            motionClock.update(dt);
+            cinematicCam.update(motionClock.t, dt);
+            renderer.render(scene, camera);
+
+            // Update info
+            const shotIndex = cinematicCam.currentShotIndex;
+            document.getElementById('motion-shot').textContent = shotNames[shotIndex] || 'unknown';
+            document.getElementById('motion-pos').textContent =
+                `${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)}`;
+        }
+
+        // ========================================
+        // 3. PALETTE MODULE TEST
+        // ========================================
+        const palette = Palette.from('cosmic', {
+            primary: 0,
+            secondary: 2,
+            accent: 4,
+            accentWeight: 0.05,
+            primaryWeight: 0.45,
+            secondaryWeight: 0.30
+        });
+
+        // Render palette swatches
+        const paletteGrid = document.getElementById('palette-grid');
+        palette.colors.forEach((color, i) => {
+            const swatch = document.createElement('div');
+            swatch.className = 'palette-swatch';
+            swatch.style.background = color;
+
+            let label = '';
+            if (i === palette.primaryIndex) label = 'PRIMARY';
+            else if (i === palette.secondaryIndex) label = 'SECONDARY';
+            else if (i === palette.accentIndex) label = 'ACCENT';
+            swatch.textContent = label;
+
+            paletteGrid.appendChild(swatch);
+        });
+
+        // Render gradient
+        const gradCanvas = document.getElementById('gradient-canvas');
+        const gradCtx = gradCanvas.getContext('2d');
+        gradCanvas.width = 400;
+        gradCanvas.height = 60;
+
+        const grad = Gradient.linear(gradCtx, 0, 0, 400, 0);
+        grad.addStops(palette, [0, 0.3, 0.6, 0.85]);
+        grad.addAccent(0.95, 0.8, palette);
+        gradCtx.fillStyle = grad.value;
+        gradCtx.fillRect(0, 0, 400, 60);
+
+        // Update palette info
+        document.getElementById('palette-name').textContent = palette.name;
+        document.getElementById('palette-primary').textContent = palette.primary;
+        document.getElementById('palette-accent').textContent = palette.accent;
+
+        // Track weighted random distribution
+        const colorCounts = {};
+
+        function updatePaletteTest() {
+            const randomColor = palette.random();
+            colorCounts[randomColor] = (colorCounts[randomColor] || 0) + 1;
+
+            const total = Object.values(colorCounts).reduce((a, b) => a + b, 0);
+            const accentCount = colorCounts[palette.accent] || 0;
+            const accentPercent = ((accentCount / total) * 100).toFixed(1);
+
+            document.getElementById('palette-random').textContent =
+                `${randomColor} (accent: ${accentPercent}%)`;
+        }
+
+        // ========================================
+        // 4. TIMING HELPERS TEST
+        // ========================================
+        const helpersCanvas = document.getElementById('helpers-canvas');
+        const helpersCtx = helpersCanvas.getContext('2d');
+        resizeCanvas(helpersCanvas);
+
+        const helpersClock = new LoopClock({ duration: 8 });
+
+        function renderHelpersTest(dt) {
+            helpersClock.update(dt);
+
+            const ctx = helpersCtx;
+            const w = helpersCanvas.width;
+            const h = helpersCanvas.height;
+            const t = helpersClock.t;
+
+            // Clear
+            ctx.fillStyle = '#0a0510';
+            ctx.fillRect(0, 0, w, h);
+
+            // Calculate helper values
+            const breatheVal = breathe(t);
+            const pulseVal = pulse(t, { beats: 4, decay: 0.4 });
+            const driftVal = drift(t, { complexity: 3, amplitude: 1 });
+
+            const barWidth = w / 3 - 40;
+            const barHeight = h - 100;
+
+            // Draw breathe bar
+            ctx.fillStyle = 'rgba(0, 245, 255, 0.3)';
+            ctx.fillRect(40, 50, barWidth, barHeight);
+            ctx.fillStyle = '#00f5ff';
+            ctx.fillRect(40, 50 + barHeight * (1 - breatheVal), barWidth, barHeight * breatheVal);
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('BREATHE', 40 + barWidth / 2, h - 20);
+
+            // Draw pulse bar
+            const pulseX = 40 + barWidth + 40;
+            ctx.fillStyle = 'rgba(255, 42, 255, 0.3)';
+            ctx.fillRect(pulseX, 50, barWidth, barHeight);
+            ctx.fillStyle = '#ff2aff';
+            ctx.fillRect(pulseX, 50 + barHeight * (1 - pulseVal), barWidth, barHeight * pulseVal);
+            ctx.fillText('PULSE', pulseX + barWidth / 2, h - 20);
+
+            // Draw drift bar (centered)
+            const driftX = pulseX + barWidth + 40;
+            const driftNorm = (driftVal + 1) / 2; // Normalize -1 to 1 -> 0 to 1
+            ctx.fillStyle = 'rgba(179, 124, 255, 0.3)';
+            ctx.fillRect(driftX, 50, barWidth, barHeight);
+
+            // Drift indicator
+            const driftY = 50 + barHeight * (1 - driftNorm);
+            ctx.fillStyle = '#b37cff';
+            ctx.fillRect(driftX, driftY - 10, barWidth, 20);
+            ctx.fillText('DRIFT', driftX + barWidth / 2, h - 20);
+
+            // Update info
+            document.getElementById('helper-breathe').textContent = breatheVal.toFixed(2);
+            document.getElementById('helper-pulse').textContent = pulseVal.toFixed(2);
+            document.getElementById('helper-drift').textContent = driftVal.toFixed(2);
+        }
+
+        // ========================================
+        // ANIMATION LOOP
+        // ========================================
+        let lastTime = performance.now();
+
+        function animate() {
+            const now = performance.now();
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            renderTimingTest(dt);
+            renderMotionTest(dt);
+            renderHelpersTest(dt);
+
+            // Update palette test periodically
+            if (Math.random() < 0.1) {
+                updatePaletteTest();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            resizeCanvas(timingCanvas);
+            resizeCanvas(helpersCanvas);
+
+            const rect = threeContainer.getBoundingClientRect();
+            camera.aspect = rect.width / rect.height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(rect.width, rect.height);
+        });
+
+        console.log('✓ JaZeR Engine modules loaded successfully');
+        console.log('  - LoopClock:', typeof LoopClock);
+        console.log('  - CinematicCamera:', typeof CinematicCamera);
+        console.log('  - Palette:', typeof Palette);
+    </script>
+</body>
+
+</html>

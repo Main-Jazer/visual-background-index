@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>JaZeR Visual Background Index (v2)</title>
+  <meta name="color-scheme" content="dark light" />
+  <style>
+    :root {
+      --bg: #05030a;
+      --panel: rgba(15, 10, 30, 0.72);
+      --border: rgba(120, 140, 220, 0.22);
+      --text: rgba(225, 235, 255, 0.92);
+      --muted: rgba(180, 190, 220, 0.75);
+      --gold: rgba(255, 200, 80, 0.85);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 700px at 50% -10%, rgba(120,80,255,0.18), transparent 60%),
+                  radial-gradient(900px 500px at 10% 20%, rgba(0,200,255,0.10), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      overflow: hidden;
+    }
+    .app {
+      display: grid;
+      grid-template-columns: 440px 1fr;
+      height: 100%;
+      gap: 14px;
+      padding: 14px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+      min-height: 0;
+    }
+    .left {
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      min-height: 0;
+    }
+    header {
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    header .title {
+      font-size: 13px;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: rgba(210,220,255,0.92);
+    }
+    header .sub {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .controls {
+      padding: 12px 14px;
+      display: grid;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    input[type="search"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(140,160,240,0.22);
+      background: rgba(0,0,0,0.25);
+      color: var(--text);
+      outline: none;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    select {
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(140,160,240,0.22);
+      background: rgba(0,0,0,0.25);
+      color: var(--text);
+      outline: none;
+      width: 100%;
+    }
+    .list {
+      min-height: 0;
+      overflow: auto;
+    }
+    .item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(140,160,240,0.14);
+      cursor: pointer;
+    }
+    .item:hover { background: rgba(255,255,255,0.03); }
+    .item .name { font-size: 13px; }
+    .item .meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .item .badge {
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(140,160,240,0.22);
+      background: rgba(0,0,0,0.18);
+      color: rgba(210,225,255,0.82);
+      align-self: start;
+      white-space: nowrap;
+    }
+    .footer {
+      padding: 10px 14px;
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .right {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+    .topbar {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .topbar .now {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: 1px solid rgba(140,160,240,0.22);
+      background: rgba(0,0,0,0.22);
+      color: rgba(220,235,255,0.92);
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    button:hover { background: rgba(255,255,255,0.05); }
+    button.primary {
+      border-color: rgba(255,200,80,0.28);
+      background: rgba(255,200,80,0.12);
+      color: rgba(255,235,200,0.92);
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #000;
+    }
+    @media (max-width: 980px) {
+      body { overflow: auto; }
+      .app { grid-template-columns: 1fr; height: auto; }
+      .right { height: 70vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="card left">
+      <header>
+        <div class="title">JaZeR Visual Background Index (v2)</div>
+        <div class="sub">
+          Non-destructive build: docs/v2/* only.<br/>
+          Serve via localhost for best results.
+        </div>
+      </header>
+
+      <div class="controls">
+        <input id="q" type="search" placeholder="Search effects..." autocomplete="off" />
+        <div class="row">
+          <select id="type">
+            <option value="all">Type: All</option>
+            <option value="three">Type: Three.js</option>
+            <option value="canvas">Type: Canvas</option>
+          </select>
+          <select id="sort">
+            <option value="name">Sort: Name</option>
+            <option value="path">Sort: Path</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="list" id="list"></div>
+
+      <div class="footer">
+        <div><span id="count"></span></div>
+        <div>Build: 2025-12-17 23:40</div>
+      </div>
+    </section>
+
+    <section class="card right">
+      <div class="topbar">
+        <div>
+          <div style="font-size:13px" id="activeName">Select an effect</div>
+          <div class="now" id="activePath">—</div>
+        </div>
+        <div class="actions">
+          <button id="btn-random">Random</button>
+          <button id="btn-open" class="primary">Open</button>
+          <button id="btn-reload">Reload</button>
+        </div>
+      </div>
+      <iframe id="frame" title="Effect preview"></iframe>
+    </section>
+  </div>
+
+  <script>
+    const MANIFEST = [{"name": "gallery", "path": "effects/gallery.html"}, {"name": "jazer anamorphic logo waves", "path": "effects/jazer-anamorphic-logo-waves.html"}, {"name": "jazer audio reactive universe", "path": "effects/jazer-audio-reactive-universe.html"}, {"name": "jazer aurora borealis", "path": "effects/jazer-aurora-borealis.html"}, {"name": "jazer aurora veil", "path": "effects/jazer-aurora-veil.html"}, {"name": "jazer binary star tunnel", "path": "effects/jazer-binary-star-tunnel.html"}, {"name": "jazer celestial logo haloes", "path": "effects/jazer-celestial-logo-haloes.html"}, {"name": "jazer chromatic glitch tunnel", "path": "effects/jazer-chromatic-glitch-tunnel.html"}, {"name": "jazer chromatic wavefield", "path": "effects/jazer-chromatic-wavefield.html"}, {"name": "jazer cinematic chase", "path": "effects/jazer-cinematic-chase.html"}, {"name": "jazer cosmic laser beams", "path": "effects/jazer-cosmic-laser-beams.html"}, {"name": "jazer cosmic nebula enhanced", "path": "effects/jazer-cosmic-nebula-enhanced.html"}, {"name": "jazer cosmic nebula", "path": "effects/jazer-cosmic-nebula.html"}, {"name": "jazer cosmic stardust", "path": "effects/jazer-cosmic-stardust.html"}, {"name": "jazer crystal cave", "path": "effects/jazer-crystal-cave.html"}, {"name": "jazer crystal lattice network", "path": "effects/jazer-crystal-lattice-network.html"}, {"name": "jazer crystal shard tunnel", "path": "effects/jazer-crystal-shard-tunnel.html"}, {"name": "jazer cyber glitch", "path": "effects/jazer-cyber-glitch.html"}, {"name": "jazer cyber glyph rain", "path": "effects/jazer-cyber-glyph-rain.html"}, {"name": "jazer digital lattice tunnel", "path": "effects/jazer-digital-lattice-tunnel.html"}, {"name": "jazer digital sandstorm", "path": "effects/jazer-digital-sandstorm.html"}, {"name": "jazer dna helix", "path": "effects/jazer-dna-helix.html"}, {"name": "jazer echoing logo orbits", "path": "effects/jazer-echoing-logo-orbits.html"}, {"name": "jazer eclipse ring halo", "path": "effects/jazer-eclipse-ring-halo.html"}, {"name": "jazer electric vein network", "path": "effects/jazer-electric-vein-network.html"}, {"name": "jazer energy reactor", "path": "effects/jazer-energy-reactor.html"}, {"name": "jazer floating monoliths", "path": "effects/jazer-floating-monoliths.html"}, {"name": "jazer flower of life mandala", "path": "effects/jazer-flower-of-life-mandala.html"}, {"name": "jazer flower of life", "path": "effects/jazer-flower-of-life.html"}, {"name": "jazer flux ribbon trails", "path": "effects/jazer-flux-ribbon-trails.html"}, {"name": "jazer fractal bloom", "path": "effects/jazer-fractal-bloom.html"}, {"name": "jazer fractal cubes", "path": "effects/jazer-fractal-cubes.html"}, {"name": "jazer galactic highway", "path": "effects/jazer-galactic-highway.html"}, {"name": "jazer glitch fracture grid", "path": "effects/jazer-glitch-fracture-grid.html"}, {"name": "jazer gpu particle tornado", "path": "effects/jazer-gpu-particle-tornado.html"}, {"name": "jazer gravity well spiral", "path": "effects/jazer-gravity-well-spiral.html"}, {"name": "jazer gridfall", "path": "effects/jazer-gridfall.html"}, {"name": "jazer hex tunnel cascade", "path": "effects/jazer-hex-tunnel-cascade.html"}, {"name": "jazer hexagon tunnel", "path": "effects/jazer-hexagon-tunnel.html"}, {"name": "jazer hologram echoes", "path": "effects/jazer-hologram-echoes.html"}, {"name": "jazer holographic city tunnel", "path": "effects/jazer-holographic-city-tunnel.html"}, {"name": "jazer holographic logo shards", "path": "effects/jazer-holographic-logo-shards.html"}, {"name": "jazer hypercube drift", "path": "effects/jazer-hypercube-drift.html"}, {"name": "jazer hyperspace streaks", "path": "effects/jazer-hyperspace-streaks.html"}, {"name": "jazer hyperspace tunnel", "path": "effects/jazer-hyperspace-tunnel.html"}, {"name": "jazer infinite city grid", "path": "effects/jazer-infinite-city-grid.html"}, {"name": "jazer infinite logo kaleidoscope", "path": "effects/jazer-infinite-logo-kaleidoscope.html"}, {"name": "jazer infinite mirror corridor", "path": "effects/jazer-infinite-mirror-corridor.html"}, {"name": "jazer instancing galaxy", "path": "effects/jazer-instancing-galaxy.html"}, {"name": "jazer laser fountain columns", "path": "effects/jazer-laser-fountain-columns.html"}, {"name": "jazer laser grid sphere", "path": "effects/jazer-laser-grid-sphere.html"}, {"name": "jazer laser lattice cage", "path": "effects/jazer-laser-lattice-cage.html"}, {"name": "jazer liquid neon ripple", "path": "effects/jazer-liquid-neon-ripple.html"}, {"name": "jazer logo constellation field", "path": "effects/jazer-logo-constellation-field.html"}, {"name": "jazer magnetic particle swirl", "path": "effects/jazer-magnetic-particle-swirl.html"}, {"name": "jazer materials showcase", "path": "effects/jazer-materials-showcase.html"}, {"name": "jazer matrix rain", "path": "effects/jazer-matrix-rain.html"}, {"name": "jazer metatrons cube", "path": "effects/jazer-metatrons-cube.html"}, {"name": "jazer mobius infinity", "path": "effects/jazer-mobius-infinity.html"}, {"name": "jazer nebula pulse", "path": "effects/jazer-nebula-pulse.html"}, {"name": "jazer neon circuit maze", "path": "effects/jazer-neon-circuit-maze.html"}, {"name": "jazer neon city", "path": "effects/jazer-neon-city.html"}, {"name": "jazer neon ocean", "path": "effects/jazer-neon-ocean.html"}, {"name": "jazer neon smoke vortex", "path": "effects/jazer-neon-smoke-vortex.html"}, {"name": "jazer neon tunnel", "path": "effects/jazer-neon-tunnel.html"}, {"name": "jazer neon vine growth", "path": "effects/jazer-neon-vine-growth.html"}, {"name": "jazer neural network", "path": "effects/jazer-neural-network.html"}, {"name": "jazer orbit rings", "path": "effects/jazer-orbit-rings.html"}, {"name": "jazer oscillating wave tunnel", "path": "effects/jazer-oscillating-wave-tunnel.html"}, {"name": "jazer parallax starfield drift", "path": "effects/jazer-parallax-starfield-drift.html"}, {"name": "jazer particle galaxy", "path": "effects/jazer-particle-galaxy.html"}, {"name": "jazer particle warp", "path": "effects/jazer-particle-warp.html"}, {"name": "jazer plasma storm corridor", "path": "effects/jazer-plasma-storm-corridor.html"}, {"name": "jazer plasma storm enhanced", "path": "effects/jazer-plasma-storm-enhanced.html"}, {"name": "jazer plasma storm", "path": "effects/jazer-plasma-storm.html"}, {"name": "jazer plasma vortex", "path": "effects/jazer-plasma-vortex.html"}, {"name": "jazer prism shard swarm", "path": "effects/jazer-prism-shard-swarm.html"}, {"name": "jazer pro fx demo", "path": "effects/jazer-pro-fx-demo.html"}, {"name": "jazer quantum foam", "path": "effects/jazer-quantum-foam.html"}, {"name": "jazer quantum lattice", "path": "effects/jazer-quantum-lattice.html"}, {"name": "jazer quantum logo particles", "path": "effects/jazer-quantum-logo-particles.html"}, {"name": "jazer quantum wormhole", "path": "effects/jazer-quantum-wormhole.html"}, {"name": "jazer radiant pulse rings", "path": "effects/jazer-radiant-pulse-rings.html"}, {"name": "jazer rainbow wireframe tunnel", "path": "effects/jazer-rainbow-wireframe-tunnel.html"}, {"name": "jazer sacred tesseract", "path": "effects/jazer-sacred-tesseract.html"}, {"name": "jazer seed of life", "path": "effects/jazer-seed-of-life.html"}, {"name": "jazer singularity swirl", "path": "effects/jazer-singularity-swirl.html"}, {"name": "jazer singularity", "path": "effects/jazer-singularity.html"}, {"name": "jazer sonic pulse lines", "path": "effects/jazer-sonic-pulse-lines.html"}, {"name": "jazer sri yantra", "path": "effects/jazer-sri-yantra.html"}, {"name": "jazer starfall conveyor", "path": "effects/jazer-starfall-conveyor.html"}, {"name": "jazer supernova shockwave", "path": "effects/jazer-supernova-shockwave.html"}, {"name": "jazer suspended light orbs", "path": "effects/jazer-suspended-light-orbs.html"}, {"name": "jazer synthwave grid", "path": "effects/jazer-synthwave-grid.html"}, {"name": "jazer synthwave sun grid", "path": "effects/jazer-synthwave-sun-grid.html"}, {"name": "jazer time ripple rings", "path": "effects/jazer-time-ripple-rings.html"}, {"name": "jazer torus knot tunnel", "path": "effects/jazer-torus-knot-tunnel.html"}, {"name": "jazer vaporwave horizon ride", "path": "effects/jazer-vaporwave-horizon-ride.html"}, {"name": "jazer void bloom portal", "path": "effects/jazer-void-bloom-portal.html"}, {"name": "jazer volumetric cathedral", "path": "effects/jazer-volumetric-cathedral.html"}, {"name": "jazer vortex spiral", "path": "effects/jazer-vortex-spiral.html"}, {"name": "jazer warp grid twister", "path": "effects/jazer-warp-grid-twister.html"}, {"name": "jazer zero gravity logo cloud", "path": "effects/jazer-zero-gravity-logo-cloud.html"}];
+
+    const el = (id) => document.getElementById(id);
+    const $q = el("q");
+    const $type = el("type");
+    const $sort = el("sort");
+    const $list = el("list");
+    const $count = el("count");
+    const $frame = el("frame");
+    const $activeName = el("activeName");
+    const $activePath = el("activePath");
+
+    function classify(item) {
+      const p = (item.path || "").toLowerCase();
+      if (p.includes("/canvas/")) return "canvas";
+      return "three";
+    }
+
+    function normalize(s) { return (s || "").toLowerCase(); }
+
+    function filtered() {
+      const q = normalize($q.value);
+      const t = $type.value;
+
+      return MANIFEST
+        .map(x => ({...x, _type: classify(x)}))
+        .filter(x => {
+          if (t !== "all" && x._type !== t) return false;
+          if (!q) return true;
+          const hay = normalize((x.name||"") + " " + (x.path||""));
+          return hay.includes(q);
+        })
+        .sort((a,b) => {
+          const ka = $sort.value === "path" ? (a.path||"") : (a.name||"");
+          const kb = $sort.value === "path" ? (b.path||"") : (b.name||"");
+          return ka.localeCompare(kb);
+        });
+    }
+
+    function render() {
+      const items = filtered();
+      $count.textContent = `${items.length} effects`;
+      $list.innerHTML = "";
+
+      for (const it of items) {
+        const row = document.createElement("div");
+        row.className = "item";
+        row.innerHTML = `
+          <div>
+            <div class="name">${escapeHtml(it.name || it.path)}</div>
+            <div class="meta">${escapeHtml(it.path)}</div>
+          </div>
+          <div class="badge">${it._type === "canvas" ? "Canvas" : "Three.js"}</div>
+        `;
+        row.addEventListener("click", () => select(it));
+        $list.appendChild(row);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    }
+
+    let active = null;
+
+    function select(it) {
+      active = it;
+      $activeName.textContent = it.name || it.path;
+      $activePath.textContent = it.path;
+      $frame.src = it.path;
+    }
+
+    el("btn-random").addEventListener("click", () => {
+      const items = filtered();
+      if (!items.length) return;
+      select(items[Math.floor(Math.random() * items.length)]);
+    });
+
+    el("btn-reload").addEventListener("click", () => {
+      if ($frame.src) $frame.src = $frame.src;
+    });
+
+    el("btn-open").addEventListener("click", () => {
+      if (active?.path) window.open(active.path, "_blank");
+    });
+
+    $q.addEventListener("input", render);
+    $type.addEventListener("change", render);
+    $sort.addEventListener("change", render);
+
+    render();
+  </script>
+</body>
+</html>

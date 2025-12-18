@@ -1,0 +1,414 @@
+[
+  {
+    "name": "gallery",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\gallery.html"
+  },
+  {
+    "name": "jazer anamorphic logo waves",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-anamorphic-logo-waves.html"
+  },
+  {
+    "name": "jazer audio reactive universe",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-audio-reactive-universe.html"
+  },
+  {
+    "name": "jazer aurora borealis",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-aurora-borealis.html"
+  },
+  {
+    "name": "jazer aurora veil",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-aurora-veil.html"
+  },
+  {
+    "name": "jazer binary star tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-binary-star-tunnel.html"
+  },
+  {
+    "name": "jazer celestial logo haloes",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-celestial-logo-haloes.html"
+  },
+  {
+    "name": "jazer chromatic glitch tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-chromatic-glitch-tunnel.html"
+  },
+  {
+    "name": "jazer chromatic wavefield",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-chromatic-wavefield.html"
+  },
+  {
+    "name": "jazer cinematic chase",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-cinematic-chase.html"
+  },
+  {
+    "name": "jazer cosmic laser beams",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-cosmic-laser-beams.html"
+  },
+  {
+    "name": "jazer cosmic nebula enhanced",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-cosmic-nebula-enhanced.html"
+  },
+  {
+    "name": "jazer cosmic nebula",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-cosmic-nebula.html"
+  },
+  {
+    "name": "jazer cosmic stardust",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-cosmic-stardust.html"
+  },
+  {
+    "name": "jazer crystal cave",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-crystal-cave.html"
+  },
+  {
+    "name": "jazer crystal lattice network",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-crystal-lattice-network.html"
+  },
+  {
+    "name": "jazer crystal shard tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-crystal-shard-tunnel.html"
+  },
+  {
+    "name": "jazer cyber glitch",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-cyber-glitch.html"
+  },
+  {
+    "name": "jazer cyber glyph rain",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-cyber-glyph-rain.html"
+  },
+  {
+    "name": "jazer digital lattice tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-digital-lattice-tunnel.html"
+  },
+  {
+    "name": "jazer digital sandstorm",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-digital-sandstorm.html"
+  },
+  {
+    "name": "jazer dna helix",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-dna-helix.html"
+  },
+  {
+    "name": "jazer echoing logo orbits",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-echoing-logo-orbits.html"
+  },
+  {
+    "name": "jazer eclipse ring halo",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-eclipse-ring-halo.html"
+  },
+  {
+    "name": "jazer electric vein network",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-electric-vein-network.html"
+  },
+  {
+    "name": "jazer energy reactor",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-energy-reactor.html"
+  },
+  {
+    "name": "jazer floating monoliths",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-floating-monoliths.html"
+  },
+  {
+    "name": "jazer flower of life mandala",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-flower-of-life-mandala.html"
+  },
+  {
+    "name": "jazer flower of life",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-flower-of-life.html"
+  },
+  {
+    "name": "jazer flux ribbon trails",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-flux-ribbon-trails.html"
+  },
+  {
+    "name": "jazer fractal bloom",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-fractal-bloom.html"
+  },
+  {
+    "name": "jazer fractal cubes",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-fractal-cubes.html"
+  },
+  {
+    "name": "jazer galactic highway",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-galactic-highway.html"
+  },
+  {
+    "name": "jazer glitch fracture grid",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-glitch-fracture-grid.html"
+  },
+  {
+    "name": "jazer gpu particle tornado",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-gpu-particle-tornado.html"
+  },
+  {
+    "name": "jazer gravity well spiral",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-gravity-well-spiral.html"
+  },
+  {
+    "name": "jazer gridfall",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-gridfall.html"
+  },
+  {
+    "name": "jazer hex tunnel cascade",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-hex-tunnel-cascade.html"
+  },
+  {
+    "name": "jazer hexagon tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-hexagon-tunnel.html"
+  },
+  {
+    "name": "jazer hologram echoes",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-hologram-echoes.html"
+  },
+  {
+    "name": "jazer holographic city tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-holographic-city-tunnel.html"
+  },
+  {
+    "name": "jazer holographic logo shards",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-holographic-logo-shards.html"
+  },
+  {
+    "name": "jazer hypercube drift",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-hypercube-drift.html"
+  },
+  {
+    "name": "jazer hyperspace streaks",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-hyperspace-streaks.html"
+  },
+  {
+    "name": "jazer hyperspace tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-hyperspace-tunnel.html"
+  },
+  {
+    "name": "jazer infinite city grid",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-infinite-city-grid.html"
+  },
+  {
+    "name": "jazer infinite logo kaleidoscope",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-infinite-logo-kaleidoscope.html"
+  },
+  {
+    "name": "jazer infinite mirror corridor",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-infinite-mirror-corridor.html"
+  },
+  {
+    "name": "jazer instancing galaxy",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-instancing-galaxy.html"
+  },
+  {
+    "name": "jazer laser fountain columns",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-laser-fountain-columns.html"
+  },
+  {
+    "name": "jazer laser grid sphere",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-laser-grid-sphere.html"
+  },
+  {
+    "name": "jazer laser lattice cage",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-laser-lattice-cage.html"
+  },
+  {
+    "name": "jazer liquid neon ripple",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-liquid-neon-ripple.html"
+  },
+  {
+    "name": "jazer logo constellation field",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-logo-constellation-field.html"
+  },
+  {
+    "name": "jazer magnetic particle swirl",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-magnetic-particle-swirl.html"
+  },
+  {
+    "name": "jazer materials showcase",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-materials-showcase.html"
+  },
+  {
+    "name": "jazer matrix rain",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-matrix-rain.html"
+  },
+  {
+    "name": "jazer metatrons cube",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-metatrons-cube.html"
+  },
+  {
+    "name": "jazer mobius infinity",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-mobius-infinity.html"
+  },
+  {
+    "name": "jazer nebula pulse",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-nebula-pulse.html"
+  },
+  {
+    "name": "jazer neon circuit maze",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-neon-circuit-maze.html"
+  },
+  {
+    "name": "jazer neon city",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-neon-city.html"
+  },
+  {
+    "name": "jazer neon ocean",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-neon-ocean.html"
+  },
+  {
+    "name": "jazer neon smoke vortex",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-neon-smoke-vortex.html"
+  },
+  {
+    "name": "jazer neon tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-neon-tunnel.html"
+  },
+  {
+    "name": "jazer neon vine growth",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-neon-vine-growth.html"
+  },
+  {
+    "name": "jazer neural network",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-neural-network.html"
+  },
+  {
+    "name": "jazer orbit rings",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-orbit-rings.html"
+  },
+  {
+    "name": "jazer oscillating wave tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-oscillating-wave-tunnel.html"
+  },
+  {
+    "name": "jazer parallax starfield drift",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-parallax-starfield-drift.html"
+  },
+  {
+    "name": "jazer particle galaxy",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-particle-galaxy.html"
+  },
+  {
+    "name": "jazer particle warp",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-particle-warp.html"
+  },
+  {
+    "name": "jazer plasma storm corridor",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-plasma-storm-corridor.html"
+  },
+  {
+    "name": "jazer plasma storm enhanced",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-plasma-storm-enhanced.html"
+  },
+  {
+    "name": "jazer plasma storm",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-plasma-storm.html"
+  },
+  {
+    "name": "jazer plasma vortex",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-plasma-vortex.html"
+  },
+  {
+    "name": "jazer prism shard swarm",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-prism-shard-swarm.html"
+  },
+  {
+    "name": "jazer pro fx demo",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-pro-fx-demo.html"
+  },
+  {
+    "name": "jazer quantum foam",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-quantum-foam.html"
+  },
+  {
+    "name": "jazer quantum lattice",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-quantum-lattice.html"
+  },
+  {
+    "name": "jazer quantum logo particles",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-quantum-logo-particles.html"
+  },
+  {
+    "name": "jazer quantum wormhole",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-quantum-wormhole.html"
+  },
+  {
+    "name": "jazer radiant pulse rings",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-radiant-pulse-rings.html"
+  },
+  {
+    "name": "jazer rainbow wireframe tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-rainbow-wireframe-tunnel.html"
+  },
+  {
+    "name": "jazer sacred tesseract",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-sacred-tesseract.html"
+  },
+  {
+    "name": "jazer seed of life",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-seed-of-life.html"
+  },
+  {
+    "name": "jazer singularity swirl",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-singularity-swirl.html"
+  },
+  {
+    "name": "jazer singularity",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-singularity.html"
+  },
+  {
+    "name": "jazer sonic pulse lines",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-sonic-pulse-lines.html"
+  },
+  {
+    "name": "jazer sri yantra",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-sri-yantra.html"
+  },
+  {
+    "name": "jazer starfall conveyor",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-starfall-conveyor.html"
+  },
+  {
+    "name": "jazer supernova shockwave",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-supernova-shockwave.html"
+  },
+  {
+    "name": "jazer suspended light orbs",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-suspended-light-orbs.html"
+  },
+  {
+    "name": "jazer synthwave grid",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-synthwave-grid.html"
+  },
+  {
+    "name": "jazer synthwave sun grid",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-synthwave-sun-grid.html"
+  },
+  {
+    "name": "jazer time ripple rings",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-time-ripple-rings.html"
+  },
+  {
+    "name": "jazer torus knot tunnel",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-torus-knot-tunnel.html"
+  },
+  {
+    "name": "jazer vaporwave horizon ride",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-vaporwave-horizon-ride.html"
+  },
+  {
+    "name": "jazer void bloom portal",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-void-bloom-portal.html"
+  },
+  {
+    "name": "jazer volumetric cathedral",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-volumetric-cathedral.html"
+  },
+  {
+    "name": "jazer vortex spiral",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-vortex-spiral.html"
+  },
+  {
+    "name": "jazer warp grid twister",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-warp-grid-twister.html"
+  },
+  {
+    "name": "jazer zero gravity logo cloud",
+    "path": "C:\\Users\\JaZeR\\ACTIVE PROJECTS\\Three JS Custom JaZeR Visuals\\effects\\jazer-zero-gravity-logo-cloud.html"
+  }
+]

@@ -1,207 +1,599 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flower of Life Mandala - JaZeR</title>
+    <title>Flower of Life Tunnel - JaZeR</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { width: 100%; height: 100%; overflow: hidden; background: #020010; }
-        canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; }
-    </style>
-</head>
-<body>
-    <canvas id="c"></canvas>
-    <script type="module">
-        import {
-            noise2D, mouse, ColorPalettes, lerpColor, hexToRgb,
-            smoothstep, clamp, fract
-        } from '../lib/engine/jazer-background-engine.js';
-        import '../lib/engine/jazer-navigation.js';
-
-        const canvas = document.getElementById('c');
-        const ctx = canvas.getContext('2d');
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        let W, H, cx, cy;
-        let time = 0;
-
-        const palette = ColorPalettes.galaxy;
-        const ringCount = 25;
-
-        function resize() {
-            W = window.innerWidth;
-            H = window.innerHeight;
-            cx = W / 2;
-            cy = H / 2;
-            canvas.width = W * dpr;
-            canvas.height = H * dpr;
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
-        function drawFlowerOfLife(centerX, centerY, radius, maxDepth) {
-            const circles = new Set();
-            const queue = [{ x: 0, y: 0, depth: 0 }];
-            circles.add("0,0");
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #020008;
+        }
 
-            const drawnCircles = [];
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #help-overlay {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(2, 0, 16, 0.92);
+            border: 1px solid rgba(100, 120, 180, 0.3);
+            border-radius: 8px;
+            padding: 16px 20px;
+            font-family: 'SF Mono', 'Consolas', monospace;
+            font-size: 11px;
+            color: rgba(180, 190, 220, 0.9);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            max-width: 320px;
+            line-height: 1.7;
+        }
+
+        #help-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #help-overlay h3 {
+            color: rgba(200, 180, 120, 0.9);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 12px;
+        }
+
+        .key {
+            display: inline-block;
+            background: rgba(60, 80, 140, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-right: 4px;
+            color: rgba(160, 180, 255, 0.9);
+        }
+
+        .val {
+            color: rgba(120, 200, 180, 0.9);
+            float: right;
+        }
+
+        #cam-label {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-family: 'SF Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: rgba(160, 140, 100, 0.6);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #cam-label.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="help-overlay">
+        <h3>Flower of Life Tunnel — Controls</h3>
+        <span class="key">H</span> Toggle Help<br>
+        <span class="key">C</span> Shot <span class="val" id="v-cam">Dolly</span><br>
+        <span class="key">Q</span> Quality <span class="val" id="v-qual">High</span><br>
+        <span class="key">R</span> Reset<br><br>
+        <span class="key">[</span><span class="key">]</span> Depth <span class="val" id="v-den">2</span><br>
+        <span class="key">-</span><span class="key">=</span> Line <span class="val" id="v-line">1.0</span><br>
+        <span class="key">;</span><span class="key">'</span> Breath <span class="val" id="v-br">12s</span><br>
+        <span class="key">O</span><span class="key">P</span> Fog <span class="val" id="v-fog">0.5</span><br>
+        <span class="key">F</span> Wave FX <span class="val" id="v-hero">ON</span><br>
+        <span class="key">M</span> Mouse <span class="val" id="v-mouse">OFF</span><br>
+        <span class="key">1</span><span class="key">2</span> Speed <span class="val" id="v-speed">1.0</span><br>
+        Shot Duration <span class="val" id="v-shot">30s</span>
+    </div>
+    <div id="cam-label"></div>
+
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+    <script type="module">
+        /**
+         * ============================================================================
+         * FLOWER OF LIFE TUNNEL v4.3 — RESTORE TRUE FLOWER OF LIFE MOTIF
+         * ============================================================================
+         * CHANGELOG v4.3 (built on v4.2)
+         * - Restored true Flower of Life pattern (overlapping circles on hex lattice)
+         * - Each Z layer contains a complete planar Flower of Life
+         * - Per-layer twist applied to entire pattern (not per-ring cylindrical mapping)
+         * - Tight Z spacing (0.8) for visual blending between layers
+         * - Depth fade window to prevent noise
+         * - Subtle radial warp at distance for tunnel conduit feel
+         * - Preserved: v4.2 cinematic camera, HUD, hotkeys, localStorage
+         * 
+         * FLOWER OF LIFE GENERATION:
+         * - BFS hex-neighbor expansion from center (0,0)
+         * - Each center placed at (cx * spacing, cy * spacing) in XY plane
+         * - All circles in a layer share the same Z coordinate
+         * - Classic overlapping petal intersections preserved
+         * 
+         * LAYER TWIST:
+         * - layerTwist = BASE_TWIST_RATE * z + variation
+         * - Entire layer rotated around Z axis by layerTwist
+         * - Preserves planar overlap structure within each layer
+         * - Creates helical continuity between layers
+         * ============================================================================
+         */
+
+        import * as THREE from 'three';
+
+        // === SETTINGS ===
+        const STORAGE_KEY = 'jazer:flower-of-life:settings:v3';
+        const defaults = {
+            cameraMode: 0,
+            quality: 2,
+            density: 2,         // Pattern depth (1-4)
+            lineWidth: 1.0,
+            breathDuration: 12,
+            fogDensity: 0.5,
+            heroEvents: true,
+            mouseInfluence: false,
+            tunnelSpeed: 1.0
+        };
+
+        let S = { ...defaults };
+        try { const saved = localStorage.getItem(STORAGE_KEY); if (saved) S = { ...defaults, ...JSON.parse(saved) }; } catch (e) { }
+        function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); } catch (e) { } }
+
+        function getShotDuration() {
+            return Math.round(S.breathDuration * 2.5 / 2) * 2;
+        }
+
+        const SHOTS = ['Dolly Glide', 'Arc Push', 'Parallax Weave', 'Locked-Off'];
+
+        // === PALETTE ===
+        const C = {
+            void: new THREE.Color(0x020008),
+            indigo: new THREE.Color(0x1e1450),
+            sapphire: new THREE.Color(0x3c50b4),
+            violet: new THREE.Color(0x6440a0),
+            gold: new THREE.Color(0xffc850),
+            white: new THREE.Color(0xd0d8ff)
+        };
+
+        // === SCENE ===
+        const scene = new THREE.Scene();
+        scene.background = C.void;
+        scene.fog = new THREE.FogExp2(0x020008, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 200);
+        camera.position.set(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(innerWidth, innerHeight);
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.85;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.body.appendChild(renderer.domElement);
+
+        // === TUNNEL PARAMETERS ===
+        const CIRCLE_RADIUS = 0.8;      // Radius of each flower circle
+        const CIRCLE_SPACING = 0.8;     // Spacing between circle centers (= radius for proper overlap)
+        const Z_SPACING = 0.8;          // Tight spacing between layers
+        const TUNNEL_LENGTH = 100;      // Total depth
+        const BASE_TWIST_RATE = 0.04;   // Gentle twist per unit Z
+        const DEPTH_FADE_START = 30;    // Where fade begins
+        const DEPTH_FADE_END = 80;      // Where nearly invisible
+
+        // === TRUE FLOWER OF LIFE GENERATOR ===
+        // BFS hex-neighbor expansion creating classic overlapping pattern
+        function generateFlowerOfLife(depth) {
+            const centers = [];
+            const visited = new Set();
+            const queue = [{ x: 0, y: 0, d: 0 }];
+            visited.add('0,0');
 
             while (queue.length > 0) {
-                const { x, y, depth } = queue.shift();
-                drawnCircles.push({x: centerX + x * radius, y: centerY + y * radius});
-                
-                if (depth >= maxDepth) continue;
+                const { x, y, d } = queue.shift();
+                centers.push({ cx: x, cy: y, depth: d });
 
+                if (d >= depth) continue;
+
+                // 6 neighbors in hex pattern (60° apart)
                 for (let i = 0; i < 6; i++) {
                     const angle = i * Math.PI / 3;
-                    const newX = x + Math.cos(angle);
-                    const newY = y + Math.sin(angle);
-                    const key = `${newX.toFixed(3)},${newY.toFixed(3)}`;
+                    const nx = x + Math.cos(angle);
+                    const ny = y + Math.sin(angle);
+                    const key = `${nx.toFixed(3)},${ny.toFixed(3)}`;
 
-                    if (!circles.has(key)) {
-                        circles.add(key);
-                        queue.push({ x: newX, y: newY, depth: depth + 1 });
+                    if (!visited.has(key)) {
+                        visited.add(key);
+                        queue.push({ x: nx, y: ny, d: d + 1 });
                     }
                 }
             }
-            
-            drawnCircles.forEach(c => {
-                ctx.moveTo(c.x + radius, c.y);
-                ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
+            return centers;
+        }
+
+        // === INSTANCED TUNNEL ===
+        let tunnelMesh = null;
+        let instanceCount = 0;
+        const instanceData = [];
+        const dummy = new THREE.Object3D();
+
+        function buildTunnel() {
+            if (tunnelMesh) scene.remove(tunnelMesh);
+            instanceData.length = 0;
+
+            const pattern = generateFlowerOfLife(S.density);
+            const zLayers = Math.floor(TUNNEL_LENGTH / Z_SPACING);
+            const segs = S.quality >= 2 ? 48 : 32;
+
+            instanceCount = pattern.length * zLayers;
+
+            // Torus geometry for each circle
+            const tubeRadius = 0.015 * S.lineWidth;
+            const geometry = new THREE.TorusGeometry(CIRCLE_RADIUS, tubeRadius, 6, segs);
+
+            const material = new THREE.MeshBasicMaterial({
+                transparent: true,
+                opacity: 0.65
             });
-        }
 
-        class TunnelRing {
-            constructor(z) { this.respawn(z); }
+            tunnelMesh = new THREE.InstancedMesh(geometry, material, instanceCount);
+            tunnelMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 
-            respawn(z) {
-                this.z = z;
-                this.colorPhase = Math.random();
-            }
+            const colors = new Float32Array(instanceCount * 3);
 
-            update(dt, speed) {
-                this.z -= dt * speed;
-                if (this.z < 0.2) {
-                    this.respawn(30);
+            let idx = 0;
+            for (let zLayer = 0; zLayer < zLayers; zLayer++) {
+                const zPos = zLayer * Z_SPACING;
+                const zNorm = zPos / TUNNEL_LENGTH;
+
+                // Layer-level twist (applied to all circles in this layer)
+                const layerTwist = BASE_TWIST_RATE * zPos;
+
+                for (const p of pattern) {
+                    // Pattern coordinates (classic flower of life layout)
+                    const patternX = p.cx * CIRCLE_SPACING;
+                    const patternY = p.cy * CIRCLE_SPACING;
+
+                    // Apply layer twist rotation
+                    const rotatedX = patternX * Math.cos(layerTwist) - patternY * Math.sin(layerTwist);
+                    const rotatedY = patternX * Math.sin(layerTwist) + patternY * Math.cos(layerTwist);
+
+                    // Store instance data
+                    instanceData.push({
+                        patternX: patternX,
+                        patternY: patternY,
+                        baseZ: -zPos,
+                        patternDepth: p.depth,
+                        zNorm: zNorm
+                    });
+
+                    // Color based on pattern depth (inner circles brighter)
+                    const depthFade = 1 - zNorm * 0.5;
+                    const patternFade = 1 - (p.depth / Math.max(1, S.density)) * 0.25;
+                    const baseColor = C.indigo.clone().lerp(C.sapphire, p.depth / Math.max(1, S.density));
+
+                    colors[idx * 3] = baseColor.r * depthFade * patternFade;
+                    colors[idx * 3 + 1] = baseColor.g * depthFade * patternFade;
+                    colors[idx * 3 + 2] = baseColor.b * depthFade * patternFade;
+
+                    idx++;
                 }
             }
 
-            draw() {
-                if (this.z < 0.2) return;
-                
-                const perspective = 200 / this.z;
-                
-                const tunnelTwist = this.z * 0.05 + time * 0.05;
+            tunnelMesh.userData.baseColors = colors.slice();
+            tunnelMesh.userData.currentColors = colors;
+            tunnelMesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
 
-                const radius = (20 + this.z * 0.8) * perspective;
-                const alpha = smoothstep(30, 15, this.z) * smoothstep(0.2, 1, this.z);
-
-                if (alpha < 0.01) return;
-
-                const colorT = fract(time * 0.1 + this.colorPhase);
-                const colorIdx = Math.floor(colorT * palette.length);
-                const colorNext = (colorIdx + 1) % palette.length;
-                const color = lerpColor(palette[colorIdx], palette[colorNext], fract(colorT * palette.length));
-                const rgb = hexToRgb(color);
-
-                ctx.save();
-                ctx.translate(cx, cy);
-                ctx.rotate(tunnelTwist);
-
-                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.4})`;
-                ctx.lineWidth = Math.max(0.1, 1.5 * perspective);
-                ctx.shadowColor = color;
-                ctx.shadowBlur = 10 * perspective;
-                
-                ctx.beginPath();
-                drawFlowerOfLife(0, 0, radius, 1);
-                ctx.stroke();
-
-                ctx.restore();
-            }
+            scene.add(tunnelMesh);
         }
-        
-        function drawCenterMandala() {
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.globalCompositeOperation = 'lighter';
+        buildTunnel();
 
-            const layers = 8;
-            const maxRadius = W * 0.8;
+        // === CORE LIGHT POINTS (depth reference) ===
+        const coreGroup = new THREE.Group();
+        scene.add(coreGroup);
 
-            for (let i = 1; i <= layers; i++) {
-                const progress = i / layers;
-                const rotation = time * 0.2 * (i % 2 === 0 ? -1 : 1) * progress;
-                const radius = progress * 200;
-                
-                const alpha = (1 - progress) * 0.5;
-                const sides = 3 + i;
-                
-                const colorT = fract(time * 0.1 + progress);
-                const colorIdx = Math.floor(colorT * palette.length);
-                const colorNext = (colorIdx + 1) % palette.length;
-                const color = lerpColor(palette[colorIdx], palette[colorNext], fract(colorT * palette.length));
-
-                ctx.save();
-                ctx.rotate(rotation);
-                
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 1.5;
-                ctx.globalAlpha = alpha;
-                ctx.shadowColor = color;
-                ctx.shadowBlur = 15;
-
-                ctx.beginPath();
-                for (let j = 0; j < sides; j++) {
-                    const angle = j * Math.PI * 2 / sides;
-                    const r1 = radius + Math.sin(time * 2 + i) * 20 * progress;
-                    ctx.moveTo(0,0);
-                    ctx.lineTo(Math.cos(angle) * r1, Math.sin(angle) * r1);
-
-                    const r2 = r1 * 0.8;
-                    const nextAngle = (j + 1) * Math.PI * 2 / sides;
-                    const midAngle = angle + (nextAngle-angle)*0.5;
-                    ctx.moveTo(Math.cos(angle) * r1, Math.sin(angle) * r1);
-                    ctx.quadraticCurveTo(
-                        Math.cos(midAngle) * r2 * (1 + Math.sin(time*3 + i) * 0.2), 
-                        Math.sin(midAngle) * r2 * (1 + Math.sin(time*3 + i) * 0.2), 
-                        Math.cos(nextAngle) * r1, 
-                        Math.sin(nextAngle) * r1
-                    );
-                }
-                ctx.stroke();
-
-                ctx.restore();
-            }
-            ctx.restore();
+        for (let i = 0; i < 6; i++) {
+            const geo = new THREE.SphereGeometry(0.06, 8, 8);
+            const mat = new THREE.MeshBasicMaterial({ color: C.gold, transparent: true, opacity: 0.35 });
+            const sphere = new THREE.Mesh(geo, mat);
+            sphere.position.z = -i * 12 - 8;
+            sphere.userData = { baseZ: sphere.position.z };
+            coreGroup.add(sphere);
         }
 
+        // === PARTICLES (reduced for clarity) ===
+        const pCount = 40;
+        const pGeo = new THREE.BufferGeometry();
+        const pPos = new Float32Array(pCount * 3);
+        const pData = [];
+        for (let i = 0; i < pCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const rad = 0.3 + Math.random() * 2;
+            pPos[i * 3] = Math.cos(angle) * rad;
+            pPos[i * 3 + 1] = Math.sin(angle) * rad;
+            pPos[i * 3 + 2] = -Math.random() * TUNNEL_LENGTH;
+            pData.push({ angle, rad, spd: 0.001 + Math.random() * 0.002 });
+        }
+        pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+        const pMat = new THREE.PointsMaterial({
+            color: C.white, size: 0.04, transparent: true,
+            opacity: 0.2, blending: THREE.AdditiveBlending
+        });
+        const particles = new THREE.Points(pGeo, pMat);
+        scene.add(particles);
 
-        const rings = Array.from({ length: ringCount }, (_, i) => new TunnelRing(i * (30 / ringCount)));
+        // === STATE ===
+        let time = 0, lastT = performance.now();
+        let mouseX = 0, mouseY = 0;
+        let travelOffset = 0;
+        let heroWaveZ = -9999;
 
-        function render() {
-            const dt = 1 / 60;
+        function breath(t) {
+            const c = (t % S.breathDuration) / S.breathDuration;
+            return 0.5 + 0.5 * Math.sin(c * Math.PI * 2 - Math.PI / 2);
+        }
+
+        function smoothstep(edge0, edge1, x) {
+            const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+            return t * t * (3 - 2 * t);
+        }
+
+        // === CINEMATIC CAMERA (from v4.2) ===
+        function updateCamera(t, br) {
+            const shotDuration = getShotDuration();
+            const shotPhase = (t % shotDuration) / shotDuration;
+            const tau = Math.PI * 2;
+
+            const mx = S.mouseInfluence ? mouseX * 0.6 : 0;
+            const my = S.mouseInfluence ? mouseY * 0.4 : 0;
+
+            let x = 0, y = 0, roll = 0;
+
+            switch (S.cameraMode) {
+                case 0: // Dolly Glide
+                    x = 0.15 * Math.sin(tau * shotPhase) + 0.08 * Math.sin(tau * 2.7 * shotPhase + 0.5);
+                    y = 0.08 * Math.sin(tau * 1.3 * shotPhase + 1.2) + 0.04 * Math.sin(tau * 0.5 * shotPhase + 0.8);
+                    roll = 0;
+                    break;
+                case 1: // Arc Push
+                    x = 0.6 * Math.sin(tau * shotPhase) + 0.1 * Math.sin(tau * 3.1 * shotPhase + 0.3);
+                    y = 0.12 * Math.sin(tau * 1.7 * shotPhase + 0.7) + 0.06 * Math.cos(tau * 2.3 * shotPhase);
+                    roll = -0.015 * Math.sin(tau * shotPhase);
+                    break;
+                case 2: // Parallax Weave
+                    x = 0.4 * Math.sin(tau * shotPhase) + 0.2 * Math.sin(tau * 2.1 * shotPhase + 0.4);
+                    y = 0.15 * Math.sin(tau * 0.7 * shotPhase + 0.5) + 0.08 * Math.sin(tau * 1.9 * shotPhase + 0.9);
+                    roll = 0.02 * Math.sin(tau * shotPhase + 0.3);
+                    break;
+                case 3: // Locked-Off
+                    x = 0.04 * Math.sin(tau * shotPhase) + 0.02 * Math.sin(tau * 2.3 * shotPhase + 0.7);
+                    y = 0.03 * Math.sin(tau * 1.1 * shotPhase + 0.4) + 0.015 * Math.sin(tau * 3.7 * shotPhase);
+                    roll = 0;
+                    break;
+            }
+
+            x += mx;
+            y += my;
+            roll = Math.max(-0.025, Math.min(0.025, roll));
+
+            camera.position.set(x, y, 0);
+            camera.rotation.set(0, 0, roll);
+            camera.lookAt(x * 0.35, y * 0.35, -60);
+        }
+
+        // === HERO WAVE ===
+        function triggerHeroWave() {
+            if (!S.heroEvents || heroWaveZ > -TUNNEL_LENGTH * 0.5) return;
+            heroWaveZ = 0;
+        }
+
+        // === RENDER LOOP ===
+        function animate() {
+            requestAnimationFrame(animate);
+            const now = performance.now(), dt = (now - lastT) / 1000;
+            lastT = now;
             time += dt;
-            mouse.update();
 
-            ctx.fillStyle = 'rgba(2, 0, 16, 0.2)';
-            ctx.fillRect(0, 0, W, H);
-            
-            drawCenterMandala();
+            const br = breath(time);
+            const speed = S.tunnelSpeed * 6;
+            const shotPhase = (time % getShotDuration()) / getShotDuration();
 
-            const speed = 1.5 + mouse.y * 5;
+            scene.fog.density = 0.012 + S.fogDensity * 0.02;
+            travelOffset += dt * speed;
+            updateCamera(time, br);
 
-            rings.sort((a, b) => b.z - a.z);
-            rings.forEach(ring => {
-                ring.update(dt, speed);
-                ring.draw();
+            // Update tunnel instances
+            if (tunnelMesh) {
+                const colors = tunnelMesh.userData.currentColors;
+                const baseColors = tunnelMesh.userData.baseColors;
+                const pattern = generateFlowerOfLife(S.density);
+                const circlesPerLayer = pattern.length;
+
+                for (let i = 0; i < instanceCount; i++) {
+                    const d = instanceData[i];
+
+                    // Move forward with travel
+                    let z = d.baseZ + travelOffset;
+
+                    // Wrap seamlessly
+                    while (z > 3) z -= TUNNEL_LENGTH;
+                    while (z < -TUNNEL_LENGTH) z += TUNNEL_LENGTH;
+
+                    const zAbs = Math.abs(z);
+
+                    // Layer twist (applied to pattern coordinates)
+                    const twistVariation = 0.01 * Math.sin(Math.PI * 2 * (zAbs / TUNNEL_LENGTH + shotPhase * 0.2));
+                    const layerTwist = BASE_TWIST_RATE * zAbs + twistVariation;
+
+                    // Rotate pattern coordinates by layer twist
+                    const rotX = d.patternX * Math.cos(layerTwist) - d.patternY * Math.sin(layerTwist);
+                    const rotY = d.patternX * Math.sin(layerTwist) + d.patternY * Math.cos(layerTwist);
+
+                    // Subtle radial warp at distance (conduit feel)
+                    const warpFactor = smoothstep(20, 60, zAbs) * 0.15;
+                    const radialDist = Math.sqrt(rotX * rotX + rotY * rotY);
+                    const warpedX = rotX * (1 + warpFactor * 0.1);
+                    const warpedY = rotY * (1 + warpFactor * 0.1);
+
+                    // Set transform (circles remain in XY plane relative to their Z)
+                    dummy.position.set(warpedX, warpedY, z);
+                    dummy.rotation.set(Math.PI / 2, 0, layerTwist);
+                    dummy.scale.setScalar(1);
+                    dummy.updateMatrix();
+                    tunnelMesh.setMatrixAt(i, dummy.matrix);
+
+                    // Depth fade
+                    const depthFade = 1 - smoothstep(DEPTH_FADE_START, DEPTH_FADE_END, zAbs);
+
+                    // Hero wave glow
+                    const waveInfluence = Math.max(0, 1 - Math.abs(z - heroWaveZ) / 10);
+
+                    // Breathing glow
+                    const breathGlow = 0.7 + br * 0.3;
+
+                    // Final color
+                    let r_c = baseColors[i * 3] * breathGlow * depthFade;
+                    let g_c = baseColors[i * 3 + 1] * breathGlow * depthFade;
+                    let b_c = baseColors[i * 3 + 2] * breathGlow * depthFade;
+
+                    // Subtle gold on wave (clamped to avoid washing out)
+                    if (waveInfluence > 0.1) {
+                        const goldAdd = waveInfluence * 0.25;
+                        r_c = Math.min(1, r_c + C.gold.r * goldAdd);
+                        g_c = Math.min(1, g_c + C.gold.g * goldAdd * 0.8);
+                        b_c = Math.min(1, b_c + C.gold.b * goldAdd * 0.4);
+                    }
+
+                    colors[i * 3] = r_c;
+                    colors[i * 3 + 1] = g_c;
+                    colors[i * 3 + 2] = b_c;
+                }
+
+                tunnelMesh.instanceMatrix.needsUpdate = true;
+                tunnelMesh.instanceColor.needsUpdate = true;
+            }
+
+            // Hero wave propagation
+            if (heroWaveZ > -TUNNEL_LENGTH) {
+                heroWaveZ -= dt * 30;
+            }
+            if (br > 0.95 && heroWaveZ < -TUNNEL_LENGTH * 0.8) {
+                triggerHeroWave();
+            }
+
+            // Core spheres
+            coreGroup.children.forEach((sphere) => {
+                let z = sphere.userData.baseZ + travelOffset;
+                while (z > 3) z -= 80;
+                while (z < -80) z += 80;
+                sphere.position.z = z;
+                sphere.material.opacity = 0.25 + br * 0.25;
+                sphere.scale.setScalar(0.8 + br * 0.4);
             });
-            
-            requestAnimationFrame(render);
+
+            // Particles
+            const pos = particles.geometry.attributes.position.array;
+            for (let i = 0; i < pCount; i++) {
+                const p = pData[i];
+                p.angle += p.spd;
+                pos[i * 3] = Math.cos(p.angle) * p.rad;
+                pos[i * 3 + 1] = Math.sin(p.angle) * p.rad;
+                pos[i * 3 + 2] += dt * S.tunnelSpeed * 2;
+                if (pos[i * 3 + 2] > 3) {
+                    pos[i * 3 + 2] = -TUNNEL_LENGTH + Math.random() * 15;
+                }
+            }
+            particles.geometry.attributes.position.needsUpdate = true;
+            pMat.opacity = 0.1 + br * 0.1;
+
+            renderer.render(scene, camera);
         }
 
-        window.addEventListener('resize', resize);
-        resize();
-        requestAnimationFrame(render);
+        // === RESIZE ===
+        function onResize() {
+            camera.aspect = innerWidth / innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(innerWidth, innerHeight);
+            renderer.setPixelRatio(Math.min(devicePixelRatio, S.quality >= 2 ? 2 : 1.5));
+        }
+        addEventListener('resize', onResize);
+
+        addEventListener('mousemove', e => {
+            mouseX = (e.clientX / innerWidth - 0.5) * 2;
+            mouseY = (e.clientY / innerHeight - 0.5) * 2;
+        });
+
+        // === UI ===
+        const help = document.getElementById('help-overlay');
+        const camLabel = document.getElementById('cam-label');
+
+        function updateUI() {
+            document.getElementById('v-cam').textContent = SHOTS[S.cameraMode].split(' ')[0];
+            document.getElementById('v-qual').textContent = ['Low', 'Med', 'High'][S.quality];
+            document.getElementById('v-den').textContent = S.density;
+            document.getElementById('v-line').textContent = S.lineWidth.toFixed(1);
+            document.getElementById('v-br').textContent = S.breathDuration + 's';
+            document.getElementById('v-fog').textContent = S.fogDensity.toFixed(1);
+            document.getElementById('v-hero').textContent = S.heroEvents ? 'ON' : 'OFF';
+            document.getElementById('v-mouse').textContent = S.mouseInfluence ? 'ON' : 'OFF';
+            document.getElementById('v-speed').textContent = S.tunnelSpeed.toFixed(1);
+            document.getElementById('v-shot').textContent = getShotDuration() + 's';
+        }
+
+        function showCam() {
+            camLabel.textContent = SHOTS[S.cameraMode];
+            camLabel.classList.add('show');
+            setTimeout(() => camLabel.classList.remove('show'), 2000);
+        }
+
+        addEventListener('keydown', e => {
+            const k = e.key.toLowerCase();
+            if (k === 'h') help.classList.toggle('visible');
+            else if (k === 'c') { S.cameraMode = (S.cameraMode + 1) % 4; showCam(); }
+            else if (k === 'q') { S.quality = (S.quality + 1) % 3; buildTunnel(); onResize(); }
+            else if (k === 'r') { time = 0; travelOffset = 0; heroWaveZ = -9999; }
+            else if (k === '[') { S.density = Math.max(1, S.density - 1); buildTunnel(); }
+            else if (k === ']') { S.density = Math.min(4, S.density + 1); buildTunnel(); }
+            else if (k === '-') { S.lineWidth = Math.max(0.3, S.lineWidth - 0.1); buildTunnel(); }
+            else if (k === '=') { S.lineWidth = Math.min(2, S.lineWidth + 0.1); buildTunnel(); }
+            else if (k === ';') { S.breathDuration = Math.max(6, S.breathDuration - 2); updateUI(); }
+            else if (k === "'") { S.breathDuration = Math.min(20, S.breathDuration + 2); updateUI(); }
+            else if (k === 'o') S.fogDensity = Math.max(0, S.fogDensity - 0.1);
+            else if (k === 'p') S.fogDensity = Math.min(1, S.fogDensity + 0.1);
+            else if (k === 'f') S.heroEvents = !S.heroEvents;
+            else if (k === 'm') S.mouseInfluence = !S.mouseInfluence;
+            else if (k === '1') S.tunnelSpeed = Math.max(0.2, S.tunnelSpeed - 0.2);
+            else if (k === '2') S.tunnelSpeed = Math.min(3, S.tunnelSpeed + 0.2);
+            updateUI(); save();
+        });
+
+        updateUI();
+        animate();
     </script>
 </body>
+
 </html>

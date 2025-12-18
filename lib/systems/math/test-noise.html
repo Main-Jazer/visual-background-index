@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Noise Test</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; }
+        canvas { border: 1px solid #0f0; margin: 10px 0; }
+        .pass { color: #0f0; }
+        .fail { color: #f00; }
+    </style>
+</head>
+<body>
+    <h1>SimplexNoise Implementation Test</h1>
+    <div id="results"></div>
+    <h2>2D Noise Visualization</h2>
+    <canvas id="canvas2d" width="256" height="256"></canvas>
+    <h2>3D Noise Visualization (z=0)</h2>
+    <canvas id="canvas3d" width="256" height="256"></canvas>
+    <h2>4D Noise Visualization (z=0, w=0)</h2>
+    <canvas id="canvas4d" width="256" height="256"></canvas>
+
+    <script type="module">
+        import { noise2D, noise3D, noise4D } from './jazer-math.js';
+
+        const results = document.getElementById('results');
+
+        function test(name, fn) {
+            try {
+                const result = fn();
+                const status = result ? 'PASS' : 'FAIL';
+                const className = result ? 'pass' : 'fail';
+                results.innerHTML += `<div class="${className}">[${status}] ${name}</div>`;
+                return result;
+            } catch (e) {
+                results.innerHTML += `<div class="fail">[ERROR] ${name}: ${e.message}</div>`;
+                return false;
+            }
+        }
+
+        // Test noise2D
+        test('noise2D returns a number', () => {
+            const val = noise2D(0.5, 0.5);
+            return typeof val === 'number';
+        });
+
+        test('noise2D returns different values for different inputs', () => {
+            const val1 = noise2D(0, 0);
+            const val2 = noise2D(1, 1);
+            return val1 !== val2;
+        });
+
+        test('noise2D returns values in reasonable range', () => {
+            const val = noise2D(0.5, 0.5);
+            return val >= -1 && val <= 1;
+        });
+
+        // Test noise3D
+        test('noise3D returns a number', () => {
+            const val = noise3D(0.5, 0.5, 0.5);
+            return typeof val === 'number';
+        });
+
+        test('noise3D does NOT return placeholder 0.5', () => {
+            const val1 = noise3D(0, 0, 0);
+            const val2 = noise3D(1, 1, 1);
+            // If it's always returning 0.5, this test will fail
+            return val1 !== 0.5 || val2 !== 0.5;
+        });
+
+        test('noise3D returns different values for different inputs', () => {
+            const val1 = noise3D(0, 0, 0);
+            const val2 = noise3D(1, 1, 1);
+            return val1 !== val2;
+        });
+
+        test('noise3D returns values in reasonable range', () => {
+            const val = noise3D(0.5, 0.5, 0.5);
+            return val >= -1 && val <= 1;
+        });
+
+        // Test noise4D
+        test('noise4D returns a number', () => {
+            const val = noise4D(0.5, 0.5, 0.5, 0.5);
+            return typeof val === 'number';
+        });
+
+        test('noise4D does NOT return placeholder 0.5', () => {
+            const val1 = noise4D(0, 0, 0, 0);
+            const val2 = noise4D(1, 1, 1, 1);
+            // If it's always returning 0.5, this test will fail
+            return val1 !== 0.5 || val2 !== 0.5;
+        });
+
+        test('noise4D returns different values for different inputs', () => {
+            const val1 = noise4D(0, 0, 0, 0);
+            const val2 = noise4D(1, 1, 1, 1);
+            return val1 !== val2;
+        });
+
+        test('noise4D returns values in reasonable range', () => {
+            const val = noise4D(0.5, 0.5, 0.5, 0.5);
+            return val >= -1 && val <= 1;
+        });
+
+        // Visualize 2D noise
+        const canvas2d = document.getElementById('canvas2d');
+        const ctx2d = canvas2d.getContext('2d');
+        const img2d = ctx2d.createImageData(256, 256);
+
+        for (let y = 0; y < 256; y++) {
+            for (let x = 0; x < 256; x++) {
+                const val = noise2D(x * 0.05, y * 0.05);
+                const gray = Math.floor((val + 1) * 127.5);
+                const idx = (y * 256 + x) * 4;
+                img2d.data[idx] = gray;
+                img2d.data[idx + 1] = gray;
+                img2d.data[idx + 2] = gray;
+                img2d.data[idx + 3] = 255;
+            }
+        }
+        ctx2d.putImageData(img2d, 0, 0);
+
+        // Visualize 3D noise (z=0)
+        const canvas3d = document.getElementById('canvas3d');
+        const ctx3d = canvas3d.getContext('2d');
+        const img3d = ctx3d.createImageData(256, 256);
+
+        for (let y = 0; y < 256; y++) {
+            for (let x = 0; x < 256; x++) {
+                const val = noise3D(x * 0.05, y * 0.05, 0);
+                const gray = Math.floor((val + 1) * 127.5);
+                const idx = (y * 256 + x) * 4;
+                img3d.data[idx] = gray;
+                img3d.data[idx + 1] = gray;
+                img3d.data[idx + 2] = gray;
+                img3d.data[idx + 3] = 255;
+            }
+        }
+        ctx3d.putImageData(img3d, 0, 0);
+
+        // Visualize 4D noise (z=0, w=0)
+        const canvas4d = document.getElementById('canvas4d');
+        const ctx4d = canvas4d.getContext('2d');
+        const img4d = ctx4d.createImageData(256, 256);
+
+        for (let y = 0; y < 256; y++) {
+            for (let x = 0; x < 256; x++) {
+                const val = noise4D(x * 0.05, y * 0.05, 0, 0);
+                const gray = Math.floor((val + 1) * 127.5);
+                const idx = (y * 256 + x) * 4;
+                img4d.data[idx] = gray;
+                img4d.data[idx + 1] = gray;
+                img4d.data[idx + 2] = gray;
+                img4d.data[idx + 3] = 255;
+            }
+        }
+        ctx4d.putImageData(img4d, 0, 0);
+
+        results.innerHTML += '<div class="pass"><br/>All tests complete! Check visualizations above for noise patterns.</div>';
+    </script>
+</body>
+</html>
