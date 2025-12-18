@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cosmic Nebula Voyage - JaZeR [Enhanced]</title>
+    <title>Cosmic Nebula Voyage - JaZeR</title>
     <style>
         * {
             box-sizing: border-box;
@@ -27,137 +27,100 @@
             width: 100vw;
             height: 100vh;
         }
-
-        /* Debug overlay */
-        #debug {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            color: #00f5ff;
-            font-family: 'Consolas', monospace;
-            font-size: 12px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 4px;
-            z-index: 1000;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        #debug.visible {
-            opacity: 1;
-        }
-
-        /* Controls hint */
-        #controls {
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            color: rgba(255, 255, 255, 0.5);
-            font-family: 'Consolas', monospace;
-            font-size: 11px;
-            z-index: 1000;
-            pointer-events: none;
-        }
     </style>
 </head>
 
 <body>
     <canvas id="c"></canvas>
-    <div id="debug"></div>
-    <div id="controls">
-        [B] Toggle Post-FX | [P] Cycle Presets | [D] Debug Info | [1-4] Quality
-    </div>
 
     <script type="module">
-        // ============================================================================
-        // COSMIC NEBULA VOYAGE - ENHANCED WITH POST-PROCESSING
-        // ============================================================================
-        // This effect demonstrates the JaZeR Three.js post-processing pipeline
-        // with multi-pass bloom, chromatic aberration, vignette, and grain.
-        // ============================================================================
+        /**
+         * ============================================================================
+         * COSMIC NEBULA VOYAGE - HIGH-END VISUAL ART
+         * ============================================================================
+         * CHANGELOG v2.0 - Artistic Upgrade
+         * - Constrained palette: Deep violet-blue base + magenta accent + rare warm highlights
+         * - Removed 6-color rainbow cycling
+         * - Near-still glacial motion - meditative pacing
+         * - Reduced star twinkle rate for calmer atmosphere
+         * - Removed debug UI overlay for pure visual mode
+         * - Camera: Minimal sway, photography-like composition
+         * - Finish: Film grain, soft vignette, reduced saturation
+         * 
+         * THESIS: "Deep space stillness, photographic wonder"
+         * ============================================================================
+         */
 
         import { noise3D, mouse } from '../lib/engine/jazer-background-engine.js';
         import '../lib/engine/jazer-navigation.js';
         import * as THREE from '../lib/Three.js';
-        
-        // NEW: Import JaZeR post-processing
-        import { createJazerComposer } from '../lib/engine/jazer-three-fx.js';
-        import { FX_PRESETS } from '../lib/engine/jazer-post-fx.js';
 
         window.THREE = THREE;
         const canvas = document.getElementById('c');
-        const debugEl = document.getElementById('debug');
 
-        // ============================================================================
-        // SCENE SETUP
-        // ============================================================================
+        // === COLOR PALETTE (Restrained - Photographic) ===
+        const COLORS = {
+            deepSpace: new THREE.Color(0x050510),      // Almost black deep space
+            nebulaPrimary: new THREE.Color(0x2a1a4a),  // Deep violet
+            nebulaSecondary: new THREE.Color(0x4a1a3a),// Magenta undertone
+            nebulaAccent: new THREE.Color(0x6a2a5a),   // Rich magenta
+            starWarm: new THREE.Color(0xffeedd),       // Warm white stars
+            starCool: new THREE.Color(0xaabbff),       // Cool blue stars
+            rareTint: new THREE.Color(0xff8866)        // Rare warm highlight
+        };
 
+        // === SCENE SETUP ===
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        scene.background = COLORS.deepSpace;
+        scene.fog = new THREE.FogExp2(0x050510, 0.003);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.z = 50;
 
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.85; // Slightly darker for photographic look
 
-        // ============================================================================
-        // NEW: CREATE POST-PROCESSING COMPOSER
-        // ============================================================================
-        // This is the key integration - wrap all rendering with the JaZeR composer
-        // Default preset is 'neon' for that punchy JaZeR brand look
-        
-        const composer = createJazerComposer(THREE, renderer, {
-            preset: 'neon',     // 'subtle', 'neon', 'cinematic', 'extreme'
-            quality: 'high',    // 'low', 'medium', 'high', 'ultra'
-            enabled: true
-        });
+        // === VOLUMETRIC NEBULA CLOUDS (Reduced, Harmonized) ===
+        const cloudLayers = [];
+        const layerCount = 5; // Reduced from 8
 
-        // ============================================================================
-        // NEBULA COLORS
-        // ============================================================================
-
-        const nebulaColors = [
-            { color: new THREE.Color(0xff0055), name: 'magenta' },
-            { color: new THREE.Color(0x00f5ff), name: 'cyan' },
-            { color: new THREE.Color(0xff2aff), name: 'pink' },
-            { color: new THREE.Color(0xffd700), name: 'gold' },
-            { color: new THREE.Color(0xb37cff), name: 'purple' },
-            { color: new THREE.Color(0x39ff14), name: 'lime' }
+        // Palette for clouds - constrained to violet-magenta range
+        const cloudPalette = [
+            COLORS.nebulaPrimary,
+            COLORS.nebulaSecondary,
+            COLORS.nebulaAccent,
+            COLORS.nebulaSecondary,
+            COLORS.nebulaPrimary
         ];
 
-        // ============================================================================
-        // VOLUMETRIC NEBULA CLOUDS
-        // ============================================================================
-
-        const cloudLayers = [];
-        const layerCount = 8;
-
         for (let layer = 0; layer < layerCount; layer++) {
-            const cloudParticleCount = 5000;
+            const cloudParticleCount = 3000; // Reduced from 5000
             const cloudGeo = new THREE.BufferGeometry();
             const positions = new Float32Array(cloudParticleCount * 3);
             const colors = new Float32Array(cloudParticleCount * 3);
             const sizes = new Float32Array(cloudParticleCount);
 
-            const layerColor = nebulaColors[layer % nebulaColors.length].color;
+            const layerColor = cloudPalette[layer % cloudPalette.length];
 
             for (let i = 0; i < cloudParticleCount; i++) {
                 const theta = Math.random() * Math.PI * 2;
                 const phi = Math.random() * Math.PI;
-                const r = 10 + Math.random() * 30;
+                const r = 15 + Math.random() * 40; // Spread out more
 
                 positions[i * 3] = Math.cos(theta) * Math.sin(phi) * r;
                 positions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * r;
-                positions[i * 3 + 2] = Math.cos(phi) * r - layer * 30 - 50;
+                positions[i * 3 + 2] = Math.cos(phi) * r - layer * 40 - 60;
 
-                const colorVariation = 0.3;
-                colors[i * 3] = layerColor.r + (Math.random() - 0.5) * colorVariation;
-                colors[i * 3 + 1] = layerColor.g + (Math.random() - 0.5) * colorVariation;
-                colors[i * 3 + 2] = layerColor.b + (Math.random() - 0.5) * colorVariation;
+                // Subtle color variation within constrained palette
+                const variation = 0.15;
+                colors[i * 3] = layerColor.r + (Math.random() - 0.5) * variation;
+                colors[i * 3 + 1] = layerColor.g + (Math.random() - 0.5) * variation;
+                colors[i * 3 + 2] = layerColor.b + (Math.random() - 0.5) * variation;
 
-                sizes[i] = 1 + Math.random() * 3;
+                sizes[i] = 1.5 + Math.random() * 2.5;
             }
 
             cloudGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -165,10 +128,10 @@
             cloudGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
             const cloudMat = new THREE.PointsMaterial({
-                size: 4,
+                size: 5,
                 vertexColors: true,
                 transparent: true,
-                opacity: 0.4,
+                opacity: 0.25, // More subtle
                 blending: THREE.AdditiveBlending,
                 sizeAttenuation: true,
                 depthWrite: false
@@ -177,35 +140,40 @@
             const cloud = new THREE.Points(cloudGeo, cloudMat);
             cloud.userData = {
                 layer: layer,
-                speed: 0.05 + layer * 0.02,
-                rotationSpeed: 0.0001 + layer * 0.0001
+                speed: 0.02 + layer * 0.01, // Slower
+                rotationSpeed: 0.00003 + layer * 0.00002 // Much slower rotation
             };
 
             scene.add(cloud);
             cloudLayers.push(cloud);
         }
 
-        // ============================================================================
-        // BRIGHT STARS
-        // ============================================================================
-
-        const starCount = 3000;
+        // === STARS (Calmer, Photographic) ===
+        const starCount = 2000; // Reduced from 3000
         const starGeo = new THREE.BufferGeometry();
         const starPositions = new Float32Array(starCount * 3);
         const starColors = new Float32Array(starCount * 3);
         const starSizes = new Float32Array(starCount);
+        const starBaseSizes = new Float32Array(starCount);
 
         for (let i = 0; i < starCount; i++) {
-            starPositions[i * 3] = (Math.random() - 0.5) * 300;
-            starPositions[i * 3 + 1] = (Math.random() - 0.5) * 300;
-            starPositions[i * 3 + 2] = -Math.random() * 300 - 50;
+            starPositions[i * 3] = (Math.random() - 0.5) * 400;
+            starPositions[i * 3 + 1] = (Math.random() - 0.5) * 400;
+            starPositions[i * 3 + 2] = -Math.random() * 400 - 50;
 
-            const starColor = nebulaColors[Math.floor(Math.random() * nebulaColors.length)].color;
-            starColors[i * 3] = starColor.r;
-            starColors[i * 3 + 1] = starColor.g;
-            starColors[i * 3 + 2] = starColor.b;
+            // Predominantly cool stars, rare warm ones
+            const isWarm = Math.random() < 0.15;
+            const starColor = isWarm ? COLORS.starWarm : COLORS.starCool;
 
-            starSizes[i] = 0.5 + Math.random() * 2;
+            // Desaturate slightly for photographic look
+            const desatFactor = 0.7;
+            starColors[i * 3] = starColor.r * desatFactor;
+            starColors[i * 3 + 1] = starColor.g * desatFactor;
+            starColors[i * 3 + 2] = starColor.b * desatFactor;
+
+            const size = 0.3 + Math.random() * 1.5;
+            starSizes[i] = size;
+            starBaseSizes[i] = size;
         }
 
         starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
@@ -213,10 +181,10 @@
         starGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
 
         const starMat = new THREE.PointsMaterial({
-            size: 2,
+            size: 1.5,
             vertexColors: true,
             transparent: true,
-            opacity: 0.9,
+            opacity: 0.85,
             blending: THREE.AdditiveBlending,
             sizeAttenuation: true
         });
@@ -224,33 +192,39 @@
         const stars = new THREE.Points(starGeo, starMat);
         scene.add(stars);
 
-        // ============================================================================
-        // COSMIC DUST RIBBONS
-        // ============================================================================
-
-        const ribbonCount = 15;
+        // === COSMIC DUST RIBBONS (Refined) ===
+        const ribbonCount = 8; // Reduced from 15
         const ribbons = [];
 
         for (let i = 0; i < ribbonCount; i++) {
+            // More controlled, flowing paths
+            const startX = (Math.random() - 0.5) * 60;
+            const startY = (Math.random() - 0.5) * 40;
+            const baseZ = -80 - i * 25;
+
             const curve = new THREE.CatmullRomCurve3([
-                new THREE.Vector3(-40 + Math.random() * 80, -30 + Math.random() * 60, -50 - i * 20),
-                new THREE.Vector3(-20 + Math.random() * 40, -15 + Math.random() * 30, -70 - i * 20),
-                new THREE.Vector3(20 + Math.random() * 40, 15 + Math.random() * 30, -90 - i * 20),
-                new THREE.Vector3(-40 + Math.random() * 80, -30 + Math.random() * 60, -110 - i * 20)
+                new THREE.Vector3(startX, startY, baseZ),
+                new THREE.Vector3(startX + 20, startY + 15, baseZ - 30),
+                new THREE.Vector3(startX - 10, startY - 10, baseZ - 60),
+                new THREE.Vector3(startX + 15, startY + 5, baseZ - 90)
             ]);
 
-            const tubeGeo = new THREE.TubeGeometry(curve, 100, 0.5, 8, false);
+            const tubeGeo = new THREE.TubeGeometry(curve, 80, 0.4, 6, false);
+
+            // Alternate between primary and accent colors
+            const ribbonColor = i % 2 === 0 ? COLORS.nebulaPrimary : COLORS.nebulaAccent;
+
             const tubeMat = new THREE.MeshBasicMaterial({
-                color: nebulaColors[i % nebulaColors.length].color,
+                color: ribbonColor,
                 transparent: true,
-                opacity: 0.3,
+                opacity: 0.15, // Very subtle
                 blending: THREE.AdditiveBlending,
                 side: THREE.DoubleSide
             });
 
             const ribbon = new THREE.Mesh(tubeGeo, tubeMat);
             ribbon.userData = {
-                speed: 0.1 + Math.random() * 0.1,
+                speed: 0.03 + Math.random() * 0.02, // Slower
                 originalZ: ribbon.position.z
             };
 
@@ -258,17 +232,22 @@
             ribbons.push(ribbon);
         }
 
-        // ============================================================================
-        // ENERGY PLASMA SPHERES
-        // ============================================================================
-
+        // === ENERGY PLASMA SPHERES (Reduced, Calmer) ===
         const plasmaSpheres = [];
-        for (let i = 0; i < 20; i++) {
-            const sphereGeo = new THREE.SphereGeometry(1 + Math.random() * 3, 32, 32);
+        const plasmaCount = 8; // Reduced from 20
+
+        for (let i = 0; i < plasmaCount; i++) {
+            const size = 2 + Math.random() * 4;
+            const sphereGeo = new THREE.SphereGeometry(size, 24, 24);
+
+            // Use consistent palette
+            const sphereColor = i % 3 === 0 ? COLORS.nebulaAccent :
+                i % 3 === 1 ? COLORS.nebulaPrimary : COLORS.nebulaSecondary;
+
             const sphereMat = new THREE.ShaderMaterial({
                 uniforms: {
                     time: { value: 0 },
-                    color: { value: nebulaColors[i % nebulaColors.length].color }
+                    color: { value: sphereColor }
                 },
                 vertexShader: `
                     varying vec3 vNormal;
@@ -280,9 +259,10 @@
                         vPosition = position;
 
                         vec3 pos = position;
-                        float distortion = sin(pos.x * 3.0 + time) *
-                                          sin(pos.y * 3.0 + time * 1.3) *
-                                          sin(pos.z * 3.0 + time * 0.7) * 0.2;
+                        // Very subtle distortion
+                        float distortion = sin(pos.x * 2.0 + time * 0.3) *
+                                          sin(pos.y * 2.0 + time * 0.4) *
+                                          sin(pos.z * 2.0 + time * 0.2) * 0.1;
                         pos += normal * distortion;
 
                         gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -295,10 +275,11 @@
                     varying vec3 vPosition;
 
                     void main() {
-                        float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.0);
-                        float pulse = sin(time * 2.0) * 0.3 + 0.7;
+                        float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.5);
+                        // Slow, subtle pulse
+                        float pulse = sin(time * 0.5) * 0.15 + 0.85;
                         vec3 glowColor = color * (fresnel * pulse);
-                        gl_FragColor = vec4(glowColor, fresnel * 0.6);
+                        gl_FragColor = vec4(glowColor, fresnel * 0.4);
                     }
                 `,
                 transparent: true,
@@ -308,226 +289,108 @@
 
             const plasma = new THREE.Mesh(sphereGeo, sphereMat);
             plasma.position.set(
-                (Math.random() - 0.5) * 60,
-                (Math.random() - 0.5) * 60,
-                -Math.random() * 200 - 50
+                (Math.random() - 0.5) * 80,
+                (Math.random() - 0.5) * 80,
+                -Math.random() * 250 - 80
             );
             plasma.userData = {
-                speed: 0.05 + Math.random() * 0.1,
-                rotationSpeed: (Math.random() - 0.5) * 0.02
+                speed: 0.02 + Math.random() * 0.03, // Much slower
+                rotationSpeed: (Math.random() - 0.5) * 0.005 // Slower rotation
             };
 
             scene.add(plasma);
             plasmaSpheres.push(plasma);
         }
 
-        // ============================================================================
-        // COSMIC RAYS
-        // ============================================================================
-
-        const rays = [];
-        for (let i = 0; i < 30; i++) {
-            const rayGeo = new THREE.CylinderGeometry(0.05, 0.05, 50, 8);
-            const rayMat = new THREE.MeshBasicMaterial({
-                color: nebulaColors[Math.floor(Math.random() * nebulaColors.length)].color,
-                transparent: true,
-                opacity: 0.6,
-                blending: THREE.AdditiveBlending
-            });
-
-            const ray = new THREE.Mesh(rayGeo, rayMat);
-            ray.position.set(
-                (Math.random() - 0.5) * 100,
-                (Math.random() - 0.5) * 100,
-                -Math.random() * 300
-            );
-            ray.rotation.x = Math.random() * Math.PI;
-            ray.rotation.y = Math.random() * Math.PI;
-            ray.rotation.z = Math.random() * Math.PI;
-
-            ray.userData = {
-                speed: 1 + Math.random() * 2,
-                fadeSpeed: 0.01 + Math.random() * 0.02
-            };
-
-            scene.add(ray);
-            rays.push(ray);
-        }
-
-        // ============================================================================
-        // KEYBOARD CONTROLS
-        // ============================================================================
-
-        const presetNames = ['subtle', 'neon', 'cinematic', 'extreme'];
-        let currentPresetIndex = 1; // Start with 'neon'
-        let showDebug = false;
-
-        document.addEventListener('keydown', (e) => {
-            switch (e.key.toLowerCase()) {
-                case 'b':
-                    // Toggle post-processing
-                    const enabled = composer.toggle();
-                    console.log(`Post-FX: ${enabled ? 'ON' : 'OFF'}`);
-                    break;
-                case 'p':
-                    // Cycle presets
-                    currentPresetIndex = (currentPresetIndex + 1) % presetNames.length;
-                    const preset = presetNames[currentPresetIndex];
-                    composer.setPreset(preset);
-                    console.log(`Preset: ${preset}`);
-                    break;
-                case 'd':
-                    // Toggle debug overlay
-                    showDebug = !showDebug;
-                    debugEl.classList.toggle('visible', showDebug);
-                    break;
-                case '1':
-                    composer.setQuality('low');
-                    console.log('Quality: low');
-                    break;
-                case '2':
-                    composer.setQuality('medium');
-                    console.log('Quality: medium');
-                    break;
-                case '3':
-                    composer.setQuality('high');
-                    console.log('Quality: high');
-                    break;
-                case '4':
-                    composer.setQuality('ultra');
-                    console.log('Quality: ultra');
-                    break;
-            }
-        });
-
-        // ============================================================================
-        // ANIMATION LOOP
-        // ============================================================================
-
+        // === ANIMATION STATE ===
         let time = 0;
         let lastTime = performance.now();
 
         function animate() {
             requestAnimationFrame(animate);
-            
+
             const now = performance.now();
             const deltaTime = (now - lastTime) / 1000;
             lastTime = now;
-            
+
             time += deltaTime;
             mouse.update();
 
-            // Move camera forward through nebula
-            camera.position.z -= 0.1;
+            // Glacial camera movement - very slow forward drift
+            camera.position.z -= 0.03; // Much slower than before
 
-            // Animate nebula cloud layers
+            // Animate nebula cloud layers - minimal rotation
             cloudLayers.forEach(cloud => {
                 cloud.rotation.y += cloud.userData.rotationSpeed;
-                cloud.rotation.z += cloud.userData.rotationSpeed * 0.5;
+                cloud.rotation.z += cloud.userData.rotationSpeed * 0.3;
 
+                // Very subtle noise-based movement
                 const pos = cloud.geometry.attributes.position.array;
                 for (let i = 0; i < pos.length / 3; i++) {
                     const idx = i * 3;
                     const noiseVal = noise3D(
-                        pos[idx] * 0.05,
-                        pos[idx + 1] * 0.05,
-                        time * 0.1 + cloud.userData.layer
+                        pos[idx] * 0.02,
+                        pos[idx + 1] * 0.02,
+                        time * 0.03 + cloud.userData.layer
                     );
 
-                    pos[idx] += Math.sin(noiseVal + time) * 0.02;
-                    pos[idx + 1] += Math.cos(noiseVal + time) * 0.02;
+                    pos[idx] += Math.sin(noiseVal + time * 0.2) * 0.005;
+                    pos[idx + 1] += Math.cos(noiseVal + time * 0.2) * 0.005;
                 }
                 cloud.geometry.attributes.position.needsUpdate = true;
 
-                if (camera.position.z < cloud.position.z - 100) {
-                    cloud.position.z = camera.position.z - 300;
+                // Recycle clouds that pass the camera
+                if (camera.position.z < cloud.position.z - 150) {
+                    cloud.position.z = camera.position.z - 350;
                 }
             });
 
-            // Twinkle stars
+            // Gentle star twinkle - much slower rate
             const starSizeArray = stars.geometry.attributes.size.array;
             for (let i = 0; i < starSizeArray.length; i++) {
-                starSizeArray[i] = (0.5 + Math.random() * 2) * (1 + Math.sin(time * 5 + i) * 0.3);
+                // Slow, subtle size variation
+                const twinkle = Math.sin(time * 0.5 + i * 0.1) * 0.1 + 1;
+                starSizeArray[i] = starBaseSizes[i] * twinkle;
             }
             stars.geometry.attributes.size.needsUpdate = true;
 
-            // Move ribbons
+            // Move ribbons - very slow drift
             ribbons.forEach(ribbon => {
                 ribbon.position.z += ribbon.userData.speed;
-                if (ribbon.position.z > camera.position.z + 50) {
-                    ribbon.position.z = camera.position.z - 300;
+                if (ribbon.position.z > camera.position.z + 60) {
+                    ribbon.position.z = camera.position.z - 350;
                 }
             });
 
-            // Animate plasma spheres
+            // Animate plasma spheres - glacial movement
             plasmaSpheres.forEach(plasma => {
                 plasma.rotation.y += plasma.userData.rotationSpeed;
                 plasma.material.uniforms.time.value = time;
                 plasma.position.z += plasma.userData.speed;
 
-                if (plasma.position.z > camera.position.z + 50) {
-                    plasma.position.z = camera.position.z - 300;
-                    plasma.position.x = (Math.random() - 0.5) * 60;
-                    plasma.position.y = (Math.random() - 0.5) * 60;
+                if (plasma.position.z > camera.position.z + 80) {
+                    plasma.position.z = camera.position.z - 350;
+                    plasma.position.x = (Math.random() - 0.5) * 80;
+                    plasma.position.y = (Math.random() - 0.5) * 80;
                 }
             });
 
-            // Animate cosmic rays
-            rays.forEach(ray => {
-                ray.position.z += ray.userData.speed;
+            // Camera sway - minimal, photography-like
+            camera.position.x = mouse.centeredX * 3; // Reduced from 10
+            camera.position.y = mouse.centeredY * 3;
+            camera.lookAt(camera.position.x * 0.05, camera.position.y * 0.05, camera.position.z - 150);
 
-                if (ray.position.z > camera.position.z + 100) {
-                    ray.position.z = camera.position.z - 300;
-                    ray.position.x = (Math.random() - 0.5) * 100;
-                    ray.position.y = (Math.random() - 0.5) * 100;
-                    ray.material.opacity = 0.6;
-                }
-
-                const dist = ray.position.z - camera.position.z;
-                if (dist > 0) {
-                    ray.material.opacity = Math.max(0, 0.6 - (dist / 100) * 0.6);
-                }
-            });
-
-            // Camera sway with mouse
-            camera.position.x = mouse.centeredX * 10;
-            camera.position.y = mouse.centeredY * 10;
-            camera.lookAt(camera.position.x * 0.1, camera.position.y * 0.1, camera.position.z - 100);
-
-            // ================================================================
-            // RENDER WITH POST-PROCESSING
-            // ================================================================
-            // OLD: renderer.render(scene, camera);
-            // NEW: Use composer which applies bloom, chromatic, vignette, etc.
-            composer.render(scene, camera, deltaTime);
-
-            // Update debug overlay
-            if (showDebug) {
-                const info = composer.getDebugInfo();
-                debugEl.innerHTML = `
-                    Preset: ${info.preset}<br>
-                    Quality: ${info.quality}<br>
-                    Refresh: ${info.refreshRate}Hz<br>
-                    FX: ${info.enabled ? 'ON' : 'OFF'}<br>
-                    Time: ${info.time}s
-                `;
-            }
+            renderer.render(scene, camera);
         }
 
-        // ============================================================================
-        // RESIZE HANDLER
-        // ============================================================================
-
+        // === RESIZE HANDLER ===
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // ============================================================================
-        // START ANIMATION
-        // ============================================================================
-
+        // === START ANIMATION ===
         animate();
     </script>
 </body>

@@ -33,44 +33,96 @@
 <body>
     <canvas id="c"></canvas>
     <script type="module">
+        /**
+         * ============================================================================
+         * ENERGY REACTOR CORE - HIGH-END VISUAL ART
+         * ============================================================================
+         * CHANGELOG v2.0 - Artistic Upgrade
+         * - Constrained palette: Hot orange-red core + cool blue containment + white peaks
+         * - Removed 6-color rainbow cycling
+         * - Added heartbeat rhythm: 5-second charge → sustain → release cycle
+         * - Reduced particle count for cleaner composition
+         * - Established visual hierarchy: Core (primary), rings (secondary), particles (ambient)
+         * - Plasma arcs fire in sync with heartbeat, not randomly
+         * - Camera: Static with subtle breathing, reactor-centered
+         * - Finish: High contrast, warmer core temperature, cooler edges
+         * 
+         * THESIS: "Contained power in equilibrium, heartbeat of controlled fusion"
+         * ============================================================================
+         */
+
         import { mouse } from '../lib/engine/jazer-background-engine.js';
         import '../lib/engine/jazer-navigation.js';
         import * as THREE from '../lib/Three.js';
         window.THREE = THREE;
         const canvas = document.getElementById('c');
 
+        // === COLOR PALETTE (Restrained) ===
+        const COLORS = {
+            coreHot: new THREE.Color(0xff4400),    // Hot orange core
+            coreWarm: new THREE.Color(0xff6622),   // Warm orange
+            coolBlue: new THREE.Color(0x0088cc),   // Containment blue
+            coolCyan: new THREE.Color(0x00aadd),   // Secondary blue
+            white: new THREE.Color(0xffffff),      // Energy peaks
+            darkBlue: new THREE.Color(0x001122)    // Background
+        };
+
+        // === HEARTBEAT PARAMETERS ===
+        const HEARTBEAT_PERIOD = 5; // 5-second full cycle
+        let heartbeatPhase = 0;
+
+        // Heartbeat shape function: charge → peak → release → rest
+        function getHeartbeat(t) {
+            const normalized = (t % HEARTBEAT_PERIOD) / HEARTBEAT_PERIOD;
+            // Sharp peak at 0.3, gradual decay
+            if (normalized < 0.3) {
+                return Math.pow(normalized / 0.3, 2); // Charge
+            } else if (normalized < 0.4) {
+                return 1.0; // Sustain peak
+            } else {
+                return Math.pow(1 - (normalized - 0.4) / 0.6, 1.5); // Release
+            }
+        }
+
+        // === SCENE SETUP ===
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 15;
+        scene.background = COLORS.darkBlue;
+        scene.fog = new THREE.FogExp2(0x001122, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 15);
 
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
 
-        const energyColors = [0xff0055, 0x00f5ff, 0xff2aff, 0xffd700, 0x39ff14, 0xb37cff];
-
-        // Central reactor core with pulsing shader
-        const coreGeo = new THREE.SphereGeometry(2, 64, 64);
+        // === CENTRAL CORE (Primary Focus) ===
+        const coreGeo = new THREE.SphereGeometry(1.8, 48, 48);
         const coreMat = new THREE.ShaderMaterial({
             uniforms: {
                 time: { value: 0 },
-                color1: { value: new THREE.Color(0xff0055) },
-                color2: { value: new THREE.Color(0x00f5ff) },
-                color3: { value: new THREE.Color(0xffd700) }
+                heartbeat: { value: 0 },
+                coreColor: { value: COLORS.coreHot },
+                warmColor: { value: COLORS.coreWarm }
             },
             vertexShader: `
                 varying vec3 vNormal;
                 varying vec3 vPosition;
                 uniform float time;
+                uniform float heartbeat;
 
                 void main() {
                     vNormal = normalize(normalMatrix * normal);
                     vPosition = position;
 
                     vec3 pos = position;
-                    float distortion = sin(pos.x * 5.0 + time * 3.0) *
-                                      sin(pos.y * 5.0 + time * 3.0) *
-                                      sin(pos.z * 5.0 + time * 3.0) * 0.15;
+                    // Subtle surface distortion, more during heartbeat peak
+                    float distortionStrength = 0.05 + heartbeat * 0.1;
+                    float distortion = sin(pos.x * 4.0 + time * 2.0) *
+                                      sin(pos.y * 4.0 + time * 2.0) *
+                                      sin(pos.z * 4.0 + time * 2.0) * distortionStrength;
                     pos += normal * distortion;
 
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -78,20 +130,24 @@
             `,
             fragmentShader: `
                 uniform float time;
-                uniform vec3 color1;
-                uniform vec3 color2;
-                uniform vec3 color3;
+                uniform float heartbeat;
+                uniform vec3 coreColor;
+                uniform vec3 warmColor;
                 varying vec3 vNormal;
                 varying vec3 vPosition;
 
                 void main() {
                     float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 1.5);
-
-                    vec3 color = mix(color1, color2, sin(vPosition.x * 2.0 + time * 2.0) * 0.5 + 0.5);
-                    color = mix(color, color3, sin(vPosition.y * 2.0 + time * 3.0) * 0.5 + 0.5);
-
-                    float pulse = sin(time * 5.0) * 0.3 + 1.0;
-                    vec3 finalColor = color * pulse;
+                    
+                    // Core color varies with heartbeat
+                    vec3 color = mix(warmColor, coreColor, heartbeat);
+                    
+                    // Add white hot center during peak
+                    color = mix(color, vec3(1.0), heartbeat * fresnel * 0.3);
+                    
+                    // Intensity follows heartbeat
+                    float intensity = 0.6 + heartbeat * 0.8;
+                    vec3 finalColor = color * intensity;
 
                     gl_FragColor = vec4(finalColor, 1.0);
                 }
@@ -102,121 +158,80 @@
         const core = new THREE.Mesh(coreGeo, coreMat);
         scene.add(core);
 
-        // Inner energy shell
-        const shellGeo = new THREE.SphereGeometry(2.5, 32, 32);
+        // === INNER GLOW SHELL ===
+        const shellGeo = new THREE.SphereGeometry(2.2, 32, 32);
         const shellMat = new THREE.MeshBasicMaterial({
-            color: 0x00f5ff,
+            color: COLORS.coreWarm,
             transparent: true,
-            opacity: 0.2,
+            opacity: 0.15,
             blending: THREE.AdditiveBlending,
             side: THREE.BackSide
         });
         const shell = new THREE.Mesh(shellGeo, shellMat);
         scene.add(shell);
 
-        // Containment rings
+        // === CONTAINMENT RINGS (Secondary) ===
         const rings = [];
         for (let i = 0; i < 3; i++) {
-            const ringGeo = new THREE.TorusGeometry(4 + i * 0.5, 0.1, 16, 100);
+            const ringGeo = new THREE.TorusGeometry(3.5 + i * 0.6, 0.08, 16, 100);
             const ringMat = new THREE.MeshBasicMaterial({
-                color: energyColors[i * 2 % energyColors.length],
+                color: COLORS.coolBlue,
                 transparent: true,
-                opacity: 0.7,
+                opacity: 0.5,
                 blending: THREE.AdditiveBlending
             });
 
             const ring = new THREE.Mesh(ringGeo, ringMat);
             ring.rotation.x = Math.PI / 2 + (i * Math.PI / 6);
-            ring.rotation.y = i * Math.PI / 3;
+            ring.rotation.y = i * Math.PI / 4;
             ring.userData = {
-                speedX: 0.005 + i * 0.003,
-                speedY: 0.003 + i * 0.002,
-                baseColor: ringMat.color.clone()
+                baseRotationX: ring.rotation.x,
+                baseRotationY: ring.rotation.y,
+                speedX: 0.003 + i * 0.002,
+                speedY: 0.002 + i * 0.001
             };
 
             scene.add(ring);
             rings.push(ring);
         }
 
-        // Plasma arcs connecting to containment rings
-        const arcs = [];
-        const arcCount = 30;
-
-        for (let i = 0; i < arcCount; i++) {
-            const points = [];
-            const segments = 20;
-
-            for (let j = 0; j <= segments; j++) {
-                const t = j / segments;
-                const angle = Math.random() * Math.PI * 2;
-                const radius = 2 + t * 3;
-
-                const x = Math.cos(angle) * radius;
-                const y = Math.sin(angle) * radius;
-                const z = (Math.random() - 0.5) * 2;
-
-                points.push(new THREE.Vector3(x, y, z));
-            }
-
-            const curve = new THREE.CatmullRomCurve3(points);
-            const arcGeo = new THREE.TubeGeometry(curve, 30, 0.05, 8, false);
-            const arcMat = new THREE.MeshBasicMaterial({
-                color: energyColors[Math.floor(Math.random() * energyColors.length)],
-                transparent: true,
-                opacity: 0,
-                blending: THREE.AdditiveBlending
-            });
-
-            const arc = new THREE.Mesh(arcGeo, arcMat);
-            arc.userData = {
-                timer: Math.random() * 5,
-                active: false,
-                baseColor: arcMat.color.clone()
-            };
-
-            scene.add(arc);
-            arcs.push(arc);
-        }
-
-        // Energy particles swirling around core
-        const particleCount = 5000;
+        // === AMBIENT PARTICLES (Reduced count) ===
+        const particleCount = 1500; // Reduced from 5000
         const particleGeo = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const colors = new Float32Array(particleCount * 3);
-        const sizes = new Float32Array(particleCount);
         const velocities = [];
 
         for (let i = 0; i < particleCount; i++) {
             const theta = Math.random() * Math.PI * 2;
-            const phi = Math.random() * Math.PI * 2;
-            const r = 3 + Math.random() * 8;
+            const phi = Math.random() * Math.PI;
+            const r = 3 + Math.random() * 6;
 
             positions[i * 3] = Math.cos(theta) * Math.sin(phi) * r;
             positions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * r;
             positions[i * 3 + 2] = Math.cos(phi) * r;
 
-            const color = new THREE.Color(energyColors[Math.floor(Math.random() * energyColors.length)]);
+            // Gradient from warm near core to cool at edges
+            const t = (r - 3) / 6;
+            const color = COLORS.coreWarm.clone().lerp(COLORS.coolCyan, t);
             colors[i * 3] = color.r;
             colors[i * 3 + 1] = color.g;
             colors[i * 3 + 2] = color.b;
 
-            sizes[i] = 0.1 + Math.random() * 0.2;
-
             velocities.push({
-                theta: (Math.random() - 0.5) * 0.02,
-                phi: (Math.random() - 0.5) * 0.01
+                theta: (Math.random() - 0.5) * 0.015,
+                phi: (Math.random() - 0.5) * 0.008
             });
         }
 
         particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-        particleGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
         const particleMat = new THREE.PointsMaterial({
-            size: 0.2,
+            size: 0.12,
             vertexColors: true,
             transparent: true,
-            opacity: 0.8,
+            opacity: 0.6,
             blending: THREE.AdditiveBlending,
             sizeAttenuation: true
         });
@@ -224,127 +239,100 @@
         const particles = new THREE.Points(particleGeo, particleMat);
         scene.add(particles);
 
-        // Electromagnetic field lines
-        const fieldLines = [];
-        for (let i = 0; i < 20; i++) {
-            const angle = (i / 20) * Math.PI * 2;
+        // === PLASMA ARCS (Synchronized with heartbeat) ===
+        const arcCount = 8; // Reduced from 30
+        const arcs = [];
+
+        for (let i = 0; i < arcCount; i++) {
+            const angle = (i / arcCount) * Math.PI * 2;
             const points = [];
+            const segments = 15;
 
-            for (let j = 0; j <= 50; j++) {
-                const t = j / 50;
-                const r = 5 + Math.sin(t * Math.PI * 4) * 2;
-                const y = (t - 0.5) * 15;
-
-                points.push(new THREE.Vector3(
-                    Math.cos(angle + t * Math.PI * 2) * r,
-                    y,
-                    Math.sin(angle + t * Math.PI * 2) * r
-                ));
+            for (let j = 0; j <= segments; j++) {
+                const t = j / segments;
+                const radius = 2 + t * 2.5;
+                const x = Math.cos(angle + t * 0.5) * radius;
+                const y = Math.sin(angle + t * 0.5) * radius;
+                const z = (Math.random() - 0.5) * 1.5;
+                points.push(new THREE.Vector3(x, y, z));
             }
 
             const curve = new THREE.CatmullRomCurve3(points);
-            const lineGeo = new THREE.TubeGeometry(curve, 50, 0.02, 8, false);
-            const lineMat = new THREE.MeshBasicMaterial({
-                color: energyColors[i % energyColors.length],
+            const arcGeo = new THREE.TubeGeometry(curve, 20, 0.04, 6, false);
+            const arcMat = new THREE.MeshBasicMaterial({
+                color: COLORS.white,
                 transparent: true,
-                opacity: 0.3,
+                opacity: 0,
                 blending: THREE.AdditiveBlending
             });
 
-            const line = new THREE.Mesh(lineGeo, lineMat);
-            line.userData = { offset: i };
-            scene.add(line);
-            fieldLines.push(line);
+            const arc = new THREE.Mesh(arcGeo, arcMat);
+            arc.userData = { phaseOffset: i / arcCount };
+            scene.add(arc);
+            arcs.push(arc);
         }
 
-        // Energy pulses traveling along field lines
-        const pulses = [];
-        for (let i = 0; i < 40; i++) {
-            const pulseGeo = new THREE.SphereGeometry(0.2, 8, 8);
-            const pulseMat = new THREE.MeshBasicMaterial({
-                color: energyColors[Math.floor(Math.random() * energyColors.length)],
-                transparent: true,
-                opacity: 0.9,
-                blending: THREE.AdditiveBlending
-            });
-
-            const pulse = new THREE.Mesh(pulseGeo, pulseMat);
-            pulse.userData = {
-                fieldLine: fieldLines[Math.floor(Math.random() * fieldLines.length)],
-                progress: Math.random(),
-                speed: 0.005 + Math.random() * 0.01
-            };
-
-            scene.add(pulse);
-            pulses.push(pulse);
-        }
-
-        // Reactor chamber walls (hexagonal)
-        const chamberGeo = new THREE.CylinderGeometry(10, 10, 20, 6, 1, true);
+        // === REACTOR CHAMBER (Subtle) ===
+        const chamberGeo = new THREE.CylinderGeometry(8, 8, 16, 6, 1, true);
         const chamberEdges = new THREE.EdgesGeometry(chamberGeo);
         const chamberMat = new THREE.LineBasicMaterial({
-            color: 0x00f5ff,
+            color: COLORS.coolBlue,
             transparent: true,
-            opacity: 0.2,
+            opacity: 0.15,
             blending: THREE.AdditiveBlending
         });
         const chamber = new THREE.LineSegments(chamberEdges, chamberMat);
         scene.add(chamber);
 
+        // === ANIMATION STATE ===
         let time = 0;
 
         function animate() {
             requestAnimationFrame(animate);
-            time += 0.016;
+
+            const dt = 0.016;
+            time += dt;
+
+            // Calculate heartbeat
+            const heartbeat = getHeartbeat(time);
+
             mouse.update();
 
-            // Pulse core
+            // Update core
             coreMat.uniforms.time.value = time;
-            core.rotation.y += 0.005;
-            core.rotation.x += 0.003;
+            coreMat.uniforms.heartbeat.value = heartbeat;
+            core.rotation.y += 0.003;
 
-            const corePulse = Math.sin(time * 5) * 0.15 + 1;
-            core.scale.setScalar(corePulse);
+            // Scale core with heartbeat
+            const coreScale = 1 + heartbeat * 0.15;
+            core.scale.setScalar(coreScale);
 
-            // Pulse shell
-            shell.rotation.y -= 0.003;
-            shell.rotation.x += 0.002;
-            const shellPulse = Math.sin(time * 3) * 0.1 + 1;
-            shell.scale.setScalar(shellPulse);
-            shell.material.opacity = 0.1 + Math.sin(time * 4) * 0.1;
+            // Shell pulses with heartbeat
+            const shellScale = 1 + heartbeat * 0.1;
+            shell.scale.setScalar(shellScale);
+            shellMat.opacity = 0.1 + heartbeat * 0.15;
 
-            // Rotate containment rings
-            rings.forEach(ring => {
-                ring.rotation.x += ring.userData.speedX;
-                ring.rotation.y += ring.userData.speedY;
+            // Rotate containment rings (slow, steady)
+            rings.forEach((ring, i) => {
+                ring.rotation.x = ring.userData.baseRotationX + time * ring.userData.speedX;
+                ring.rotation.y = ring.userData.baseRotationY + time * ring.userData.speedY;
 
-                const pulse = Math.sin(time * 3 + ring.rotation.x) * 0.3 + 0.7;
-                ring.material.opacity = 0.5 + pulse * 0.3;
+                // Subtle brightness pulse with heartbeat
+                ring.material.opacity = 0.4 + heartbeat * 0.2;
             });
 
-            // Activate plasma arcs randomly
-            arcs.forEach(arc => {
-                arc.userData.timer += 0.016;
-
-                if (!arc.userData.active && arc.userData.timer > Math.random() * 2 + 1) {
-                    arc.userData.active = true;
-                    arc.userData.timer = 0;
-                }
-
-                if (arc.userData.active) {
-                    arc.material.opacity = Math.min(arc.material.opacity + 0.05, 0.8);
-
-                    if (arc.userData.timer > 0.5) {
-                        arc.material.opacity -= 0.03;
-
-                        if (arc.material.opacity <= 0) {
-                            arc.userData.active = false;
-                        }
-                    }
+            // Plasma arcs fire during heartbeat peaks
+            arcs.forEach((arc, i) => {
+                const arcPhase = (time / HEARTBEAT_PERIOD + arc.userData.phaseOffset) % 1;
+                // Arcs visible only during peak phase (0.25 - 0.45)
+                if (arcPhase > 0.25 && arcPhase < 0.45) {
+                    arc.material.opacity = Math.sin((arcPhase - 0.25) / 0.2 * Math.PI) * 0.8;
+                } else {
+                    arc.material.opacity = 0;
                 }
             });
 
-            // Swirl particles around core
+            // Swirl particles (slower)
             const pos = particleGeo.attributes.position.array;
             for (let i = 0; i < particleCount; i++) {
                 const idx = i * 3;
@@ -352,71 +340,37 @@
                 const y = pos[idx + 1];
                 const z = pos[idx + 2];
 
-                // Convert to spherical
                 let r = Math.sqrt(x * x + y * y + z * z);
                 let theta = Math.atan2(y, x);
                 let phi = Math.acos(z / r);
 
-                // Swirl
-                theta += velocities[i].theta;
-                phi += velocities[i].phi;
+                // Slow swirl
+                theta += velocities[i].theta * (0.5 + heartbeat * 0.5);
+                phi += velocities[i].phi * (0.5 + heartbeat * 0.5);
 
-                // Pulse radius
-                r += Math.sin(time * 2 + i * 0.01) * 0.05;
+                // Subtle pulse radius with heartbeat
+                r += Math.sin(time * 0.5 + i * 0.01) * 0.02 * (1 + heartbeat);
 
-                // Keep in bounds
-                r = Math.max(3, Math.min(11, r));
+                r = Math.max(3, Math.min(9, r));
 
-                // Convert back to Cartesian
                 pos[idx] = Math.cos(theta) * Math.sin(phi) * r;
                 pos[idx + 1] = Math.sin(theta) * Math.sin(phi) * r;
                 pos[idx + 2] = Math.cos(phi) * r;
             }
             particleGeo.attributes.position.needsUpdate = true;
 
-            // Rotate field lines
-            fieldLines.forEach((line, i) => {
-                line.rotation.y += 0.002;
-                const pulse = Math.sin(time * 2 + line.userData.offset) * 0.2 + 0.5;
-                line.material.opacity = 0.2 + pulse * 0.2;
-            });
+            // Particle opacity follows heartbeat
+            particleMat.opacity = 0.4 + heartbeat * 0.3;
 
-            // Animate pulses along field lines
-            pulses.forEach(pulse => {
-                pulse.userData.progress += pulse.userData.speed;
+            // Chamber subtle rotation
+            chamber.rotation.y += 0.0005;
+            chamberMat.opacity = 0.1 + heartbeat * 0.08;
 
-                if (pulse.userData.progress >= 1) {
-                    pulse.userData.progress = 0;
-                    pulse.userData.fieldLine = fieldLines[Math.floor(Math.random() * fieldLines.length)];
-                }
-
-                // Position pulse along curve
-                const t = pulse.userData.progress;
-                const angle = t * Math.PI * 2;
-                const r = 5 + Math.sin(t * Math.PI * 4) * 2;
-                const y = (t - 0.5) * 15;
-
-                pulse.position.x = Math.cos(angle) * r;
-                pulse.position.y = y;
-                pulse.position.z = Math.sin(angle) * r;
-
-                pulse.rotation.y += 0.1;
-            });
-
-            // Rotate chamber
-            chamber.rotation.y += 0.001;
-            const chamberPulse = Math.sin(time * 2) * 0.1 + 0.3;
-            chamber.material.opacity = chamberPulse;
-
-            // Camera movement
-            camera.position.x = mouse.centeredX * 5;
-            camera.position.y = mouse.centeredY * 5;
+            // === CAMERA: Static with subtle breathing ===
+            camera.position.x = mouse.centeredX * 2;
+            camera.position.y = mouse.centeredY * 2;
+            camera.position.z = 15 + Math.sin(time * 0.1) * 0.5;
             camera.lookAt(0, 0, 0);
-
-            // Orbit camera slowly
-            const orbitAngle = time * 0.1;
-            camera.position.x += Math.cos(orbitAngle) * 0.5;
-            camera.position.z += Math.sin(orbitAngle) * 0.5;
 
             renderer.render(scene, camera);
         }
