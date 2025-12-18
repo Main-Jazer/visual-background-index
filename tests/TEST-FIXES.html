@@ -82,7 +82,7 @@
 
         // Test 1: Background Engine Module Loads
         try {
-            const module = await import('./lib/jazer-background-engine.js');
+            const module = await import('./lib/engine/jazer-background-engine.js');
             const exports = Object.keys(module);
             setStatus('test1', true, `Module loaded successfully!\nExports: ${exports.join(', ')}`);
         } catch (error) {
@@ -100,7 +100,7 @@
 
         // Test 3: Core Functions Accessible
         try {
-            const { noise2D, noise3D, noise4D, SimplexNoise, ColorPalettes, mouse } = await import('./lib/jazer-background-engine.js');
+            const { noise2D, noise3D, noise4D, SimplexNoise, ColorPalettes, mouse } = await import('./lib/engine/jazer-background-engine.js');
             
             // Test SimplexNoise instantiation
             const simplex = new SimplexNoise(12345);

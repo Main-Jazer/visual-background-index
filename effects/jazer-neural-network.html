@@ -34,7 +34,8 @@
 <body>
     <canvas id="c"></canvas>
     <script type="module">
-        import { mouse } from '../lib/jazer-background-engine.js';
+        import { mouse } from '../lib/engine/jazer-background-engine.js';
+        import '../lib/engine/jazer-navigation.js';
         import * as THREE from '../lib/Three.js';
 
         window.THREE = THREE;
@@ -231,7 +232,7 @@
             requestAnimationFrame(animate);
             time += 0.016;
             mouse.update();
-            
+
             // Auto-rotate camera
             const radius = 35;
             camera.position.x = Math.cos(time * autoRotateSpeed * 0.01) * radius;

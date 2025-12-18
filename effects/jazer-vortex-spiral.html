@@ -38,7 +38,8 @@
             noise2D, mouse, Easing,
             ColorPalettes, cycleColor, hexToRgb,
             map, clamp, smoothstep
-        } from '../lib/jazer-background-engine.js';
+        } from '../lib/engine/jazer-background-engine.js';
+        import '../lib/engine/jazer-navigation.js';
 
         // =====================================================
         // CONFIGURATION
@@ -51,14 +52,14 @@
 
         // Neon color palette
         const neonPalette = ['#00ffff', '#ff00ff', '#9d00ff', '#00ccff', '#ff1aff'];
-        
+
         // Spiral parameters
-        const textCount = 120;          // Number of "JaZeR" instances in spiral
-        const spiralTightness = 0.15;   // How tightly wound the spiral is
-        const rotationSpeed = 0.4;      // Spiral rotation speed
-        const zoomSpeed = 0.3;          // Inward zoom speed
-        const pulseBPM = 120;           // Glow pulse beats per minute
-        
+        const textCount = 180;          // More "JaZeR" instances in spiral
+        const spiralTightness = 0.12;   // Slightly looser spiral
+        const rotationSpeed = 0.6;      // Faster spiral rotation
+        const zoomSpeed = 0.4;          // Faster inward zoom
+        const pulseBPM = 128;           // Faster glow pulse
+
         // Text elements array
         const texts = [];
 
@@ -99,22 +100,22 @@
             getPosition() {
                 // Calculate current angle with rotation
                 const currentAngle = this.angle + time * rotationSpeed;
-                
+
                 // Logarithmic spiral radius calculation
                 // The radius decreases over time to create the inward zoom effect
                 const zoomFactor = (time * zoomSpeed) % 10; // Loop every 10 seconds
                 const spiralRadius = this.baseRadius * Math.exp(-spiralTightness * currentAngle) - zoomFactor * 30;
-                
+
                 // Loop the spiral when it gets too small
                 let radius = spiralRadius;
                 if (radius < 10) {
                     radius += 800; // Reset to outer edge
                 }
-                
+
                 // Calculate X and Y from polar coordinates
                 const x = cx + Math.cos(currentAngle) * radius;
                 const y = cy + Math.sin(currentAngle) * radius;
-                
+
                 return { x, y, radius, angle: currentAngle };
             }
 
@@ -123,58 +124,58 @@
              */
             draw() {
                 const pos = this.getPosition();
-                
+
                 // Calculate opacity based on distance from center (fade out at edges)
                 const distFromCenter = pos.radius;
                 const fadeIn = smoothstep(10, 100, distFromCenter);
                 const fadeOut = smoothstep(800, 600, distFromCenter);
                 let alpha = fadeIn * fadeOut;
-                
+
                 // Add periodic glow pulse synchronized to BPM
                 const pulseFrequency = (pulseBPM / 60) * Math.PI * 2; // Convert BPM to rad/s
                 const pulse = Math.sin(time * pulseFrequency + this.pulsePhase);
                 const glowIntensity = map(pulse, -1, 1, 0.6, 1.4);
                 alpha *= glowIntensity;
-                
+
                 if (alpha < 0.05) return; // Skip if nearly invisible
-                
+
                 // Get color from palette with cycling
                 const colorIndex = Math.floor((time * 0.3 + this.colorOffset * 5) % neonPalette.length);
                 const color = neonPalette[colorIndex];
                 const rgb = hexToRgb(color);
-                
+
                 // Calculate size based on distance (perspective)
                 const scale = map(distFromCenter, 10, 800, 2.0, 0.5);
                 const fontSize = Math.max(12, 20 * scale);
-                
+
                 // Add subtle wobble using noise
                 const wobbleX = noise2D(this.index * 0.1, time * 0.5) * 5;
                 const wobbleY = noise2D(this.index * 0.1 + 100, time * 0.5) * 5;
-                
+
                 // Configure text rendering
                 ctx.font = `bold ${fontSize}px "Arial", sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                
+
                 // Draw text with glow
                 ctx.save();
                 ctx.translate(pos.x + wobbleX, pos.y + wobbleY);
-                
+
                 // Rotate text along the spiral tangent
                 ctx.rotate(pos.angle + Math.PI / 2);
-                
+
                 // Glow effect with pulse
                 const blurAmount = 15 * scale * glowIntensity;
                 ctx.shadowColor = color;
                 ctx.shadowBlur = blurAmount;
                 ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
-                
+
                 // Draw text multiple times for stronger glow during pulse
                 const drawCount = pulse > 0.5 ? 3 : 2;
                 for (let g = 0; g < drawCount; g++) {
                     ctx.fillText('JaZeR', 0, 0);
                 }
-                
+
                 ctx.restore();
             }
         }
@@ -202,19 +203,19 @@
         function render(now) {
             const dt = 1 / 60; // Assume 60fps
             time += dt;
-            
+
             // Update mouse tracking
             mouse.update();
-            
+
             // Clear canvas with fade trail for hypnotic effect
             ctx.fillStyle = 'rgba(0, 0, 20, 0.12)';
             ctx.fillRect(0, 0, W, H);
-            
+
             // Draw central vortex glow
             const vortexColor = cycleColor(neonPalette, time * 0.4);
             const vortexRgb = hexToRgb(vortexColor);
             const pulseSize = 20 + Math.sin(time * (pulseBPM / 60) * Math.PI * 2) * 8;
-            
+
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
             ctx.shadowColor = vortexColor;
@@ -223,13 +224,37 @@
             ctx.beginPath();
             ctx.arc(cx, cy, pulseSize, 0, Math.PI * 2);
             ctx.fill();
+
+            // Draw depth particles around vortex center
+            for (let i = 0; i < 40; i++) {
+                const pAngle = (i / 40) * Math.PI * 2 + time * 1.5;
+                const pDist = 25 + Math.sin(time * 3 + i * 0.5) * 15;
+                const pSize = 1 + Math.sin(time * 4 + i) * 0.5;
+                const pAlpha = 0.3 + Math.sin(time * 2 + i) * 0.2;
+
+                ctx.fillStyle = `rgba(${vortexRgb.r}, ${vortexRgb.g}, ${vortexRgb.b}, ${pAlpha})`;
+                ctx.beginPath();
+                ctx.arc(
+                    cx + Math.cos(pAngle) * pDist,
+                    cy + Math.sin(pAngle) * pDist,
+                    pSize, 0, Math.PI * 2
+                );
+                ctx.fill();
+            }
             ctx.restore();
-            
+
             // Draw all spiral texts (from outside to inside for proper layering)
             for (let i = texts.length - 1; i >= 0; i--) {
                 texts[i].draw();
             }
-            
+
+            // Vignette effect for depth
+            const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.65);
+            vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vig.addColorStop(1, 'rgba(0, 0, 20, 0.5)');
+            ctx.fillStyle = vig;
+            ctx.fillRect(0, 0, W, H);
+
             requestAnimationFrame(render);
         }
 

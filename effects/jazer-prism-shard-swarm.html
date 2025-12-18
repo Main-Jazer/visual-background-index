@@ -52,7 +52,8 @@
         import {
             noise2D, noise3D, mouse, hexToRgb,
             map, clamp, smoothstep
-        } from '../lib/jazer-background-engine.js';
+        } from '../lib/engine/jazer-background-engine.js';
+        import '../lib/engine/jazer-navigation.js';
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -61,7 +62,8 @@
         let time = 0;
 
         const shards = [];
-        const shardCount = 40;
+        const shardCount = 60;  // More shards
+        const sparkles = [];
 
         function resize() {
             W = window.innerWidth;
@@ -81,12 +83,12 @@
             const m = l - c / 2;
             let r, g, b;
 
-            if (h < 1/6) [r, g, b] = [c, x, 0];
-            else if (h < 2/6) [r, g, b] = [x, c, 0];
-            else if (h < 3/6) [r, g, b] = [0, c, x];
-            else if (h < 4/6) [r, g, b] = [0, x, c];
-            else if (h < 5/6) [r, g, b] = [x, 0, c];
-            else [r, g, b] = [c, 0, x];
+            if (h < 1 / 6) [r, g, b] = [c, x, 0];
+            else if (h < 2 / 6) [r, g, b] = [x, c, 0];
+            else if (h < 3 / 6) [r, g, b] = [0, c, x];
+            else if (h < 4 / 6) [r, g, b] = [0, x, c];
+            else if (h < 5 / 6) [r, g, b] = [x, 0, c];
+            else[r, g, b] = [c, 0, x];
 
             return {
                 r: Math.floor((r + m) * 255),
@@ -100,12 +102,12 @@
             constructor(index) {
                 this.index = index;
                 this.phase = (index / shardCount) * Math.PI * 2;
-                
+
                 // Swarm position
                 this.orbitRadius = 200 + Math.random() * 200;
                 this.orbitSpeed = 0.3 + Math.random() * 0.3;
                 this.verticalOffset = Math.sin(this.phase) * 100;
-                
+
                 // Rotation
                 this.rotX = Math.random() * Math.PI * 2;
                 this.rotY = Math.random() * Math.PI * 2;
@@ -122,11 +124,23 @@
             update(dt) {
                 // Swarm orbit
                 this.phase += this.orbitSpeed * dt;
-                
+
                 // Rotation
                 this.rotX += this.rotSpeedX * dt;
                 this.rotY += this.rotSpeedY * dt;
                 this.rotZ += this.rotSpeedZ * dt;
+
+                // Mouse attraction - shards are drawn toward mouse
+                const pos = this.getPosition();
+                const mouseX = mouse.centeredX * 300;
+                const mouseY = mouse.centeredY * 300;
+                const dx = mouseX - pos.x;
+                const dy = mouseY - pos.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 200 && dist > 10) {
+                    this.orbitRadius -= (200 - dist) * 0.0003;
+                    this.verticalOffset += dy * 0.001;
+                }
             }
 
             getPosition() {
@@ -176,7 +190,7 @@
 
             draw() {
                 const pos = this.getPosition();
-                
+
                 // Define crystal/prism vertices (hexagonal prism)
                 const vertices = [
                     // Top hexagon
@@ -307,9 +321,23 @@
             requestAnimationFrame(render);
         }
 
+        // Initialize sparkle particles
+        function initSparkles() {
+            for (let i = 0; i < 100; i++) {
+                sparkles.push({
+                    x: Math.random() * 800 - 400,
+                    y: Math.random() * 800 - 400,
+                    z: Math.random() * 400 - 200,
+                    size: Math.random() * 2,
+                    speed: 0.5 + Math.random() * 1.5
+                });
+            }
+        }
+
         window.addEventListener('resize', resize);
         resize();
         initShards();
+        initSparkles();
         requestAnimationFrame(render);
     </script>
 </body>

@@ -52,7 +52,8 @@
         import {
             noise2D, mouse, ColorPalettes, hexToRgb, cycleColor,
             map, clamp, smoothstep
-        } from '../lib/jazer-background-engine.js';
+        } from '../lib/engine/jazer-background-engine.js';
+        import '../lib/engine/jazer-navigation.js';
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -91,20 +92,21 @@
 
             generateTextPositions() {
                 const positions = [];
-                const textCount = 8;
+                const textCount = 12;  // More text instances
                 for (let i = 0; i < textCount; i++) {
                     positions.push({
                         angle: (i / textCount) * Math.PI * 2,
-                        char: 'JaZeR'[i % 5],
-                        offset: Math.random() * 20 - 10
+                        text: 'JaZeR',  // Full text instead of single char
+                        offset: Math.random() * 15 - 7
                     });
                 }
                 return positions;
             }
 
             update(dt) {
-                // Time dilation effect - speed varies based on time zone
-                const timeDistortion = 0.5 + Math.sin(time * 2 + this.timeZone * 10) * 0.5;
+                // Time dilation effect - speed varies based on time zone AND mouse
+                const mouseInfluence = (mouse.centeredX + mouse.centeredY) * 0.3;
+                const timeDistortion = 0.5 + Math.sin(time * 2 + this.timeZone * 10 + mouseInfluence) * 0.5;
                 this.radius += this.speed * dt * timeDistortion;
 
                 // Reset when ring expands beyond max
@@ -128,10 +130,10 @@
                 // Draw ring with time distortion
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
-                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
-                ctx.lineWidth = this.thickness;
+                ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 1.2})`;
+                ctx.lineWidth = this.thickness + 1;
                 ctx.shadowColor = color;
-                ctx.shadowBlur = 15;
+                ctx.shadowBlur = 20;
 
                 // Draw warped circle
                 ctx.beginPath();
@@ -187,10 +189,10 @@
                     ctx.font = `bold ${fontSize}px monospace`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+                    ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 1.2})`;
                     ctx.shadowColor = color;
-                    ctx.shadowBlur = 10;
-                    ctx.fillText(pos.char, 0, 0);
+                    ctx.shadowBlur = 15;
+                    ctx.fillText(pos.text, 0, 0);  // Use full text
                     ctx.restore();
                 });
             }
@@ -198,9 +200,9 @@
 
         // Initialize rings
         function initRings() {
-            for (let i = 0; i < 15; i++) {
+            for (let i = 0; i < 20; i++) {  // More rings
                 const ring = new TimeRing();
-                ring.radius = (i / 15) * ring.maxRadius;
+                ring.radius = (i / 20) * ring.maxRadius;
                 rings.push(ring);
             }
         }

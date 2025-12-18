@@ -51,7 +51,8 @@
         import {
             noise2D, mouse, ColorPalettes, hexToRgb, cycleColor,
             map, clamp, smoothstep
-        } from '../lib/jazer-background-engine.js';
+        } from '../lib/engine/jazer-background-engine.js';
+        import '../lib/engine/jazer-navigation.js';
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -61,6 +62,7 @@
 
         const palette = ColorPalettes.neon;
         const ripples = [];
+        const MAX_RIPPLES = 20;
 
         function resize() {
             W = window.innerWidth;
@@ -96,7 +98,7 @@
 
             draw() {
                 const progress = this.age / this.maxAge;
-                const radius = progress * 400;
+                const radius = progress * 500;  // Larger radius
                 const alpha = 1 - progress;
 
                 if (alpha < 0.01) return;
@@ -105,18 +107,18 @@
                 const rgb = hexToRgb(color);
 
                 // Draw multiple concentric rings for liquid effect
-                for (let i = 0; i < 5; i++) {
-                    const r = radius - i * 15;
+                for (let i = 0; i < 7; i++) {  // More rings
+                    const r = radius - i * 12;
                     if (r < 0) continue;
 
                     const ringAlpha = alpha * (1 - i * 0.15);
 
                     ctx.save();
                     ctx.globalCompositeOperation = 'lighter';
-                    ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${ringAlpha * 0.5})`;
-                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${ringAlpha * 0.6})`;
+                    ctx.lineWidth = 3;
                     ctx.shadowColor = color;
-                    ctx.shadowBlur = 15;
+                    ctx.shadowBlur = 25;
                     ctx.beginPath();
                     ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
                     ctx.stroke();
@@ -137,19 +139,19 @@
                         ctx.font = `bold ${fontSize}px monospace`;
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
-                        
+
                         // Liquid shimmer effect - split RGB
                         ctx.globalCompositeOperation = 'lighter';
-                        
+
                         ctx.fillStyle = `rgba(${rgb.r}, 50, 50, ${textAlpha})`;
                         ctx.fillText(this.text, textX + 1, textY);
-                        
+
                         ctx.fillStyle = `rgba(50, ${rgb.g}, 50, ${textAlpha})`;
                         ctx.fillText(this.text, textX, textY);
-                        
+
                         ctx.fillStyle = `rgba(50, 50, ${rgb.b}, ${textAlpha})`;
                         ctx.fillText(this.text, textX - 1, textY);
-                        
+
                         ctx.restore();
                     }
                 }
@@ -161,7 +163,7 @@
                 const dy = y - this.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 const radius = (this.age / this.maxAge) * 400;
-                
+
                 // Ripple wave function
                 const wave = Math.sin((dist - radius) * 0.1) * Math.exp(-Math.abs(dist - radius) / 50);
                 return wave * (1 - this.age / this.maxAge);
@@ -170,19 +172,42 @@
 
         // Initialize ripples
         function initRipples() {
-            for (let i = 0; i < 8; i++) {
-                const x = cx + (Math.random() - 0.5) * W * 0.6;
-                const y = cy + (Math.random() - 0.5) * H * 0.6;
+            for (let i = 0; i < 12; i++) {  // More initial ripples
+                const x = cx + (Math.random() - 0.5) * W * 0.7;
+                const y = cy + (Math.random() - 0.5) * H * 0.7;
                 const ripple = new Ripple(x, y);
                 ripple.age = Math.random() * ripple.maxAge;
                 ripples.push(ripple);
             }
         }
 
+        // Spawn ripple on mouse click
+        canvas.addEventListener('click', (e) => {
+            if (ripples.length >= MAX_RIPPLES) {
+                ripples.shift(); // Remove oldest
+            }
+            const ripple = new Ripple(e.clientX, e.clientY);
+            ripples.push(ripple);
+        });
+
+        // Spawn ripples on mouse move (throttled)
+        let lastMouseRipple = 0;
+        canvas.addEventListener('mousemove', (e) => {
+            if (time - lastMouseRipple > 0.5 && Math.random() < 0.15) {
+                if (ripples.length >= MAX_RIPPLES) {
+                    ripples.shift();
+                }
+                const ripple = new Ripple(e.clientX, e.clientY);
+                ripple.maxAge = 3; // Shorter lifespan for mouse ripples
+                ripples.push(ripple);
+                lastMouseRipple = time;
+            }
+        });
+
         // Draw liquid interference pattern
         function drawInterference() {
             const resolution = 8;
-            
+
             for (let y = 0; y < H; y += resolution) {
                 for (let x = 0; x < W; x += resolution) {
                     // Sum all ripple contributions
@@ -197,19 +222,19 @@
                     const hue = (time * 0.1 + intensity) % 1;
                     const sat = 0.8;
                     const light = 0.4 + intensity * 0.3;
-                    
+
                     const c = (1 - Math.abs(2 * light - 1)) * sat;
                     const hMod = hue * 6;
                     const x1 = c * (1 - Math.abs(hMod % 2 - 1));
                     const m = light - c / 2;
-                    
+
                     let r, g, b;
                     if (hMod < 1) [r, g, b] = [c, x1, 0];
                     else if (hMod < 2) [r, g, b] = [x1, c, 0];
                     else if (hMod < 3) [r, g, b] = [0, c, x1];
                     else if (hMod < 4) [r, g, b] = [0, x1, c];
                     else if (hMod < 5) [r, g, b] = [x1, 0, c];
-                    else [r, g, b] = [c, 0, x1];
+                    else[r, g, b] = [c, 0, x1];
 
                     const rgb = {
                         r: Math.floor((r + m) * 255),

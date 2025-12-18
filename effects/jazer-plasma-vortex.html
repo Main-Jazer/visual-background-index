@@ -33,7 +33,8 @@
 <body>
     <canvas id="c"></canvas>
     <script type="module">
-        import { noise3D, mouse, ColorPalettes } from '../lib/jazer-background-engine.js';
+        import { noise3D, mouse, ColorPalettes } from '../lib/engine/jazer-background-engine.js';
+        import '../lib/engine/jazer-navigation.js';
 
         import * as THREE from '../lib/Three.js';
         window.THREE = THREE;
@@ -64,33 +65,33 @@
         let idx = 0;
         for (let ring = 0; ring < ringCount; ring++) {
             const radius = 2 + ring * 0.5;
-            const ringHeight = (ring - ringCount/2) * 0.8;
-            
+            const ringHeight = (ring - ringCount / 2) * 0.8;
+
             for (let i = 0; i < pointsPerRing; i++) {
                 const i3 = idx * 3;
                 const angle = (i / pointsPerRing) * Math.PI * 2;
-                
+
                 // Spiral pattern with vertical offset
                 const x = Math.cos(angle + ring * 0.2) * radius;
                 const y = Math.sin(angle + ring * 0.2) * radius;
                 const z = ringHeight + Math.sin(angle * 3) * 0.2;
-                
+
                 positions[i3] = x;
                 positions[i3 + 1] = y;
                 positions[i3 + 2] = z;
-                
+
                 // Dynamic color based on position and time
                 const hue = (angle / (Math.PI * 2) + ring * 0.1) % 1;
                 const saturation = 0.8 + Math.sin(angle * 4) * 0.2;
                 const lightness = 0.5 + Math.sin(angle * 6 + ring * 0.5) * 0.2;
-                
+
                 const color = new THREE.Color().setHSL(hue, saturation, lightness);
                 colors[i3] = color.r;
                 colors[i3 + 1] = color.g;
                 colors[i3 + 2] = color.b;
-                
+
                 sizes[idx] = 0.05 + Math.sin(angle * 5) * 0.03;
-                
+
                 idx++;
             }
         }
@@ -186,29 +187,77 @@
             vertexShader: `
                 uniform float time;
                 varying vec3 vNormal;
+                varying vec3 vPosition;
+                
+                // Simple GLSL noise function
+                float hash(vec3 p) {
+                    p = fract(p * 0.3183099 + 0.1);
+                    p *= 17.0;
+                    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+                }
+                
+                float noise3D(vec3 p) {
+                    vec3 i = floor(p);
+                    vec3 f = fract(p);
+                    f = f * f * (3.0 - 2.0 * f);
+                    
+                    return mix(mix(mix(hash(i + vec3(0.0, 0.0, 0.0)),
+                                       hash(i + vec3(1.0, 0.0, 0.0)), f.x),
+                                   mix(hash(i + vec3(0.0, 1.0, 0.0)),
+                                       hash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+                               mix(mix(hash(i + vec3(0.0, 0.0, 1.0)),
+                                       hash(i + vec3(1.0, 0.0, 1.0)), f.x),
+                                   mix(hash(i + vec3(0.0, 1.0, 1.0)),
+                                       hash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y), f.z);
+                }
                 
                 void main() {
                     vNormal = normal;
+                    vPosition = position;
                     
                     // Distort the sphere surface with noise
                     vec3 pos = position;
-                    float noise = noise3D(pos.x, pos.y, pos.z + time * 2.0);
-                    pos = normalize(pos) * (0.8 + noise * 0.1);
+                    float n = noise3D(pos + vec3(0.0, 0.0, time * 2.0));
+                    pos = normalize(pos) * (0.8 + n * 0.1);
                     
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
                 }
             `,
             fragmentShader: `
+                precision highp float;
                 uniform float time;
                 varying vec3 vNormal;
+                varying vec3 vPosition;
+                
+                // Simple GLSL noise function
+                float hash(vec3 p) {
+                    p = fract(p * 0.3183099 + 0.1);
+                    p *= 17.0;
+                    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+                }
+                
+                float noise3D(vec3 p) {
+                    vec3 i = floor(p);
+                    vec3 f = fract(p);
+                    f = f * f * (3.0 - 2.0 * f);
+                    
+                    return mix(mix(mix(hash(i + vec3(0.0, 0.0, 0.0)),
+                                       hash(i + vec3(1.0, 0.0, 0.0)), f.x),
+                                   mix(hash(i + vec3(0.0, 1.0, 0.0)),
+                                       hash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+                               mix(mix(hash(i + vec3(0.0, 0.0, 1.0)),
+                                       hash(i + vec3(1.0, 0.0, 1.0)), f.x),
+                                   mix(hash(i + vec3(0.0, 1.0, 1.0)),
+                                       hash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y), f.z);
+                }
                 
                 void main() {
                     // Create a dynamic plasma-like color pattern
-                    float n1 = noise3D(vNormal.x * 5.0, vNormal.y * 5.0, time * 2.0);
-                    float n2 = noise3D(vNormal.y * 5.0, vNormal.z * 5.0, time * 2.5 + 100.0);
-                    float n3 = noise3D(vNormal.z * 5.0, vNormal.x * 5.0, time * 3.0 + 200.0);
+                    float n1 = noise3D(vec3(vNormal.x * 5.0, vNormal.y * 5.0, time * 2.0));
+                    float n2 = noise3D(vec3(vNormal.y * 5.0, vNormal.z * 5.0, time * 2.5 + 100.0));
+                    float n3 = noise3D(vec3(vNormal.z * 5.0, vNormal.x * 5.0, time * 3.0 + 200.0));
                     
-                    float hue = (sin(time + n1 * 2.0) * 0.2 + 0.4) % 1.0;
+                    float hue = mod(sin(time + n1 * 2.0) * 0.2 + 0.4, 1.0);
                     float sat = 0.8 + n2 * 0.2;
                     float val = 0.6 + n3 * 0.3;
                     
@@ -225,7 +274,7 @@
             transparent: true,
             blending: THREE.AdditiveBlending
         });
-        
+
         const plasmaCore = new THREE.Mesh(coreGeometry, coreMaterial);
         scene.add(plasmaCore);
 

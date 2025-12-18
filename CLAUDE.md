@@ -61,6 +61,21 @@ All 3 tests must pass:
 
 **Three.js** - Three.js r160 library (ES6 module export)
 
+**jazer-navigation.js** - Navigation module:
+- Back to gallery button
+- Previous/Next effect navigation
+- Favorites toggle button
+- Keyboard shortcuts (Esc, Left/Right arrows, F for favorite)
+- Auto-initializes when imported
+- Non-intrusive floating UI overlay
+
+**jazer-favorites.js** - Favorites management:
+- localStorage persistence for favorite effects
+- Shared state across gallery and effect pages
+- Add/remove/toggle favorites
+- Export/import functionality
+- Change listeners for reactive updates
+
 ### Effect Types
 
 **Canvas 2D Effects** (~19 effects):
@@ -87,6 +102,8 @@ All 3 tests must pass:
 ├── lib/                          # Library files
 │   ├── Three.js                  # Three.js r160 (ES6 module)
 │   ├── jazer-background-engine.js    # Core engine (noise, easing, mouse, colors)
+│   ├── jazer-navigation.js       # Navigation controls for effects
+│   ├── jazer-favorites.js        # Favorites management with localStorage
 │   ├── jazer-shaders.js          # GLSL shader utilities
 │   ├── jazer-post-fx.js          # Post-processing effects
 │   ├── jazer-three-fx.js         # Three.js helper functions
@@ -116,6 +133,7 @@ All 3 tests must pass:
     <canvas id="c"></canvas>
     <script type="module">
         import { noise2D, noise3D, mouse, hexToRgb, ColorPalettes } from '../lib/jazer-background-engine.js';
+        import '../lib/jazer-navigation.js';
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -166,6 +184,7 @@ All 3 tests must pass:
     <script type="module">
         import * as THREE from '../lib/Three.js';
         import { noise3D, mouse, hexToRgb } from '../lib/jazer-background-engine.js';
+        import '../lib/jazer-navigation.js';
 
         window.THREE = THREE;
         const canvas = document.getElementById('c');
@@ -215,6 +234,44 @@ window.THREE = THREE;
     const THREE = window.THREE; // undefined!
 </script>
 ```
+
+### Navigation System
+
+All effect files include navigation controls for seamless browsing:
+
+**Import (already included in all effects):**
+```javascript
+import '../lib/jazer-navigation.js';
+```
+
+**Features:**
+- **Back to Gallery**: Returns to main gallery (index.html)
+- **Previous/Next**: Navigate between effects in sequence
+- **Favorites Toggle**: Star/unstar effects you like (★/☆)
+- **Keyboard Shortcuts**:
+  - `Esc` - Back to gallery
+  - `←` Left Arrow - Previous effect
+  - `→` Right Arrow - Next effect
+  - `F` - Toggle favorite
+- **Auto-initializes**: No manual setup required
+- **Non-intrusive UI**: Floating buttons in top-right corner
+
+The navigation automatically detects the current effect and provides appropriate controls. The module is already imported in all effect files created with the templates above.
+
+### Favorites System
+
+Mark effects you like to build upon later:
+
+**In Gallery (index.html):**
+- Click the "★ Favorites" filter to view only favorited effects
+- Favorite count badge shows how many effects you've favorited
+- Favorite effects display a gold star badge on their card
+
+**In Effect Pages:**
+- Click the star button (☆) or press `F` to toggle favorite
+- Star turns gold (★) when favorited
+- Favorites persist across browser sessions via localStorage
+- Changes sync automatically between gallery and effect pages
 
 ### Performance Optimization
 

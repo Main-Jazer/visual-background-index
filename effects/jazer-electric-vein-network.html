@@ -1,12 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JaZeR Electric Vein Network</title>
   <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
+    :root {
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: "Inter", system-ui, sans-serif;
@@ -15,6 +22,7 @@
       overflow: hidden;
       min-height: 100vh;
     }
+
     canvas {
       position: fixed;
       inset: 0;
@@ -22,6 +30,7 @@
       height: 100vh;
       display: block;
     }
+
     .label {
       position: fixed;
       left: 2rem;
@@ -34,12 +43,14 @@
     }
   </style>
 </head>
+
 <body>
   <canvas id="effectCanvas"></canvas>
   <div class="label">Electric Vein Network</div>
   <script type="module">
     import * as THREE from '../lib/Three.js';
-    import { mouse } from '../lib/jazer-background-engine.js';
+    import '../lib/engine/jazer-navigation.js';
+    import { mouse } from '../lib/engine/jazer-background-engine.js';
 
     const canvas = document.getElementById('effectCanvas');
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -63,7 +74,7 @@
       const position = new THREE.Vector3((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 4, (Math.random() - 0.5) * 6);
       nodeMatrix.identity().setPosition(position);
       nodes.setMatrixAt(i, nodeMatrix);
-      nodeData.push({ position, velocity: new THREE.Vector3((Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2, (Math.random()-0.5)*0.2) });
+      nodeData.push({ position, velocity: new THREE.Vector3((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2) });
     }
 
     const connectionMaterial = new THREE.LineBasicMaterial({ color: 0x00f5ff, transparent: true, opacity: 0.45 });
@@ -174,4 +185,5 @@
     animate();
   </script>
 </body>
+
 </html>

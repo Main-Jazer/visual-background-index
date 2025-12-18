@@ -34,8 +34,8 @@
     <canvas id="c"></canvas>
     <script type="module">
         import * as THREE from '../lib/Three.js';
-        import { noise2D, noise3D, mouse, hexToRgb, smoothstep } from '../lib/jazer-background-engine.js';
-
+        import { noise2D, noise3D, mouse, hexToRgb, smoothstep } from '../lib/engine/jazer-background-engine.js';
+        import '../lib/engine/jazer-navigation.js';
         window.THREE = THREE;
         const canvas = document.getElementById('c');
 

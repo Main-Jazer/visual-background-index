@@ -33,8 +33,8 @@
 <body>
     <canvas id="c"></canvas>
     <script type="module">
-        import { noise3D, mouse, ColorPalettes } from '../lib/jazer-background-engine.js';
-
+        import { noise3D, mouse, ColorPalettes } from '../lib/engine/jazer-background-engine.js';
+        import '../lib/engine/jazer-navigation.js';
         import * as THREE from '../lib/Three.js';
         window.THREE = THREE;
         const canvas = document.getElementById('c');
@@ -63,14 +63,14 @@
         // Initialize particles in a spherical distribution
         for (let i = 0; i < particleCount; i++) {
             const i3 = i * 3;
-            
+
             // Random position within sphere
             const u = Math.random();
             const v = Math.random();
             const theta = u * Math.PI * 2;
             const phi = Math.acos(2 * v - 1);
             const r = Math.cbrt(Math.random()) * foamRadius;
-            
+
             positions[i3] = r * Math.sin(phi) * Math.cos(theta);
             positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
             positions[i3 + 2] = r * Math.cos(phi);
@@ -201,7 +201,7 @@
             wireframe: true,
             blending: THREE.AdditiveBlending
         });
-        
+
         const energyField = new THREE.Mesh(fieldGeometry, fieldMaterial);
         scene.add(energyField);
 
