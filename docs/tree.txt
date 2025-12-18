@@ -1,17 +1,10 @@
 C:\Users\JaZeR\ACTIVE PROJECTS\Three JS Custom JaZeR Visuals
 ├── docs/
-│   ├── v2/
-│   │   ├── effects.manifest.v2.json
-│   │   └── index.html
 │   ├── CLEANUP-SUMMARY.md
-│   ├── effects.manifest.json
-│   ├── effects.manifest.md
 │   ├── FIXES-APPLIED.md
 │   ├── High-Quality-JaZeR-Background-Atmosphere-Generator.md
-│   ├── index.html
 │   ├── MIGRATION-GUIDE.md
-│   ├── START-HERE.md
-│   └── tree.txt
+│   └── START-HERE.md
 ├── effects/
 │   ├── gallery.html
 │   ├── jazer-anamorphic-logo-waves.html
@@ -204,13 +197,6 @@ C:\Users\JaZeR\ACTIVE PROJECTS\Three JS Custom JaZeR Visuals
 │   ├── lib-modules-test.html
 │   ├── TEST-FIXES.html
 │   └── TEST-GALLERY.html
-├── tools/
-│   ├── v2/
-│   │   └── build_index_app_v2.py
-│   ├── build_index_app.py
-│   ├── build_site.py
-│   ├── generate_effect_manifest.py
-│   └── tree_scan.py
 ├── .gitignore
 ├── AGENTS.md
 ├── CLAUDE.md
@@ -218,4 +204,4 @@ C:\Users\JaZeR\ACTIVE PROJECTS\Three JS Custom JaZeR Visuals
 ├── index.html
 ├── LICENSE
 ├── README.md
-└── tree.txt
+└── tree_scan.py

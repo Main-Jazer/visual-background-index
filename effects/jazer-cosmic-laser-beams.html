@@ -53,7 +53,17 @@
             noise2D, mouse, ColorPalettes, hexToRgb, cycleColor,
             map, clamp, smoothstep
         } from '../lib/engine/jazer-background-engine.js';
+        import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
         import '../lib/engine/jazer-navigation.js';
+
+        const __jazerEffectFile = location.pathname.split('/').pop() || '';
+        const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+        const { ui, expose } = attachEffectUI({
+            title: document.title,
+            schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+        });
+        window.JAZER_UI = ui;
+        window.JAZER_EXPOSE = expose;
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -103,11 +113,15 @@
             }
 
             update(dt) {
-                this.angle += this.rotationSpeed * dt;
+                const rotationSpeed = window.JAZER_UI?.params?.rotationSpeed ?? this.rotationSpeed;
+                const spawnInterval = window.JAZER_UI?.params?.spawnInterval ?? 0.3;
+                const particleSpeed = window.JAZER_UI?.params?.particleSpeed ?? 300;
+
+                this.angle += rotationSpeed * dt;
                 this.spawnTimer += dt;
 
                 // Spawn new particles
-                if (this.spawnTimer > 0.3) {
+                if (this.spawnTimer > spawnInterval) {
                     this.spawnTimer = 0;
                     this.particles.push({
                         distance: 0,
@@ -118,7 +132,7 @@
 
                 // Update particles
                 this.particles.forEach(p => {
-                    p.distance += 300 * dt;
+                    p.distance += particleSpeed * dt;
                     p.life = 1 - (p.distance / Math.max(W, H));
                 });
 
@@ -136,6 +150,7 @@
                 // Draw beam core
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
+                const beamWidth = window.JAZER_UI?.params?.beamWidth ?? 1;
 
                 const gradient = ctx.createLinearGradient(cx, cy, endX, endY);
                 gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`);
@@ -143,7 +158,7 @@
                 gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0)`);
 
                 ctx.strokeStyle = gradient;
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 3 * beamWidth;
                 ctx.shadowColor = color;
                 ctx.shadowBlur = 15;
                 ctx.beginPath();
@@ -152,7 +167,7 @@
                 ctx.stroke();
 
                 // Draw outer glow
-                ctx.lineWidth = 8;
+                ctx.lineWidth = 8 * beamWidth;
                 ctx.shadowBlur = 30;
                 ctx.globalAlpha = 0.3;
                 ctx.beginPath();
@@ -202,13 +217,26 @@
             }
         }
 
+        function rebuild() {
+            beams.length = 0;
+            stars.length = 0;
+            init();
+        }
+        expose('rebuild', rebuild);
+        expose('reset', () => {
+            time = 0;
+            rebuild();
+        });
+
         function render() {
-            const dt = 1 / 60;
+            const timeScale = window.JAZER_UI?.params?.timeScale ?? 1;
+            const dt = (1 / 60) * timeScale;
             time += dt;
             mouse.update();
 
             // Clear with dark space background
-            ctx.fillStyle = 'rgba(0, 0, 5, 0.15)';
+            const trailAlpha = window.JAZER_UI?.params?.trailAlpha ?? 0.15;
+            ctx.fillStyle = `rgba(0, 0, 5, ${trailAlpha})`;
             ctx.fillRect(0, 0, W, H);
 
             // Draw stars

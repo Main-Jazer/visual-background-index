@@ -38,7 +38,17 @@
             ColorPalettes, hexToRgb, lerpColor,
             map, clamp, smoothstep
         } from '../lib/engine/jazer-background-engine.js';
+        import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
         import '../lib/engine/jazer-navigation.js';
+
+        const __jazerEffectFile = location.pathname.split('/').pop() || '';
+        const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+        const { ui, expose } = attachEffectUI({
+            title: document.title,
+            schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+        });
+        window.JAZER_UI = ui;
+        window.JAZER_EXPOSE = expose;
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -73,7 +83,10 @@
 
             draw() {
                 const segments = 100;
-                const mouseInfluence = mouse.centeredX * 0.05;
+                const mouseEnabled = window.JAZER_UI?.params?.mouseEnabled ? 1 : 0;
+                const mouseInfluence = mouse.centeredX * 0.05 * mouseEnabled;
+                const speedScale = window.JAZER_UI?.params?.ribbonSpeed ?? 1;
+                const amplitudeScale = window.JAZER_UI?.params?.ribbonAmplitude ?? 1;
 
                 // Calculate ribbon path
                 const points = [];
@@ -82,12 +95,12 @@
                     const x = t * W;
 
                     // Layered noise for organic movement
-                    const noise1 = simplex.noise2D(t * this.frequency * 100 + this.phase, time * this.speed);
-                    const noise2 = simplex.noise2D(t * this.frequency * 200 + this.phase + 100, time * this.speed * 1.5) * 0.5;
-                    const noise3 = simplex.noise2D(t * this.frequency * 400 + this.phase + 200, time * this.speed * 2) * 0.25;
+                    const noise1 = simplex.noise2D(t * this.frequency * 100 + this.phase, time * this.speed * speedScale);
+                    const noise2 = simplex.noise2D(t * this.frequency * 200 + this.phase + 100, time * this.speed * 1.5 * speedScale) * 0.5;
+                    const noise3 = simplex.noise2D(t * this.frequency * 400 + this.phase + 200, time * this.speed * 2 * speedScale) * 0.25;
 
-                    const waveOffset = Math.sin(t * Math.PI * this.waveCount + time * 0.5) * 0.03;
-                    const combinedNoise = (noise1 + noise2 + noise3 + waveOffset) * this.amplitude;
+                    const waveOffset = Math.sin(t * Math.PI * this.waveCount + time * 0.5 * speedScale) * 0.03;
+                    const combinedNoise = (noise1 + noise2 + noise3 + waveOffset) * this.amplitude * amplitudeScale;
 
                     const y = (this.baseY + combinedNoise + mouseInfluence * (1 - t)) * H;
 
@@ -99,8 +112,9 @@
                 const color2 = auroraColors[(this.colorIndex + 1) % auroraColors.length];
 
                 // Multiple layers for glow effect
+                const thicknessScale = window.JAZER_UI?.params?.ribbonThickness ?? 1;
                 for (let layer = 3; layer >= 0; layer--) {
-                    const layerThickness = this.thickness * (1 + layer * 0.5);
+                    const layerThickness = this.thickness * thicknessScale * (1 + layer * 0.5);
                     const layerAlpha = layer === 0 ? 0.6 : 0.15 / layer;
 
                     ctx.beginPath();
@@ -173,11 +187,12 @@
         }));
 
         function drawStars() {
+            const twinkleScale = window.JAZER_UI?.params?.starTwinkle ?? 1;
             stars.forEach(star => {
                 if (star.x > W) star.x = Math.random() * W;
                 if (star.y > H * 0.7) star.y = Math.random() * H * 0.7;
 
-                const twinkle = Math.sin(time * star.twinkleSpeed + star.twinkleOffset) * 0.3 + 0.7;
+                const twinkle = Math.sin(time * star.twinkleSpeed * twinkleScale + star.twinkleOffset) * 0.3 + 0.7;
                 ctx.fillStyle = `rgba(255, 255, 255, ${twinkle * 0.8})`;
                 ctx.beginPath();
                 ctx.arc(star.x, star.y, star.size * twinkle, 0, Math.PI * 2);
@@ -192,7 +207,8 @@
             ctx.moveTo(0, H);
 
             for (let x = 0; x <= W; x += 10) {
-                const height = fbm2D(x * 0.001, 0, 4, 0.5) * 150 + 100;
+                const mountainFar = window.JAZER_UI?.params?.mountainFar ?? 1;
+                const height = fbm2D(x * 0.001, 0, 4, 0.5) * 150 * mountainFar + 100;
                 ctx.lineTo(x, H - height);
             }
 
@@ -206,7 +222,8 @@
             ctx.moveTo(0, H);
 
             for (let x = 0; x <= W; x += 10) {
-                const height = fbm2D(x * 0.002 + 100, 0, 4, 0.5) * 100 + 50;
+                const mountainNear = window.JAZER_UI?.params?.mountainNear ?? 1;
+                const height = fbm2D(x * 0.002 + 100, 0, 4, 0.5) * 100 * mountainNear + 50;
                 ctx.lineTo(x, H - height);
             }
 
@@ -215,8 +232,14 @@
             ctx.fill();
         }
 
+        expose('reset', () => {
+            time = 0;
+            ribbons.forEach(r => { r.phase = Math.random() * 1000; });
+        });
+
         function render() {
-            time += 1 / 60;
+            const timeScale = window.JAZER_UI?.params?.timeScale ?? 1;
+            time += (1 / 60) * timeScale;
             mouse.update();
 
             // Night sky gradient
@@ -243,7 +266,8 @@
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
             const reflectionGrad = ctx.createLinearGradient(0, H - 100, 0, H);
-            reflectionGrad.addColorStop(0, 'rgba(100, 200, 150, 0.1)');
+            const reflection = window.JAZER_UI?.params?.reflection ?? 1;
+            reflectionGrad.addColorStop(0, `rgba(100, 200, 150, ${0.1 * reflection})`);
             reflectionGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = reflectionGrad;
             ctx.fillRect(0, H - 100, W, 100);
@@ -252,7 +276,8 @@
             // Subtle vignette
             const vig = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.8);
             vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
-            vig.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+            const vignette = window.JAZER_UI?.params?.vignette ?? 1;
+            vig.addColorStop(1, `rgba(0, 0, 0, ${0.4 * vignette})`);
             ctx.fillStyle = vig;
             ctx.fillRect(0, 0, W, H);
 

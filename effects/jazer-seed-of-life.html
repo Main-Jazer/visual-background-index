@@ -49,6 +49,20 @@
     <div class="jazer-center">JaZeR</div>
     <script type="module">
         import {
+        import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
+
+        // --- JaZeR UI schema (injected) ---
+        const __jazerEffectFile = location.pathname.split('/').pop() || '';
+        const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+        const { ui, expose, ready } = attachEffectUI({
+          title: document.title,
+          schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+        });
+        window.JAZER_UI = ui;
+        window.JAZER_EXPOSE = expose;
+        window.JAZER_UI_READY = ready;
+        // ------------------------------------
+
             noise2D, mouse,
             ColorPalettes, hexToRgb,
             smoothstep
@@ -170,7 +184,7 @@
         const layers = Array.from({ length: layerCount }, (_, i) => new PortalLayer(i));
 
         function render() {
-            time += 1 / 60;
+            time += (1 / 60) * (window.JAZER_UI?.params?.timeScale ?? 1);
             mouse.update();
 
             // Deep blue-black background
@@ -184,7 +198,8 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
             ctx.fillRect(0, 0, W, H);
 
-            const dt = 1 / 60;
+            const timeScale = window.JAZER_UI?.params?.timeScale ?? 1;
+            const dt = (1 / 60) * timeScale;
 
             layers.sort((a, b) => b.z - a.z);
             layers.forEach(l => { l.update(dt); l.draw(); });

@@ -74,6 +74,16 @@
         import { noise2D, noise3D, mouse, hexToRgb } from '../lib/engine/jazer-background-engine.js';
         import '../lib/engine/jazer-navigation.js';
         import { initProFX } from '../lib/fx/post/jazer-pro-fx.js';
+        import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
+
+        const __jazerEffectFile = location.pathname.split('/').pop() || '';
+        const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+        const { ui, expose } = attachEffectUI({
+            title: document.title,
+            schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+        });
+        window.JAZER_UI = ui;
+        window.JAZER_EXPOSE = expose;
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -102,6 +112,8 @@
                 this.decay = 0.002 + Math.random() * 0.005;
             }
             update() {
+                const attractStrength = window.JAZER_UI?.params?.attractStrength ?? 0.3;
+                const noiseStrength = window.JAZER_UI?.params?.noiseStrength ?? 0.2;
                 // Mouse attraction
                 const mx = mouse.x * W;
                 const my = mouse.y * H;
@@ -109,13 +121,13 @@
                 const dy = my - this.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < 300 && dist > 10) {
-                    this.speedX += (dx / dist) * 0.3;
-                    this.speedY += (dy / dist) * 0.3;
+                    this.speedX += (dx / dist) * attractStrength;
+                    this.speedY += (dy / dist) * attractStrength;
                 }
 
                 // Noise-based movement
-                this.speedX += noise2D(this.x * 0.005, time) * 0.2;
-                this.speedY += noise2D(this.y * 0.005, time + 100) * 0.2;
+                this.speedX += noise2D(this.x * 0.005, time) * noiseStrength;
+                this.speedY += noise2D(this.y * 0.005, time + 100) * noiseStrength;
 
                 // Damping
                 this.speedX *= 0.98;
@@ -179,13 +191,14 @@
             // Draw connections between nearby particles
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
+            const connectionDistance = window.JAZER_UI?.params?.connectionDistance ?? 150;
             for (let i = 0; i < particles.length; i++) {
                 for (let j = i + 1; j < particles.length; j++) {
                     const dx = particles[j].x - particles[i].x;
                     const dy = particles[j].y - particles[i].y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 150) {
-                        const alpha = (1 - dist / 150) * 0.3 * particles[i].life * particles[j].life;
+                    if (dist < connectionDistance) {
+                        const alpha = (1 - dist / connectionDistance) * 0.3 * particles[i].life * particles[j].life;
                         ctx.strokeStyle = `rgba(0, 245, 255, ${alpha})`;
                         ctx.lineWidth = 1;
                         ctx.beginPath();
@@ -215,19 +228,32 @@
             ctx.restore();
         }
 
+        function reseed() {
+            const count = Math.max(20, Math.round(window.JAZER_UI?.params?.particleCount ?? 200));
+            particles = Array.from({ length: count }, () => new Particle());
+        }
+
+        expose('reseed', reseed);
+        expose('prevPreset', () => fx.prevPreset());
+        expose('nextPreset', () => fx.nextPreset());
+        expose('toggleFX', () => fx.toggle());
+        expose('toggleHUD', () => fx.toggleHUD());
+
         function animate() {
-            time += 1 / 60;
+            const timeScale = window.JAZER_UI?.params?.timeScale ?? 1;
+            const dt = (1 / 60) * timeScale;
+            time += dt;
             mouse.update();
 
             // Render with Pro FX post-processing
-            fx.render(drawScene, 1 / 60);
+            fx.render(drawScene, dt);
 
             requestAnimationFrame(animate);
         }
 
         window.addEventListener('resize', resize);
         resize();
-        particles = Array.from({ length: 200 }, () => new Particle());
+        reseed();
         animate();
     </script>
 </body>

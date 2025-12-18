@@ -36,6 +36,20 @@
         import { noise2D, mouse } from '../lib/engine/jazer-background-engine.js';
         import '../lib/engine/jazer-navigation.js';
         import * as THREE from '../lib/Three.js';
+        import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
+
+        // --- JaZeR UI schema (injected) ---
+        const __jazerEffectFile = location.pathname.split('/').pop() || '';
+        const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+        const { ui, expose, ready } = attachEffectUI({
+          title: document.title,
+          schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+        });
+        window.JAZER_UI = ui;
+        window.JAZER_EXPOSE = expose;
+        window.JAZER_UI_READY = ready;
+        // ------------------------------------
+
         window.THREE = THREE;
         const canvas = document.getElementById('c');
 
@@ -105,6 +119,7 @@
             blending: THREE.AdditiveBlending,
             side: THREE.DoubleSide
         });
+        window.JAZER_EXPOSE?.('oceanMaterial', oceanMaterial);
 
         const ocean = new THREE.Mesh(oceanGeometry, oceanMaterial);
         ocean.rotation.x = -Math.PI / 2;
@@ -119,6 +134,7 @@
             opacity: 0.6,
             blending: THREE.AdditiveBlending
         });
+        window.JAZER_EXPOSE?.('wireframeMaterial', wireframeMaterial);
 
         const wireframe = new THREE.LineSegments(wireframeEdges, wireframeMaterial);
         wireframe.rotation.x = -Math.PI / 2;
@@ -270,7 +286,9 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            time += 0.016;
+            const timeScale = window.JAZER_UI?.params?.timeScale ?? 1;
+            const dt = 0.016 * timeScale;
+            time += dt;
             mouse.update();
 
             // Animate ocean waves with multi-layered noise
@@ -311,7 +329,7 @@
                 crestPos[idx + 1] += crestVelocities[i].y;
                 crestPos[idx + 2] += crestVelocities[i].z;
 
-                crestVelocities[i].life += 0.01;
+                crestVelocities[i].life += 0.01 * timeScale;
 
                 // Reset if too high or out of bounds
                 if (crestPos[idx + 1] > 15 || crestVelocities[i].life > 1) {
@@ -335,7 +353,7 @@
 
             // Animate light beams
             beams.forEach(beam => {
-                beam.userData.timer += 0.016;
+                beam.userData.timer += dt;
 
                 if (beam.userData.timer > 2 + Math.random() * 3) {
                     beam.userData.active = true;

@@ -53,7 +53,17 @@
             noise2D, noise3D, mouse, ColorPalettes, hexToRgb, lerpColor,
             map, clamp, smoothstep
         } from '../lib/engine/jazer-background-engine.js';
+        import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
         import '../lib/engine/jazer-navigation.js';
+
+        const __jazerEffectFile = location.pathname.split('/').pop() || '';
+        const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+        const { ui, expose } = attachEffectUI({
+            title: document.title,
+            schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+        });
+        window.JAZER_UI = ui;
+        window.JAZER_EXPOSE = expose;
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -157,7 +167,8 @@
 
         // Draw nebula using layered noise
         function drawNebula(pulse) {
-            const resolution = 4; // Lower = more detail, but slower
+            const resolution = Math.max(1, Math.round(window.JAZER_UI?.params?.resolution ?? 4)); // Lower = more detail, but slower
+            const intensity = window.JAZER_UI?.params?.nebulaIntensity ?? 0.6;
 
             for (let y = 0; y < H; y += resolution) {
                 for (let x = 0; x < W; x += resolution) {
@@ -193,32 +204,42 @@
                     const g = Math.floor(color1.g * (1 - blend) + color2.g * blend);
                     const b = Math.floor(color1.b * (1 - blend) + color2.b * blend);
 
-                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${noiseVal * 0.6})`;
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${noiseVal * intensity})`;
                     ctx.fillRect(x, y, resolution, resolution);
                 }
             }
         }
 
-        // Initialize
-        function init() {
-            // Create stars
-            for (let i = 0; i < 300; i++) {
-                stars.push(new Star());
-            }
+        function reseed() {
+            const starCount = Math.max(0, Math.round(window.JAZER_UI?.params?.stars ?? 300));
+            const textCount = Math.max(0, Math.round(window.JAZER_UI?.params?.textParticles ?? 50));
 
-            // Create text particles
-            for (let i = 0; i < 50; i++) {
-                textParticles.push(new TextParticle());
-            }
+            stars.length = 0;
+            for (let i = 0; i < starCount; i++) stars.push(new Star());
+
+            textParticles.length = 0;
+            for (let i = 0; i < textCount; i++) textParticles.push(new TextParticle());
         }
 
+        // Initialize
+        function init() {
+            reseed();
+        }
+
+        expose('reset', () => {
+            time = 0;
+            reseed();
+        });
+
         function render() {
-            const dt = 1 / 60;
+            const timeScale = window.JAZER_UI?.params?.timeScale ?? 1;
+            const dt = (1 / 60) * timeScale;
             time += dt;
             mouse.update();
 
             // Synchronized pulse (breathing effect)
-            const pulse = Math.sin(time * 1.5) * 0.3 + 0.7;
+            const pulseRate = window.JAZER_UI?.params?.pulseRate ?? 1.5;
+            const pulse = Math.sin(time * pulseRate) * 0.3 + 0.7;
 
             // Clear to black
             ctx.fillStyle = '#000000';
@@ -237,17 +258,20 @@
             });
 
             // Add subtle scanlines for effect
-            ctx.globalAlpha = 0.05;
-            for (let y = 0; y < H; y += 2) {
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, y, W, 1);
+            if (window.JAZER_UI?.params?.scanlines) {
+                ctx.globalAlpha = window.JAZER_UI?.params?.scanlineAlpha ?? 0.05;
+                for (let y = 0; y < H; y += 2) {
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(0, y, W, 1);
+                }
+                ctx.globalAlpha = 1;
             }
-            ctx.globalAlpha = 1;
 
             // Vignette
             const vig = ctx.createRadialGradient(cx, cy, Math.min(W, H) * 0.2, cx, cy, Math.max(W, H) * 0.7);
             vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
-            vig.addColorStop(1, 'rgba(0, 0, 0, 0.7)');
+            const vignette = window.JAZER_UI?.params?.vignette ?? 1;
+            vig.addColorStop(1, `rgba(0, 0, 0, ${0.7 * vignette})`);
             ctx.fillStyle = vig;
             ctx.fillRect(0, 0, W, H);
 
@@ -256,11 +280,7 @@
 
         window.addEventListener('resize', () => {
             resize();
-            // Reinit stars with new dimensions
-            stars.length = 0;
-            for (let i = 0; i < 300; i++) {
-                stars.push(new Star());
-            }
+            reseed();
         });
 
         resize();

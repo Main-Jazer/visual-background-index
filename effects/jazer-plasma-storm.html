@@ -35,6 +35,19 @@
     <script type="module">
         import { noise2D, noise3D, mouse, hexToRgb, smoothstep } from '../lib/engine/jazer-background-engine.js';
         import '../lib/engine/jazer-navigation.js';
+        import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
+        // --- JaZeR UI schema (injected) ---
+        const __jazerEffectFile = location.pathname.split('/').pop() || '';
+        const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+        const { ui, expose, ready } = attachEffectUI({
+          title: document.title,
+          schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+        });
+        window.JAZER_UI = ui;
+        window.JAZER_EXPOSE = expose;
+        window.JAZER_UI_READY = ready;
+        // ------------------------------------
+
 
         const canvas = document.getElementById('c');
         const ctx = canvas.getContext('2d');
@@ -165,7 +178,7 @@
         let orbs = [];
 
         function render() {
-            time += 1 / 60;
+            time += (1 / 60) * (window.JAZER_UI?.params?.timeScale ?? 1);
             mouse.update();
 
             const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H));
@@ -180,7 +193,8 @@
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
 
-            const dt = 1 / 60;
+            const timeScale = window.JAZER_UI?.params?.timeScale ?? 1;
+            const dt = (1 / 60) * timeScale;
             orbs.forEach(orb => { orb.update(dt); orb.draw(); });
 
             for (let i = 0; i < orbs.length; i++) {

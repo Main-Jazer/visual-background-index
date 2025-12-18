@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "title": "Cosmic Laser Beams",
+  "defaults": {
+    "timeScale": 1,
+    "rotationSpeed": 0.1,
+    "spawnInterval": 0.3,
+    "particleSpeed": 300,
+    "beamWidth": 1,
+    "trailAlpha": 0.15,
+    "mouseEnabled": true
+  },
+  "hud": {
+    "title": "Cosmic Laser Beams \u2014 Controls",
+    "toggleKey": "h",
+    "visible": false
+  },
+  "hotkeys": [
+    {
+      "key": "H",
+      "label": "Toggle Help"
+    },
+    {
+      "key": "R",
+      "label": "Reset",
+      "action": "reset"
+    },
+    {
+      "keys": [
+        "1",
+        "2"
+      ],
+      "label": "Time",
+      "bind": "params.timeScale",
+      "step": 0.1,
+      "min": 0.1,
+      "max": 3,
+      "format": "fixed1"
+    },
+    {
+      "key": "M",
+      "label": "Mouse",
+      "bind": "params.mouseEnabled",
+      "type": "toggle",
+      "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Beamwidth",
+      "bind": "params.beamWidth",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0,
+      "max": 2
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Particlespeed",
+      "bind": "params.particleSpeed",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0.1,
+      "max": 3
+    },
+    {
+      "keys": [
+        "7",
+        "8"
+      ],
+      "label": "Rotationspeed",
+      "bind": "params.rotationSpeed",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0.1,
+      "max": 3
+    },
+    {
+      "keys": [
+        "9",
+        "10"
+      ],
+      "label": "Spawninterval",
+      "bind": "params.spawnInterval",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0,
+      "max": 2
+    }
+  ],
+  "controls": [
+    {
+      "type": "slider",
+      "label": "Time Scale",
+      "bind": "params.timeScale",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "checkbox",
+      "label": "Mouse Enabled",
+      "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Beamwidth",
+      "bind": "params.beamWidth",
+      "step": 0.01,
+      "min": 0,
+      "max": 2
+    },
+    {
+      "type": "slider",
+      "label": "Particlespeed",
+      "bind": "params.particleSpeed",
+      "step": 0.01,
+      "min": 0.1,
+      "max": 3
+    },
+    {
+      "type": "slider",
+      "label": "Rotationspeed",
+      "bind": "params.rotationSpeed",
+      "step": 0.01,
+      "min": 0.1,
+      "max": 3
+    },
+    {
+      "type": "slider",
+      "label": "Spawninterval",
+      "bind": "params.spawnInterval",
+      "step": 0.01,
+      "min": 0,
+      "max": 2
+    },
+    {
+      "type": "slider",
+      "label": "Trailalpha",
+      "bind": "params.trailAlpha",
+      "step": 0.01,
+      "min": 0,
+      "max": 1
+    }
+  ],
+  "hint": "Press H for help. Canvas 2D effect."
+}

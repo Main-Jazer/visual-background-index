@@ -1,0 +1,189 @@
+{
+  "version": 1,
+  "title": "Nebula Pulse",
+  "defaults": {
+    "timeScale": 1,
+    "pulseRate": 1.5,
+    "resolution": 4,
+    "nebulaIntensity": 0.6,
+    "scanlines": true,
+    "scanlineAlpha": 0.05,
+    "vignette": 1,
+    "stars": 300,
+    "textParticles": 50,
+    "mouseEnabled": true
+  },
+  "hud": {
+    "title": "Nebula Pulse \u2014 Controls",
+    "toggleKey": "h",
+    "visible": false
+  },
+  "hotkeys": [
+    {
+      "key": "H",
+      "label": "Toggle Help"
+    },
+    {
+      "key": "R",
+      "label": "Reset",
+      "action": "reset"
+    },
+    {
+      "keys": [
+        "1",
+        "2"
+      ],
+      "label": "Time",
+      "bind": "params.timeScale",
+      "step": 0.1,
+      "min": 0.1,
+      "max": 3,
+      "format": "fixed1"
+    },
+    {
+      "key": "M",
+      "label": "Mouse",
+      "bind": "params.mouseEnabled",
+      "type": "toggle",
+      "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Nebulaintensity",
+      "bind": "params.nebulaIntensity",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0,
+      "max": 2
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Pulserate",
+      "bind": "params.pulseRate",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0,
+      "max": 2
+    },
+    {
+      "keys": [
+        "7",
+        "8"
+      ],
+      "label": "Resolution",
+      "bind": "params.resolution",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0,
+      "max": 2
+    },
+    {
+      "keys": [
+        "9",
+        "10"
+      ],
+      "label": "Scanlinealpha",
+      "bind": "params.scanlineAlpha",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0,
+      "max": 2
+    }
+  ],
+  "controls": [
+    {
+      "type": "slider",
+      "label": "Time Scale",
+      "bind": "params.timeScale",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "checkbox",
+      "label": "Mouse Enabled",
+      "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Nebulaintensity",
+      "bind": "params.nebulaIntensity",
+      "step": 0.01,
+      "min": 0,
+      "max": 2
+    },
+    {
+      "type": "slider",
+      "label": "Pulserate",
+      "bind": "params.pulseRate",
+      "step": 0.01,
+      "min": 0,
+      "max": 2
+    },
+    {
+      "type": "slider",
+      "label": "Resolution",
+      "bind": "params.resolution",
+      "step": 0.01,
+      "min": 0,
+      "max": 2
+    },
+    {
+      "type": "slider",
+      "label": "Scanlinealpha",
+      "bind": "params.scanlineAlpha",
+      "step": 0.01,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "type": "slider",
+      "label": "Scanlines",
+      "bind": "params.scanlines",
+      "step": 0.01,
+      "min": 0,
+      "max": 2
+    },
+    {
+      "type": "slider",
+      "label": "Stars",
+      "bind": "params.stars",
+      "step": 0.01,
+      "min": 0,
+      "max": 2
+    },
+    {
+      "type": "slider",
+      "label": "Textparticles",
+      "bind": "params.textParticles",
+      "step": 0.01,
+      "min": 0,
+      "max": 2
+    },
+    {
+      "type": "slider",
+      "label": "Vignette",
+      "bind": "params.vignette",
+      "step": 0.01,
+      "min": 0,
+      "max": 2
+    },
+    {
+      "type": "color",
+      "label": "Nebulacolors 1",
+      "bind": "effect.nebulaColors[0]"
+    },
+    {
+      "type": "color",
+      "label": "Nebulacolors 2",
+      "bind": "effect.nebulaColors[1]"
+    }
+  ],
+  "hint": "Press H for help. Canvas 2D effect."
+}

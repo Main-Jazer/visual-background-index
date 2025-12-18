@@ -53,6 +53,19 @@
         import { createVolumetricSpotlight, GodRaysPass, VolumetricFogPass } from '../lib/fx/three/jazer-volumetric.js';
         import { createGPUParticles } from '../lib/fx/three/jazer-gpu-particles.js';
         import '../lib/engine/jazer-navigation.js';
+        import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
+        // --- JaZeR UI schema (injected) ---
+        const __jazerEffectFile = location.pathname.split('/').pop() || '';
+        const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+        const { ui, expose, ready } = attachEffectUI({
+          title: document.title,
+          schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+        });
+        window.JAZER_UI = ui;
+        window.JAZER_EXPOSE = expose;
+        window.JAZER_UI_READY = ready;
+        // ------------------------------------
+
 
         window.THREE = THREE;
         const canvas = document.getElementById('c');

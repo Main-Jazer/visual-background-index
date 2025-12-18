@@ -34,6 +34,20 @@
     <canvas id="c"></canvas>
 
     <script type="module">
+        import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
+
+        // --- JaZeR UI schema (injected) ---
+        const __jazerEffectFile = location.pathname.split('/').pop() || '';
+        const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+        const { ui, expose, ready } = attachEffectUI({
+          title: document.title,
+          schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+        });
+        window.JAZER_UI = ui;
+        window.JAZER_EXPOSE = expose;
+        window.JAZER_UI_READY = ready;
+        // ------------------------------------
+
         /**
          * ============================================================================
          * PLASMA STORM - HIGH-END VISUAL ART
@@ -275,7 +289,8 @@
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
 
-            const dt = 1 / 60;
+            const timeScale = window.JAZER_UI?.params?.timeScale ?? 1;
+            const dt = (1 / 60) * timeScale;
             const mx = mouse.x * W;
             const my = mouse.y * H;
 

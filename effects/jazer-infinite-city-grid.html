@@ -33,6 +33,20 @@
 <body>
     <canvas id="c"></canvas>
     <script type="module">
+        import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
+
+        // --- JaZeR UI schema (injected) ---
+        const __jazerEffectFile = location.pathname.split('/').pop() || '';
+        const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+        const { ui, expose, ready } = attachEffectUI({
+          title: document.title,
+          schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+        });
+        window.JAZER_UI = ui;
+        window.JAZER_EXPOSE = expose;
+        window.JAZER_UI_READY = ready;
+        // ------------------------------------
+
         /**
          * JaZeR Infinite City Grid
          * 
@@ -241,7 +255,7 @@
         }
 
         function render() {
-            time += 1 / 60;
+            time += (1 / 60) * (window.JAZER_UI?.params?.timeScale ?? 1);
             mouse.update();
 
             // Move camera forward

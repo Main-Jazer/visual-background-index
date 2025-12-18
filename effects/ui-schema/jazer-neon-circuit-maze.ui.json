@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "title": "Neon Circuit Maze",
+  "defaults": {
+    "timeScale": 1,
+    "mouseEnabled": true
+  },
+  "hud": {
+    "title": "Neon Circuit Maze \u2014 Controls",
+    "toggleKey": "h",
+    "visible": false
+  },
+  "hotkeys": [
+    {
+      "key": "H",
+      "label": "Toggle Help"
+    },
+    {
+      "key": "R",
+      "label": "Reset",
+      "action": "reset"
+    },
+    {
+      "keys": [
+        "1",
+        "2"
+      ],
+      "label": "Time",
+      "bind": "params.timeScale",
+      "step": 0.1,
+      "min": 0.1,
+      "max": 3,
+      "format": "fixed1"
+    },
+    {
+      "key": "M",
+      "label": "Mouse",
+      "bind": "params.mouseEnabled",
+      "type": "toggle",
+      "format": "onoff"
+    }
+  ],
+  "controls": [
+    {
+      "type": "slider",
+      "label": "Time Scale",
+      "bind": "params.timeScale",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "checkbox",
+      "label": "Mouse Enabled",
+      "bind": "params.mouseEnabled"
+    }
+  ],
+  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+}

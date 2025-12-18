@@ -1,0 +1,319 @@
+{
+  "version": 1,
+  "title": "Crystal Cave",
+  "defaults": {
+    "timeScale": 1,
+    "cameraSpeed": 15,
+    "tunnelRadius": 8,
+    "crystalCount": 30,
+    "crystalMinSize": 0.5,
+    "crystalMaxSize": 2,
+    "crystalPulseSpeed": 1.5,
+    "crystalEmissive": 0.5,
+    "crystalMetalness": 0.9,
+    "crystalRoughness": 0.1,
+    "crystalOpacity": 0.8,
+    "particleCount": 500,
+    "particleSize": 0.15,
+    "particleOpacity": 0.8,
+    "lightIntensity": 2,
+    "lightDistance": 30,
+    "ambientIntensity": 0.5,
+    "cameraLightIntensity": 1,
+    "fogDensity": 0.015,
+    "mouseInfluence": 2,
+    "segmentLength": 20,
+    "segmentCount": 15
+  },
+  "hud": {
+    "title": "Crystal Cave — Controls",
+    "toggleKey": "h",
+    "visible": false
+  },
+  "hotkeys": [
+    {
+      "key": "H",
+      "label": "Toggle Help"
+    },
+    {
+      "key": "R",
+      "label": "Reset",
+      "action": "reset"
+    },
+    {
+      "keys": ["1", "2"],
+      "label": "Time",
+      "bind": "params.timeScale",
+      "step": 0.1,
+      "min": 0.1,
+      "max": 3,
+      "format": "fixed1"
+    },
+    {
+      "keys": ["3", "4"],
+      "label": "Speed",
+      "bind": "params.cameraSpeed",
+      "step": 1,
+      "min": 5,
+      "max": 30,
+      "format": "fixed0"
+    },
+    {
+      "keys": ["5", "6"],
+      "label": "Crystal Size",
+      "bind": "params.crystalMaxSize",
+      "step": 0.1,
+      "min": 0.5,
+      "max": 4,
+      "format": "fixed1"
+    },
+    {
+      "keys": ["7", "8"],
+      "label": "Pulse Speed",
+      "bind": "params.crystalPulseSpeed",
+      "step": 0.1,
+      "min": 0.5,
+      "max": 3,
+      "format": "fixed1"
+    },
+    {
+      "keys": ["Q", "W"],
+      "label": "Emissive",
+      "bind": "params.crystalEmissive",
+      "step": 0.1,
+      "min": 0,
+      "max": 2,
+      "format": "fixed1"
+    },
+    {
+      "keys": ["A", "S"],
+      "label": "Fog",
+      "bind": "params.fogDensity",
+      "step": 0.001,
+      "min": 0,
+      "max": 0.05,
+      "format": "fixed3"
+    }
+  ],
+  "controls": [
+    {
+      "type": "group",
+      "label": "Motion",
+      "controls": [
+        {
+          "type": "slider",
+          "label": "Time Scale",
+          "bind": "params.timeScale",
+          "min": 0,
+          "max": 3,
+          "step": 0.01
+        },
+        {
+          "type": "slider",
+          "label": "Camera Speed",
+          "bind": "params.cameraSpeed",
+          "min": 5,
+          "max": 50,
+          "step": 0.5
+        },
+        {
+          "type": "slider",
+          "label": "Mouse Influence",
+          "bind": "params.mouseInfluence",
+          "min": 0,
+          "max": 5,
+          "step": 0.1
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": "Tunnel Geometry",
+      "controls": [
+        {
+          "type": "slider",
+          "label": "Tunnel Radius",
+          "bind": "params.tunnelRadius",
+          "min": 5,
+          "max": 15,
+          "step": 0.5
+        },
+        {
+          "type": "slider",
+          "label": "Segment Length",
+          "bind": "params.segmentLength",
+          "min": 10,
+          "max": 40,
+          "step": 1
+        },
+        {
+          "type": "slider",
+          "label": "Segment Count",
+          "bind": "params.segmentCount",
+          "min": 5,
+          "max": 30,
+          "step": 1
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": "Crystal Properties",
+      "controls": [
+        {
+          "type": "slider",
+          "label": "Crystal Count",
+          "bind": "params.crystalCount",
+          "min": 10,
+          "max": 60,
+          "step": 1
+        },
+        {
+          "type": "slider",
+          "label": "Min Size",
+          "bind": "params.crystalMinSize",
+          "min": 0.1,
+          "max": 2,
+          "step": 0.1
+        },
+        {
+          "type": "slider",
+          "label": "Max Size",
+          "bind": "params.crystalMaxSize",
+          "min": 0.5,
+          "max": 5,
+          "step": 0.1
+        },
+        {
+          "type": "slider",
+          "label": "Pulse Speed",
+          "bind": "params.crystalPulseSpeed",
+          "min": 0.5,
+          "max": 4,
+          "step": 0.1
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": "Crystal Material",
+      "controls": [
+        {
+          "type": "slider",
+          "label": "Emissive Intensity",
+          "bind": "params.crystalEmissive",
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        },
+        {
+          "type": "slider",
+          "label": "Metalness",
+          "bind": "params.crystalMetalness",
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "type": "slider",
+          "label": "Roughness",
+          "bind": "params.crystalRoughness",
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        },
+        {
+          "type": "slider",
+          "label": "Opacity",
+          "bind": "params.crystalOpacity",
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": "Particles",
+      "controls": [
+        {
+          "type": "slider",
+          "label": "Particle Count",
+          "bind": "params.particleCount",
+          "min": 100,
+          "max": 2000,
+          "step": 50
+        },
+        {
+          "type": "slider",
+          "label": "Particle Size",
+          "bind": "params.particleSize",
+          "min": 0.05,
+          "max": 0.5,
+          "step": 0.01
+        },
+        {
+          "type": "slider",
+          "label": "Particle Opacity",
+          "bind": "params.particleOpacity",
+          "min": 0,
+          "max": 1,
+          "step": 0.01
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": "Lighting",
+      "controls": [
+        {
+          "type": "slider",
+          "label": "Light Intensity",
+          "bind": "params.lightIntensity",
+          "min": 0,
+          "max": 5,
+          "step": 0.1
+        },
+        {
+          "type": "slider",
+          "label": "Light Distance",
+          "bind": "params.lightDistance",
+          "min": 10,
+          "max": 60,
+          "step": 1
+        },
+        {
+          "type": "slider",
+          "label": "Ambient Intensity",
+          "bind": "params.ambientIntensity",
+          "min": 0,
+          "max": 2,
+          "step": 0.01
+        },
+        {
+          "type": "slider",
+          "label": "Camera Light",
+          "bind": "params.cameraLightIntensity",
+          "min": 0,
+          "max": 3,
+          "step": 0.1
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": "Atmosphere",
+      "controls": [
+        {
+          "type": "slider",
+          "label": "Fog Density",
+          "bind": "params.fogDensity",
+          "min": 0,
+          "max": 0.05,
+          "step": 0.001
+        }
+      ]
+    }
+  ],
+  "hint": "Press H for help. Three.js 3D tunnel effect with procedural crystals."
+}

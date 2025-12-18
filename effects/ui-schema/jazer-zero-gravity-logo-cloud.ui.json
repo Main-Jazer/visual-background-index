@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "title": "Zero Gravity Logo Cloud",
+  "defaults": {
+    "timeScale": 1,
+    "driftSpeed": 0.2,
+    "particleSpeed": 30,
+    "lineOpacity": 0.15,
+    "particleOpacity": 0.4,
+    "glowOpacity": 0.2,
+    "mouseCamera": 1,
+    "mouseEnabled": true
+  },
+  "hud": {
+    "title": "Zero Gravity Logo Cloud \u2014 Controls",
+    "toggleKey": "h",
+    "visible": false
+  },
+  "hotkeys": [
+    {
+      "key": "H",
+      "label": "Toggle Help"
+    },
+    {
+      "key": "R",
+      "label": "Reset",
+      "action": "reset"
+    },
+    {
+      "keys": [
+        "1",
+        "2"
+      ],
+      "label": "Time",
+      "bind": "params.timeScale",
+      "step": 0.1,
+      "min": 0.1,
+      "max": 3,
+      "format": "fixed1"
+    },
+    {
+      "key": "M",
+      "label": "Mouse",
+      "bind": "params.mouseEnabled",
+      "type": "toggle",
+      "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Driftspeed",
+      "bind": "params.driftSpeed",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0.1,
+      "max": 3
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Glowopacity",
+      "bind": "params.glowOpacity",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0,
+      "max": 2
+    },
+    {
+      "keys": [
+        "7",
+        "8"
+      ],
+      "label": "Lineopacity",
+      "bind": "params.lineOpacity",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0,
+      "max": 2
+    },
+    {
+      "keys": [
+        "9",
+        "10"
+      ],
+      "label": "Mousecamera",
+      "bind": "params.mouseCamera",
+      "step": 0.1,
+      "format": "fixed1",
+      "min": 0,
+      "max": 2
+    }
+  ],
+  "controls": [
+    {
+      "type": "slider",
+      "label": "Time Scale",
+      "bind": "params.timeScale",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "checkbox",
+      "label": "Mouse Enabled",
+      "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Driftspeed",
+      "bind": "params.driftSpeed",
+      "step": 0.01,
+      "min": 0.1,
+      "max": 3
+    },
+    {
+      "type": "slider",
+      "label": "Glowopacity",
+      "bind": "params.glowOpacity",
+      "step": 0.01,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "type": "slider",
+      "label": "Lineopacity",
+      "bind": "params.lineOpacity",
+      "step": 0.01,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "type": "slider",
+      "label": "Mousecamera",
+      "bind": "params.mouseCamera",
+      "step": 0.01,
+      "min": 0,
+      "max": 2
+    },
+    {
+      "type": "slider",
+      "label": "Particleopacity",
+      "bind": "params.particleOpacity",
+      "step": 0.01,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "type": "slider",
+      "label": "Particlespeed",
+      "bind": "params.particleSpeed",
+      "step": 0.01,
+      "min": 0.1,
+      "max": 3
+    }
+  ],
+  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+}

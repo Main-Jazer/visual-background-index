@@ -41,6 +41,16 @@
     import * as THREE from '../lib/Three.js';
         import '../lib/engine/jazer-navigation.js';
     import { mouse } from '../lib/engine/jazer-background-engine.js';
+    import { attachEffectUI } from '../lib/engine/jazer-effect-ui-schema.js';
+
+    const __jazerEffectFile = location.pathname.split('/').pop() || '';
+    const __jazerEffectName = __jazerEffectFile.replace(/\.html$/i, '');
+    const { ui, expose } = attachEffectUI({
+      title: document.title,
+      schemaUrl: new URL(`./ui-schema/${__jazerEffectName}.ui.json`, import.meta.url)
+    });
+    window.JAZER_UI = ui;
+    window.JAZER_EXPOSE = expose;
 
     const canvas = document.getElementById('effectCanvas');
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -134,6 +144,14 @@
 
     const clock = new THREE.Clock();
 
+    expose('reset', () => {
+      letterPlanes.forEach((item) => {
+        item.mesh.position.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 5, (Math.random() - 0.5) * 6);
+        item.mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        item.drift.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+      });
+    });
+
     function resize() {
       const width = window.innerWidth;
       const height = window.innerHeight;
@@ -151,12 +169,21 @@
       const elapsed = clock.getElapsedTime();
       mouse.update();
 
+      const timeScale = window.JAZER_UI?.params?.timeScale ?? 1;
+      const driftSpeed = window.JAZER_UI?.params?.driftSpeed ?? 0.2;
+      const particleSpeed = window.JAZER_UI?.params?.particleSpeed ?? 30;
+      const deltaScaled = delta * timeScale;
+
+      connectorMaterial.opacity = window.JAZER_UI?.params?.lineOpacity ?? 0.15;
+      particleMaterial.opacity = window.JAZER_UI?.params?.particleOpacity ?? 0.4;
+      glowMaterial.opacity = window.JAZER_UI?.params?.glowOpacity ?? 0.2;
+
       letterPlanes.forEach(item => {
         const { mesh, drift } = item;
-        mesh.position.addScaledVector(drift, delta * 0.2);
+        mesh.position.addScaledVector(drift, deltaScaled * driftSpeed);
         mesh.position.x += Math.sin(elapsed * 0.3 + item.charIndex) * 0.001;
-        mesh.rotation.x += delta * 0.1 * (item.charIndex + 1);
-        mesh.rotation.y += delta * 0.13;
+        mesh.rotation.x += deltaScaled * 0.1 * (item.charIndex + 1);
+        mesh.rotation.y += deltaScaled * 0.13;
         const radius = 4;
         mesh.position.x = THREE.MathUtils.euclideanModulo(mesh.position.x + radius, radius * 2) - radius;
         mesh.position.y = THREE.MathUtils.euclideanModulo(mesh.position.y + radius, radius * 2) - radius;
@@ -174,9 +201,9 @@
 
       const posArray = particleGeometry.attributes.position.array;
       for (let i = 0; i < particleCount; i++) {
-        posArray[i * 3] += particleVelocity[i * 3] * delta * 30;
-        posArray[i * 3 + 1] += particleVelocity[i * 3 + 1] * delta * 30;
-        posArray[i * 3 + 2] += particleVelocity[i * 3 + 2] * delta * 30;
+        posArray[i * 3] += particleVelocity[i * 3] * deltaScaled * particleSpeed;
+        posArray[i * 3 + 1] += particleVelocity[i * 3 + 1] * deltaScaled * particleSpeed;
+        posArray[i * 3 + 2] += particleVelocity[i * 3 + 2] * deltaScaled * particleSpeed;
         if (posArray[i * 3] > 9) posArray[i * 3] = -9;
         if (posArray[i * 3] < -9) posArray[i * 3] = 9;
         if (posArray[i * 3 + 1] > 6) posArray[i * 3 + 1] = -6;
@@ -187,10 +214,11 @@
       particleGeometry.attributes.position.needsUpdate = true;
 
       glow.scale.setScalar(2.2 + Math.sin(elapsed * 0.8) * 0.3);
-      glow.rotation.y += delta * 0.2;
+      glow.rotation.y += deltaScaled * 0.2;
 
-      camera.position.x = Math.sin(elapsed * 0.15) * 0.6 + mouse.centeredX * 0.9;
-      camera.position.y = Math.sin(elapsed * 0.2) * 0.4 + mouse.centeredY * 0.6;
+      const mouseCamera = window.JAZER_UI?.params?.mouseCamera ?? 1;
+      camera.position.x = Math.sin(elapsed * 0.15) * 0.6 + mouse.centeredX * 0.9 * mouseCamera;
+      camera.position.y = Math.sin(elapsed * 0.2) * 0.4 + mouse.centeredY * 0.6 * mouseCamera;
       camera.lookAt(0, 0, 0);
 
       renderer.render(scene, camera);
