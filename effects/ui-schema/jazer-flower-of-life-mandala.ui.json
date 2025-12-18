@@ -1,11 +1,24 @@
 {
   "version": 1,
-  "title": "Flower Of Life Mandala",
+  "title": "Flower of Life Mandala",
   "defaults": {
-    "timeScale": 1
+    "timeScale": 1,
+    "quality": 2,
+    "cameraMode": 0,
+    "density": 2,
+    "lineWidth": 1,
+    "breathDuration": 12,
+    "fogDensity": 0.5,
+    "heroEvents": true,
+    "mouseInfluence": false,
+    "tunnelSpeed": 1,
+    "shotDuration": 30,
+    "bgColor": "#020008",
+    "accentA": "#c8b478",
+    "accentB": "#78c8b4"
   },
   "hud": {
-    "title": "Flower Of Life Mandala \u2014 Controls",
+    "title": "Flower of Life Mandala - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -20,9 +33,60 @@
       "action": "reset"
     },
     {
+      "key": "C",
+      "label": "Camera Mode"
+    },
+    {
+      "key": "Q",
+      "label": "Quality"
+    },
+    {
+      "keys": [
+        "[",
+        "]"
+      ],
+      "label": "Density"
+    },
+    {
+      "keys": [
+        "-",
+        "="
+      ],
+      "label": "Line Width"
+    },
+    {
+      "keys": [
+        ";",
+        "'"
+      ],
+      "label": "Breath"
+    },
+    {
+      "keys": [
+        "O",
+        "P"
+      ],
+      "label": "Fog"
+    },
+    {
+      "key": "F",
+      "label": "Hero Events"
+    },
+    {
+      "key": "M",
+      "label": "Mouse Influence"
+    },
+    {
       "keys": [
         "1",
         "2"
+      ],
+      "label": "Speed"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
       ],
       "label": "Time",
       "bind": "params.timeScale",
@@ -40,7 +104,96 @@
       "min": 0,
       "max": 3,
       "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Quality",
+      "bind": "params.quality",
+      "min": 0,
+      "max": 2,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Camera Mode",
+      "bind": "params.cameraMode",
+      "min": 0,
+      "max": 3,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Density",
+      "bind": "params.density",
+      "min": 1,
+      "max": 4,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Line Width",
+      "bind": "params.lineWidth",
+      "min": 0.3,
+      "max": 2,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Breath Duration",
+      "bind": "params.breathDuration",
+      "min": 6,
+      "max": 20,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "checkbox",
+      "label": "Hero Events",
+      "bind": "params.heroEvents"
+    },
+    {
+      "type": "checkbox",
+      "label": "Mouse Influence",
+      "bind": "params.mouseInfluence"
+    },
+    {
+      "type": "slider",
+      "label": "Tunnel Speed",
+      "bind": "params.tunnelSpeed",
+      "min": 0.2,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Shot Duration",
+      "bind": "params.shotDuration",
+      "min": 5,
+      "max": 60,
+      "step": 1
+    },
+    {
+      "type": "color",
+      "label": "Background",
+      "bind": "params.bgColor"
+    },
+    {
+      "type": "color",
+      "label": "Accent A",
+      "bind": "params.accentA"
+    },
+    {
+      "type": "color",
+      "label": "Accent B",
+      "bind": "params.accentB"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

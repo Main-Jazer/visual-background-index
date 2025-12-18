@@ -3,10 +3,33 @@
   "title": "Crystal Shard Tunnel",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "bgColor": "#010007",
+    "fogColor": "#040017",
+    "fogDensity": 0.08,
+    "tunnelColor": "#0f1a3c",
+    "tunnelOpacity": 0.2,
+    "tunnelRotationAmp": 0.15,
+    "shardCount": 350,
+    "shardColor": "#66dfff",
+    "shardOpacity": 0.7,
+    "shardSpeedBase": 5,
+    "shardSpeedVar": 6,
+    "shardOrbitSpeed": 0.8,
+    "shardGlowSize": 0.08,
+    "shardGlowOpacity": 0.4,
+    "shardGlowColor": "#ffffff",
+    "particleCount": 600,
+    "particleSize": 0.04,
+    "particleOpacity": 0.6,
+    "particleSpeedBase": 10,
+    "particleSpeedVar": 20,
+    "cameraSwayX": 0.6,
+    "cameraSwayY": 0.5
   },
   "hud": {
-    "title": "Crystal Shard Tunnel \u2014 Controls",
+    "title": "Crystal Shard Tunnel — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +61,30 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Tunnel",
+      "bind": "params.tunnelOpacity",
+      "step": 0.05,
+      "min": 0,
+      "max": 1,
+      "format": "fixed2"
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Shards",
+      "bind": "params.shardOpacity",
+      "step": 0.05,
+      "min": 0,
+      "max": 1,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -53,7 +100,104 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Tunnel Opacity",
+      "bind": "params.tunnelOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Tunnel Rotation Amp",
+      "bind": "params.tunnelRotationAmp",
+      "min": 0,
+      "max": 0.6,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Tunnel Color",
+      "bind": "params.tunnelColor"
+    },
+    {
+      "type": "slider",
+      "label": "Shard Opacity",
+      "bind": "params.shardOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Shard Color",
+      "bind": "params.shardColor"
+    },
+    {
+      "type": "slider",
+      "label": "Shard Glow Opacity",
+      "bind": "params.shardGlowOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Shard Glow Size",
+      "bind": "params.shardGlowSize",
+      "min": 0.01,
+      "max": 0.3,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Shard Glow Color",
+      "bind": "params.shardGlowColor"
+    },
+    {
+      "type": "slider",
+      "label": "Particle Opacity",
+      "bind": "params.particleOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Particle Size",
+      "bind": "params.particleSize",
+      "min": 0.005,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Background Color",
+      "bind": "params.bgColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

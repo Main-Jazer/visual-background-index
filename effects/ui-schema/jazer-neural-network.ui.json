@@ -3,10 +3,21 @@
   "title": "Neural Network",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "nodeCount": 180,
+    "pulseCount": 60,
+    "maxConnectionDistance": 10,
+    "maxConnections": 4,
+    "bgParticleCount": 2500,
+    "autoRotateSpeed": 0.3,
+    "nodeOpacity": 0.85,
+    "lineOpacity": 0.5,
+    "neonA": "#00f5ff",
+    "neonB": "#ff2aff"
   },
   "hud": {
-    "title": "Neural Network \u2014 Controls",
+    "title": "Neural Network - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +64,31 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Node Count",
+      "bind": "params.nodeCount",
+      "min": 0,
+      "max": 5000,
+      "step": 10
+    },
+    {
+      "type": "slider",
+      "label": "Connection Distance",
+      "bind": "params.maxConnectionDistance",
+      "min": 0,
+      "max": 50,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Auto Rotate Speed",
+      "bind": "params.autoRotateSpeed",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

@@ -3,7 +3,18 @@
   "title": "Cosmic Nebula",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "cameraDrift": 0.1,
+    "cameraMouseStrength": 10,
+    "cloudOpacity": 0.4,
+    "cloudNoiseScale": 0.05,
+    "cloudNoiseSpeed": 0.1,
+    "cloudWiggleAmp": 0.02,
+    "starTwinkleSpeed": 5,
+    "starTwinkleAmp": 0.3,
+    "ribbonSpeedMult": 1,
+    "plasmaSpeedMult": 1,
+    "raySpeedMult": 1
   },
   "hud": {
     "title": "Cosmic Nebula \u2014 Controls",
@@ -38,6 +49,30 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Camera",
+      "bind": "params.cameraDrift",
+      "step": 0.05,
+      "min": 0,
+      "max": 0.6,
+      "format": "fixed2"
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Stars",
+      "bind": "params.starTwinkleAmp",
+      "step": 0.05,
+      "min": 0,
+      "max": 1,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -53,7 +88,95 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Camera Drift",
+      "bind": "params.cameraDrift",
+      "min": 0,
+      "max": 0.6,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Camera Mouse Strength",
+      "bind": "params.cameraMouseStrength",
+      "min": 0,
+      "max": 30,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Cloud Opacity",
+      "bind": "params.cloudOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Cloud Noise Scale",
+      "bind": "params.cloudNoiseScale",
+      "min": 0.001,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Cloud Noise Speed",
+      "bind": "params.cloudNoiseSpeed",
+      "min": 0,
+      "max": 0.5,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Cloud Wiggle Amp",
+      "bind": "params.cloudWiggleAmp",
+      "min": 0,
+      "max": 0.1,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Star Twinkle Speed",
+      "bind": "params.starTwinkleSpeed",
+      "min": 0,
+      "max": 12,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Star Twinkle Amp",
+      "bind": "params.starTwinkleAmp",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ribbon Speed Mult",
+      "bind": "params.ribbonSpeedMult",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Plasma Speed Mult",
+      "bind": "params.plasmaSpeedMult",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ray Speed Mult",
+      "bind": "params.raySpeedMult",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. Only timeScale is currently read by the effect; the rest are schema stubs pending effect-side wiring."
 }

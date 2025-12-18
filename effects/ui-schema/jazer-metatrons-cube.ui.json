@@ -1,12 +1,23 @@
 {
   "version": 1,
-  "title": "Metatrons Cube",
+  "title": "Metatron's Cube",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "fruitOfLifeRadius": 5,
+    "lineOpacity": 0.3,
+    "lineWidth": 1,
+    "solidOpacity": 0.9,
+    "particleCount": 2000,
+    "particleOpacity": 0.5,
+    "particleSize": 0.03,
+    "colorA": "#ff2aff",
+    "colorB": "#00f5ff",
+    "accent": "#ffd25b"
   },
   "hud": {
-    "title": "Metatrons Cube \u2014 Controls",
+    "title": "Metatron's Cube - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -31,13 +42,6 @@
       "min": 0.1,
       "max": 3,
       "format": "fixed1"
-    },
-    {
-      "key": "M",
-      "label": "Mouse",
-      "bind": "params.mouseEnabled",
-      "type": "toggle",
-      "format": "onoff"
     }
   ],
   "controls": [
@@ -50,10 +54,44 @@
       "step": 0.01
     },
     {
-      "type": "checkbox",
-      "label": "Mouse Enabled",
-      "bind": "params.mouseEnabled"
+      "type": "slider",
+      "label": "Fruit of Life Radius",
+      "bind": "params.fruitOfLifeRadius",
+      "min": 1,
+      "max": 15,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Particle Count",
+      "bind": "params.particleCount",
+      "min": 0,
+      "max": 50000,
+      "step": 250
+    },
+    {
+      "type": "slider",
+      "label": "Line Opacity",
+      "bind": "params.lineOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Color B",
+      "bind": "params.colorB"
+    },
+    {
+      "type": "color",
+      "label": "Accent",
+      "bind": "params.accent"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

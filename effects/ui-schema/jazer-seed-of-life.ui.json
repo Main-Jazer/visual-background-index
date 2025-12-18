@@ -1,12 +1,21 @@
 {
   "version": 1,
-  "title": "Seed Of Life",
+  "title": "Seed of Life",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "layerCount": 15,
+    "baseRadius": 70,
+    "pulseSpeed": 0.8,
+    "pulseAmp": 0.1,
+    "rotationSpeed": 0.03,
+    "parallaxStrength": 50,
+    "trailAlpha": 0.12,
+    "bgInner": "#070018",
+    "bgOuter": "#000006"
   },
   "hud": {
-    "title": "Seed Of Life \u2014 Controls",
+    "title": "Seed of Life - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +62,23 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Layer Count",
+      "bind": "params.layerCount",
+      "min": 1,
+      "max": 60,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Trail Alpha",
+      "bind": "params.trailAlpha",
+      "min": 0,
+      "max": 0.3,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

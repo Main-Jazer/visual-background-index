@@ -2,11 +2,28 @@
   "version": 1,
   "title": "Neon Wireframe Ocean",
   "defaults": {
-    "timeScale": 1.0,
-    "mouseEnabled": true
+    "timeScale": 1,
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "oceanWidth": 200,
+    "oceanDepth": 200,
+    "oceanResolution": 100,
+    "waveAmp": 1,
+    "waveFreq": 0.06,
+    "waveSpeed": 1,
+    "wireOpacity": 0.35,
+    "wireColor": "#00f5ff",
+    "crestParticleCount": 2000,
+    "crestOpacity": 0.85,
+    "crestSize": 0.08,
+    "orbCount": 10,
+    "orbOpacity": 0.6,
+    "neonA": "#00f5ff",
+    "neonB": "#ff2aff",
+    "neonC": "#ff0055"
   },
   "hud": {
-    "title": "Neon Wireframe Ocean \u2014 Controls",
+    "title": "Neon Wireframe Ocean - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +70,36 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Ocean Resolution",
+      "bind": "params.oceanResolution",
+      "min": 10,
+      "max": 400,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Crest Particles",
+      "bind": "params.crestParticleCount",
+      "min": 0,
+      "max": 50000,
+      "step": 250
+    },
+    {
+      "type": "slider",
+      "label": "Wire Opacity",
+      "bind": "params.wireOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Wire Color",
+      "bind": "params.wireColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

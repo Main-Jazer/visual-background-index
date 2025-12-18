@@ -3,10 +3,27 @@
   "title": "Echoing Logo Orbits",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "bgColor": "#010008",
+    "fogColor": "#070028",
+    "fogDensity": 0.04,
+    "orbitRotationSpeed": 0.2,
+    "orbitLogoSpeed": 0.5,
+    "orbitLogoCount": 12,
+    "orbitRadius": 2.2,
+    "orbitRadiusWobble": 0.2,
+    "orbitYamp": 0.5,
+    "ringOpacity": 0.2,
+    "connectorOpacity": 0.18,
+    "sparkOpacity": 0.5,
+    "sparkSize": 0.08,
+    "sparkCount": 800,
+    "accentCyan": "#00f5ff",
+    "accentMagenta": "#ff2aff"
   },
   "hud": {
-    "title": "Echoing Logo Orbits \u2014 Controls",
+    "title": "Echoing Logo Orbits — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +70,99 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Orbit Rotation Speed",
+      "bind": "params.orbitRotationSpeed",
+      "min": 0,
+      "max": 2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Orbit Logo Speed",
+      "bind": "params.orbitLogoSpeed",
+      "min": 0,
+      "max": 3,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Orbit Radius",
+      "bind": "params.orbitRadius",
+      "min": 0.2,
+      "max": 10,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Orbit Radius Wobble",
+      "bind": "params.orbitRadiusWobble",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ring Opacity",
+      "bind": "params.ringOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Connector Opacity",
+      "bind": "params.connectorOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Spark Opacity",
+      "bind": "params.sparkOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Background Color",
+      "bind": "params.bgColor"
+    },
+    {
+      "type": "color",
+      "label": "Accent Cyan",
+      "bind": "params.accentCyan"
+    },
+    {
+      "type": "color",
+      "label": "Accent Magenta",
+      "bind": "params.accentMagenta"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

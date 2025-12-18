@@ -3,10 +3,23 @@
   "title": "Synthwave Sun Grid",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000010",
+    "sunRadius": 1.8,
+    "sunGlow": 1,
+    "gridWidth": 20,
+    "gridDepth": 40,
+    "gridResX": 200,
+    "gridResZ": 400,
+    "starCount": 800,
+    "starOpacity": 0.6,
+    "starSize": 0.03,
+    "horizonOpacity": 0.15,
+    "neonA": "#ff2aff",
+    "neonB": "#00f5ff"
   },
   "hud": {
-    "title": "Synthwave Sun Grid \u2014 Controls",
+    "title": "Synthwave Sun Grid - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -31,13 +44,6 @@
       "min": 0.1,
       "max": 3,
       "format": "fixed1"
-    },
-    {
-      "key": "M",
-      "label": "Mouse",
-      "bind": "params.mouseEnabled",
-      "type": "toggle",
-      "format": "onoff"
     }
   ],
   "controls": [
@@ -50,10 +56,13 @@
       "step": 0.01
     },
     {
-      "type": "checkbox",
-      "label": "Mouse Enabled",
-      "bind": "params.mouseEnabled"
+      "type": "slider",
+      "label": "Star Count",
+      "bind": "params.starCount",
+      "min": 0,
+      "max": 200000,
+      "step": 1000
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

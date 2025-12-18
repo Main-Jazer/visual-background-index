@@ -3,10 +3,24 @@
   "title": "Holographic Logo Shards",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#010008",
+    "fogColor": "#05031a",
+    "fogDensity": 0.05,
+    "shardCount": 400,
+    "shardTrailCount": 800,
+    "shardSize": 0.12,
+    "shardOpacity": 0.75,
+    "trailOpacity": 0.35,
+    "trailSize": 0.06,
+    "spinSpeed": 0.8,
+    "pulseSpeed": 1.2,
+    "colorA": "#ff2aff",
+    "colorB": "#00f5ff",
+    "glowColor": "#ffffff"
   },
   "hud": {
-    "title": "Holographic Logo Shards \u2014 Controls",
+    "title": "Holographic Logo Shards - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +52,18 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "[",
+        "]"
+      ],
+      "label": "Shards",
+      "bind": "params.shardCount",
+      "step": 50,
+      "min": 0,
+      "max": 2000,
+      "format": "int"
     }
   ],
   "controls": [
@@ -53,7 +79,67 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "slider",
+      "label": "Shard Count",
+      "bind": "params.shardCount",
+      "min": 0,
+      "max": 5000,
+      "step": 50
+    },
+    {
+      "type": "slider",
+      "label": "Shard Trail Count",
+      "bind": "params.shardTrailCount",
+      "min": 0,
+      "max": 20000,
+      "step": 100
+    },
+    {
+      "type": "slider",
+      "label": "Shard Opacity",
+      "bind": "params.shardOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Trail Opacity",
+      "bind": "params.trailOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Color B",
+      "bind": "params.colorB"
+    },
+    {
+      "type": "color",
+      "label": "Glow",
+      "bind": "params.glowColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

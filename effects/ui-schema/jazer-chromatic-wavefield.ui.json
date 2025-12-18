@@ -3,10 +3,32 @@
   "title": "Chromatic Wavefield",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "gridSize": 30,
+    "spacing": 25,
+    "waveAmp": 1,
+    "wave1Amp": 40,
+    "wave2Amp": 40,
+    "wave3Amp": 30,
+    "wave4Amp": 20,
+    "wave1Freq": 0.05,
+    "wave2Freq": 0.05,
+    "wave3Freq": 0.03,
+    "wave4Freq": 0.04,
+    "wave1Speed": 2,
+    "wave2Speed": 1.5,
+    "wave3Speed": 1.8,
+    "wave4Speed": 2.2,
+    "rgbSplit": 1,
+    "pointSize": 2,
+    "lineAlpha": 0.3,
+    "backgroundFade": 0.15,
+    "vignette": 0.7,
+    "peakThreshold": 50,
+    "peakStep": 4
   },
   "hud": {
-    "title": "Chromatic Wavefield \u2014 Controls",
+    "title": "Chromatic Wavefield — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +75,119 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Grid Size",
+      "bind": "params.gridSize",
+      "min": 10,
+      "max": 80,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Spacing",
+      "bind": "params.spacing",
+      "min": 5,
+      "max": 80,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Wave Amplitude (Global)",
+      "bind": "params.waveAmp",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Wave 1 Amp",
+      "bind": "params.wave1Amp",
+      "min": 0,
+      "max": 120,
+      "step": 0.5
+    },
+    {
+      "type": "slider",
+      "label": "Wave 2 Amp",
+      "bind": "params.wave2Amp",
+      "min": 0,
+      "max": 120,
+      "step": 0.5
+    },
+    {
+      "type": "slider",
+      "label": "Wave 3 Amp",
+      "bind": "params.wave3Amp",
+      "min": 0,
+      "max": 120,
+      "step": 0.5
+    },
+    {
+      "type": "slider",
+      "label": "Wave 4 Amp",
+      "bind": "params.wave4Amp",
+      "min": 0,
+      "max": 120,
+      "step": 0.5
+    },
+    {
+      "type": "slider",
+      "label": "RGB Split",
+      "bind": "params.rgbSplit",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Point Size",
+      "bind": "params.pointSize",
+      "min": 0.5,
+      "max": 8,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Line Alpha",
+      "bind": "params.lineAlpha",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Background Fade",
+      "bind": "params.backgroundFade",
+      "min": 0,
+      "max": 0.6,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Vignette",
+      "bind": "params.vignette",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Peak Threshold",
+      "bind": "params.peakThreshold",
+      "min": 0,
+      "max": 200,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Peak Step",
+      "bind": "params.peakStep",
+      "min": 1,
+      "max": 12,
+      "step": 1
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. Only timeScale is currently read by the effect; the rest are schema stubs pending effect-side wiring."
 }

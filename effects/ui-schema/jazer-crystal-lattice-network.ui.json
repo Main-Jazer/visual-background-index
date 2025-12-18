@@ -3,7 +3,38 @@
   "title": "Crystal Lattice Network",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "breathPeriod": 10,
+    "dt": 0.016,
+    "gridSize": 6,
+    "spacing": 2.2,
+    "connectionDistance": 2.5,
+    "connectionOpacityBase": 0.1,
+    "connectionOpacityEnergy": 0.15,
+    "fogDensity": 0.015,
+    "exposure": 0.9,
+    "cameraBaseX": 8,
+    "cameraBaseY": 6,
+    "cameraBaseZ": 15,
+    "cameraDriftSpeed": 0.03,
+    "cameraDriftAmpX": 4,
+    "cameraDriftAmpY": 3,
+    "cameraDriftAmpZ": 2,
+    "cameraMouseX": 2,
+    "cameraMouseY": 1.5,
+    "nodeSizeBase": 0.15,
+    "nodeSizeEnergy": 0.1,
+    "nodePointScale": 80,
+    "innerGlowOpacityBase": 0.2,
+    "innerGlowOpacityAmp": 0.2,
+    "innerGlowScaleBase": 0.8,
+    "innerGlowScaleAmp": 0.3,
+    "colorBase": "#0a0a1a",
+    "colorStructure": "#1a2a4a",
+    "colorEnergy": "#00a8cc",
+    "colorAccent": "#4a9eff",
+    "colorHighlight": "#ffd700",
+    "colorGlow": "#0066aa"
   },
   "hud": {
     "title": "Crystal Lattice Network \u2014 Controls",
@@ -38,6 +69,42 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Breath",
+      "bind": "params.breathPeriod",
+      "step": 0.5,
+      "min": 2,
+      "max": 30,
+      "format": "sec"
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Exposure",
+      "bind": "params.exposure",
+      "step": 0.05,
+      "min": 0,
+      "max": 2,
+      "format": "fixed2"
+    },
+    {
+      "keys": [
+        "7",
+        "8"
+      ],
+      "label": "Fog",
+      "bind": "params.fogDensity",
+      "step": 0.002,
+      "min": 0,
+      "max": 0.06,
+      "format": "fixed4"
     }
   ],
   "controls": [
@@ -53,7 +120,109 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Breath Period",
+      "bind": "params.breathPeriod",
+      "min": 2,
+      "max": 30,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.06,
+      "step": 0.0005
+    },
+    {
+      "type": "slider",
+      "label": "Exposure",
+      "bind": "params.exposure",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Connection Distance",
+      "bind": "params.connectionDistance",
+      "min": 0,
+      "max": 6,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Node Size Base",
+      "bind": "params.nodeSizeBase",
+      "min": 0,
+      "max": 1,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Node Size Energy",
+      "bind": "params.nodeSizeEnergy",
+      "min": 0,
+      "max": 1,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Node Point Scale",
+      "bind": "params.nodePointScale",
+      "min": 10,
+      "max": 200,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Camera Mouse X",
+      "bind": "params.cameraMouseX",
+      "min": 0,
+      "max": 10,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Mouse Y",
+      "bind": "params.cameraMouseY",
+      "min": 0,
+      "max": 10,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Base Color",
+      "bind": "params.colorBase"
+    },
+    {
+      "type": "color",
+      "label": "Structure Color",
+      "bind": "params.colorStructure"
+    },
+    {
+      "type": "color",
+      "label": "Energy Color",
+      "bind": "params.colorEnergy"
+    },
+    {
+      "type": "color",
+      "label": "Accent Color",
+      "bind": "params.colorAccent"
+    },
+    {
+      "type": "color",
+      "label": "Highlight Color",
+      "bind": "params.colorHighlight"
+    },
+    {
+      "type": "color",
+      "label": "Glow Color",
+      "bind": "params.colorGlow"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect uses fixed dt and does not currently read params; controls are schema stubs pending effect-side wiring."
 }

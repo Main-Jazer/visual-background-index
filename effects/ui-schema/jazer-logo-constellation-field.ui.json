@@ -3,10 +3,21 @@
   "title": "Logo Constellation Field",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "starCount": 80,
+    "dustCount": 1000,
+    "connectionDistance": 2.5,
+    "connectionOpacity": 0.1,
+    "dustOpacity": 0.4,
+    "dustSize": 0.06,
+    "logoOpacity": 1,
+    "logoSize": 0.6,
+    "colorA": "#00f5ff",
+    "colorB": "#ff2aff"
   },
   "hud": {
-    "title": "Logo Constellation Field \u2014 Controls",
+    "title": "Logo Constellation Field - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +64,49 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Star Count",
+      "bind": "params.starCount",
+      "min": 0,
+      "max": 1000,
+      "step": 10
+    },
+    {
+      "type": "slider",
+      "label": "Dust Count",
+      "bind": "params.dustCount",
+      "min": 0,
+      "max": 20000,
+      "step": 100
+    },
+    {
+      "type": "slider",
+      "label": "Connection Distance",
+      "bind": "params.connectionDistance",
+      "min": 0,
+      "max": 10,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Connection Opacity",
+      "bind": "params.connectionOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Color B",
+      "bind": "params.colorB"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

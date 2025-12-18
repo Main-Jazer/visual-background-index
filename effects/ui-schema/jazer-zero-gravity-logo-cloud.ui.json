@@ -3,16 +3,22 @@
   "title": "Zero Gravity Logo Cloud",
   "defaults": {
     "timeScale": 1,
+    "mouseEnabled": true,
+    "mouseCamera": 1,
     "driftSpeed": 0.2,
     "particleSpeed": 30,
     "lineOpacity": 0.15,
     "particleOpacity": 0.4,
     "glowOpacity": 0.2,
-    "mouseCamera": 1,
-    "mouseEnabled": true
+    "particleCount": 1500,
+    "letterCount": 5,
+    "bgColor": "#000000",
+    "neonA": "#00f5ff",
+    "neonB": "#ff2aff",
+    "accent": "#ffc857"
   },
   "hud": {
-    "title": "Zero Gravity Logo Cloud \u2014 Controls",
+    "title": "Zero Gravity Logo Cloud - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -39,59 +45,28 @@
       "format": "fixed1"
     },
     {
-      "key": "M",
-      "label": "Mouse",
-      "bind": "params.mouseEnabled",
-      "type": "toggle",
-      "format": "onoff"
-    },
-    {
       "keys": [
         "3",
         "4"
       ],
-      "label": "Driftspeed",
+      "label": "Drift",
       "bind": "params.driftSpeed",
-      "step": 0.1,
-      "format": "fixed1",
-      "min": 0.1,
-      "max": 3
+      "step": 0.05,
+      "min": 0,
+      "max": 2,
+      "format": "fixed2"
     },
     {
       "keys": [
         "5",
         "6"
       ],
-      "label": "Glowopacity",
-      "bind": "params.glowOpacity",
-      "step": 0.1,
-      "format": "fixed1",
+      "label": "Speed",
+      "bind": "params.particleSpeed",
+      "step": 5,
       "min": 0,
-      "max": 2
-    },
-    {
-      "keys": [
-        "7",
-        "8"
-      ],
-      "label": "Lineopacity",
-      "bind": "params.lineOpacity",
-      "step": 0.1,
-      "format": "fixed1",
-      "min": 0,
-      "max": 2
-    },
-    {
-      "keys": [
-        "9",
-        "10"
-      ],
-      "label": "Mousecamera",
-      "bind": "params.mouseCamera",
-      "step": 0.1,
-      "format": "fixed1",
-      "min": 0,
-      "max": 2
+      "max": 200,
+      "format": "int"
     }
   ],
   "controls": [
@@ -110,52 +85,52 @@
     },
     {
       "type": "slider",
-      "label": "Driftspeed",
-      "bind": "params.driftSpeed",
-      "step": 0.01,
-      "min": 0.1,
-      "max": 3
-    },
-    {
-      "type": "slider",
-      "label": "Glowopacity",
-      "bind": "params.glowOpacity",
-      "step": 0.01,
-      "min": 0,
-      "max": 1
-    },
-    {
-      "type": "slider",
-      "label": "Lineopacity",
-      "bind": "params.lineOpacity",
-      "step": 0.01,
-      "min": 0,
-      "max": 1
-    },
-    {
-      "type": "slider",
-      "label": "Mousecamera",
+      "label": "Mouse Camera",
       "bind": "params.mouseCamera",
-      "step": 0.01,
       "min": 0,
-      "max": 2
+      "max": 2,
+      "step": 0.01
     },
     {
       "type": "slider",
-      "label": "Particleopacity",
-      "bind": "params.particleOpacity",
-      "step": 0.01,
+      "label": "Drift Speed",
+      "bind": "params.driftSpeed",
       "min": 0,
-      "max": 1
+      "max": 2,
+      "step": 0.001
     },
     {
       "type": "slider",
-      "label": "Particlespeed",
+      "label": "Particle Speed",
       "bind": "params.particleSpeed",
-      "step": 0.01,
-      "min": 0.1,
-      "max": 3
+      "min": 0,
+      "max": 200,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Line Opacity",
+      "bind": "params.lineOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Particle Opacity",
+      "bind": "params.particleOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Glow Opacity",
+      "bind": "params.glowOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect reads these params live."
 }

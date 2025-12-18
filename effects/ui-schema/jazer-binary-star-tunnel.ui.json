@@ -3,7 +3,27 @@
   "title": "Binary Star Tunnel",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "fogDensity": 0.05,
+    "fogColor": "#030015",
+    "bgColor": "#02000a",
+    "tunnelOpacity": 0.25,
+    "tunnelColor": "#0d1028",
+    "glowOpacity": 0.4,
+    "glowSpeed": 6,
+    "glowColor": "#3399ff",
+    "particleOpacity": 1,
+    "particleSpeed": 25,
+    "particleSize": 30,
+    "particleColor": "#ffe6b3",
+    "primaryColor": "#fff6de",
+    "secondaryColor": "#9dd4ff",
+    "ringOpacity": 0.25,
+    "ringColor": "#1c2cf7",
+    "trailOpacity": 0.4,
+    "orbitSpeed": 1.5,
+    "cameraSway": 1
   },
   "hud": {
     "title": "Binary Star Tunnel \u2014 Controls",
@@ -38,6 +58,30 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Tunnel Opacity",
+      "bind": "params.tunnelOpacity",
+      "step": 0.05,
+      "min": 0,
+      "max": 1,
+      "format": "fixed2"
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Particles",
+      "bind": "params.particleOpacity",
+      "step": 0.1,
+      "min": 0,
+      "max": 1,
+      "format": "fixed1"
     }
   ],
   "controls": [
@@ -53,7 +97,143 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Sway",
+      "bind": "params.cameraSway",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Tunnel Opacity",
+      "bind": "params.tunnelOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Tunnel Color",
+      "bind": "params.tunnelColor"
+    },
+    {
+      "type": "slider",
+      "label": "Glow Opacity",
+      "bind": "params.glowOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Glow Speed",
+      "bind": "params.glowSpeed",
+      "min": 0,
+      "max": 20,
+      "step": 0.1
+    },
+    {
+      "type": "color",
+      "label": "Glow Color",
+      "bind": "params.glowColor"
+    },
+    {
+      "type": "slider",
+      "label": "Particle Opacity",
+      "bind": "params.particleOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Particle Speed",
+      "bind": "params.particleSpeed",
+      "min": 0,
+      "max": 80,
+      "step": 0.5
+    },
+    {
+      "type": "slider",
+      "label": "Particle Size",
+      "bind": "params.particleSize",
+      "min": 5,
+      "max": 80,
+      "step": 0.5
+    },
+    {
+      "type": "color",
+      "label": "Particle Color",
+      "bind": "params.particleColor"
+    },
+    {
+      "type": "slider",
+      "label": "Orbit Speed",
+      "bind": "params.orbitSpeed",
+      "min": 0,
+      "max": 6,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Trail Opacity",
+      "bind": "params.trailOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Primary Star Color",
+      "bind": "params.primaryColor"
+    },
+    {
+      "type": "color",
+      "label": "Secondary Star Color",
+      "bind": "params.secondaryColor"
+    },
+    {
+      "type": "slider",
+      "label": "Ring Opacity",
+      "bind": "params.ringOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Ring Color",
+      "bind": "params.ringColor"
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Background Color",
+      "bind": "params.bgColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. Controls bind to params; effect must read window.JAZER_UI.params (or expose objects) for changes to apply."
 }

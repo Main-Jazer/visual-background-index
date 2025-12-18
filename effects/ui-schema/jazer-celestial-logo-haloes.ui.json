@@ -3,10 +3,31 @@
   "title": "Celestial Logo Haloes",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "cameraSwayX": 1,
+    "cameraSwayY": 1,
+    "bgColor": "#01000a",
+    "fogColor": "#020112",
+    "fogDensity": 0.05,
+    "letterFloat": 1,
+    "letterFloatSpeed": 1.2,
+    "haloOpacity": 0.2,
+    "orbCount": 180,
+    "orbSpeed": 1,
+    "orbRadius": 1,
+    "orbSize": 0.07,
+    "dustOpacity": 0.4,
+    "dustSize": 0.06,
+    "connectorOpacity": 0.2,
+    "palette1": "#ff2aff",
+    "palette2": "#ffd25b",
+    "palette3": "#00f5ff",
+    "palette4": "#91fffe",
+    "palette5": "#ff8ad3"
   },
   "hud": {
-    "title": "Celestial Logo Haloes \u2014 Controls",
+    "title": "Celestial Logo Haloes — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +59,30 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Fog",
+      "bind": "params.fogDensity",
+      "step": 0.01,
+      "min": 0,
+      "max": 0.2,
+      "format": "fixed2"
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Halo",
+      "bind": "params.haloOpacity",
+      "step": 0.05,
+      "min": 0,
+      "max": 1,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -53,7 +98,154 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Sway X",
+      "bind": "params.cameraSwayX",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Sway Y",
+      "bind": "params.cameraSwayY",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Letter Float",
+      "bind": "params.letterFloat",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Letter Float Speed",
+      "bind": "params.letterFloatSpeed",
+      "min": 0,
+      "max": 6,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Halo Opacity",
+      "bind": "params.haloOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Orb Count",
+      "bind": "params.orbCount",
+      "min": 0,
+      "max": 800,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Orb Speed",
+      "bind": "params.orbSpeed",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Orb Radius",
+      "bind": "params.orbRadius",
+      "min": 0.2,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Orb Size",
+      "bind": "params.orbSize",
+      "min": 0.01,
+      "max": 0.3,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Dust Opacity",
+      "bind": "params.dustOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Dust Size",
+      "bind": "params.dustSize",
+      "min": 0.01,
+      "max": 0.3,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Connector Opacity",
+      "bind": "params.connectorOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Background Color",
+      "bind": "params.bgColor"
+    },
+    {
+      "type": "color",
+      "label": "Palette 1",
+      "bind": "params.palette1"
+    },
+    {
+      "type": "color",
+      "label": "Palette 2",
+      "bind": "params.palette2"
+    },
+    {
+      "type": "color",
+      "label": "Palette 3",
+      "bind": "params.palette3"
+    },
+    {
+      "type": "color",
+      "label": "Palette 4",
+      "bind": "params.palette4"
+    },
+    {
+      "type": "color",
+      "label": "Palette 5",
+      "bind": "params.palette5"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. Controls bind to params; this effect currently needs effect-side wiring to apply most of these parameters."
 }

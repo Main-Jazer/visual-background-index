@@ -3,10 +3,33 @@
   "title": "Energy Reactor",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#001122",
+    "fogDensity": 0.02,
+    "exposure": 1.1,
+    "coreRadius": 1.8,
+    "coreDistortionBase": 0.05,
+    "coreDistortionBeat": 0.1,
+    "shellOpacityBase": 0.1,
+    "shellOpacityBeat": 0.15,
+    "ringOpacityBase": 0.4,
+    "ringOpacityBeat": 0.2,
+    "particleCount": 1500,
+    "particleOpacityBase": 0.4,
+    "particleOpacityBeat": 0.3,
+    "particleSize": 0.12,
+    "arcCount": 8,
+    "arcOpacity": 0.8,
+    "chamberOpacityBase": 0.1,
+    "chamberOpacityBeat": 0.08,
+    "coreColor": "#ff4a1a",
+    "warmColor": "#ff9a3a",
+    "coolBlue": "#2a6dff",
+    "coolCyan": "#00d1ff",
+    "whiteHot": "#ffffff"
   },
   "hud": {
-    "title": "Energy Reactor \u2014 Controls",
+    "title": "Energy Reactor — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -31,13 +54,6 @@
       "min": 0.1,
       "max": 3,
       "format": "fixed1"
-    },
-    {
-      "key": "M",
-      "label": "Mouse",
-      "bind": "params.mouseEnabled",
-      "type": "toggle",
-      "format": "onoff"
     }
   ],
   "controls": [
@@ -50,10 +66,73 @@
       "step": 0.01
     },
     {
-      "type": "checkbox",
-      "label": "Mouse Enabled",
-      "bind": "params.mouseEnabled"
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Exposure",
+      "bind": "params.exposure",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Particle Opacity Base",
+      "bind": "params.particleOpacityBase",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Particle Size",
+      "bind": "params.particleSize",
+      "min": 0.01,
+      "max": 0.5,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Ring Opacity Base",
+      "bind": "params.ringOpacityBase",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Shell Opacity Base",
+      "bind": "params.shellOpacityBase",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Core Color",
+      "bind": "params.coreColor"
+    },
+    {
+      "type": "color",
+      "label": "Warm Color",
+      "bind": "params.warmColor"
+    },
+    {
+      "type": "color",
+      "label": "Cool Blue",
+      "bind": "params.coolBlue"
+    },
+    {
+      "type": "color",
+      "label": "Cool Cyan",
+      "bind": "params.coolCyan"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

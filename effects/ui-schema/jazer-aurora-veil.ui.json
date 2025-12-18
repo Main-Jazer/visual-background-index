@@ -3,7 +3,28 @@
   "title": "Aurora Veil",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "fogDensity": 0.06,
+    "fogColor": "#020313",
+    "bgColor": "#01020a",
+    "ribbonOpacity": 0.9,
+    "ribbonGlow": 1,
+    "ribbonWarp": 1,
+    "ribbonSpeed": 1,
+    "shardSpeed": 1,
+    "shardOpacity": 1,
+    "shardSize": 0.08,
+    "starOpacity": 1,
+    "starSize": 0.05,
+    "groundOpacity": 0.7,
+    "cameraSwayX": 1,
+    "cameraSwayY": 1,
+    "ribbonColor1": "#7cf2ff",
+    "ribbonColor2": "#44ffd2",
+    "ribbonColor3": "#ff5bf7",
+    "ribbonColor4": "#64a1ff",
+    "ribbonColor5": "#27c4ff"
   },
   "hud": {
     "title": "Aurora Veil \u2014 Controls",
@@ -38,6 +59,30 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Ribbon Speed",
+      "bind": "params.ribbonSpeed",
+      "step": 0.1,
+      "min": 0,
+      "max": 3,
+      "format": "fixed1"
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Fog",
+      "bind": "params.fogDensity",
+      "step": 0.005,
+      "min": 0,
+      "max": 0.2,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -53,7 +98,154 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ribbon Speed",
+      "bind": "params.ribbonSpeed",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ribbon Warp",
+      "bind": "params.ribbonWarp",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ribbon Opacity",
+      "bind": "params.ribbonOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ribbon Glow",
+      "bind": "params.ribbonGlow",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Shard Speed",
+      "bind": "params.shardSpeed",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Shard Opacity",
+      "bind": "params.shardOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Shard Size",
+      "bind": "params.shardSize",
+      "min": 0.01,
+      "max": 0.3,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Star Opacity",
+      "bind": "params.starOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Star Size",
+      "bind": "params.starSize",
+      "min": 0.01,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Ground Opacity",
+      "bind": "params.groundOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Sway X",
+      "bind": "params.cameraSwayX",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Sway Y",
+      "bind": "params.cameraSwayY",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Background Color",
+      "bind": "params.bgColor"
+    },
+    {
+      "type": "color",
+      "label": "Ribbon Color 1",
+      "bind": "params.ribbonColor1"
+    },
+    {
+      "type": "color",
+      "label": "Ribbon Color 2",
+      "bind": "params.ribbonColor2"
+    },
+    {
+      "type": "color",
+      "label": "Ribbon Color 3",
+      "bind": "params.ribbonColor3"
+    },
+    {
+      "type": "color",
+      "label": "Ribbon Color 4",
+      "bind": "params.ribbonColor4"
+    },
+    {
+      "type": "color",
+      "label": "Ribbon Color 5",
+      "bind": "params.ribbonColor5"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. Controls bind to params; effect must read window.JAZER_UI.params (or expose objects) for changes to apply."
 }

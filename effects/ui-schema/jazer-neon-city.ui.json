@@ -3,10 +3,24 @@
   "title": "Neon City",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "buildingCount": 100,
+    "adCount": 14,
+    "vehicleCount": 24,
+    "groundWidth": 200,
+    "groundDepth": 400,
+    "groundResolutionX": 100,
+    "groundResolutionZ": 200,
+    "fogDensity": 0.01,
+    "wireOpacity": 0.35,
+    "windowOpacity": 0.35,
+    "neonA": "#ff0055",
+    "neonB": "#00f5ff",
+    "neonC": "#ff2aff"
   },
   "hud": {
-    "title": "Neon City \u2014 Controls",
+    "title": "Neon City - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +67,38 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Building Count",
+      "bind": "params.buildingCount",
+      "min": 0,
+      "max": 1000,
+      "step": 10
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.1,
+      "step": 0.0005
+    },
+    {
+      "type": "color",
+      "label": "Neon A",
+      "bind": "params.neonA"
+    },
+    {
+      "type": "color",
+      "label": "Neon B",
+      "bind": "params.neonB"
+    },
+    {
+      "type": "color",
+      "label": "Neon C",
+      "bind": "params.neonC"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

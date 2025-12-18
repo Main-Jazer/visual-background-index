@@ -3,10 +3,27 @@
   "title": "Floating Monoliths",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "bgColor": "#010009",
+    "fogColor": "#040022",
+    "fogDensity": 0.05,
+    "monolithCount": 24,
+    "monolithColor": "#0e162f",
+    "monolithMetalness": 0.3,
+    "monolithRoughness": 0.6,
+    "monolithFloatAmp": 0.25,
+    "monolithFloatSpeed": 0.6,
+    "glowColor": "#00f5ff",
+    "glowOpacity": 0.2,
+    "particleCount": 1000,
+    "particleSize": 0.04,
+    "particleOpacity": 0.5,
+    "cameraMouseX": 0.8,
+    "cameraMouseY": 0.6
   },
   "hud": {
-    "title": "Floating Monoliths \u2014 Controls",
+    "title": "Floating Monoliths — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +70,54 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Background Color",
+      "bind": "params.bgColor"
+    },
+    {
+      "type": "slider",
+      "label": "Glow Opacity",
+      "bind": "params.glowOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Glow Color",
+      "bind": "params.glowColor"
+    },
+    {
+      "type": "slider",
+      "label": "Particle Opacity",
+      "bind": "params.particleOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

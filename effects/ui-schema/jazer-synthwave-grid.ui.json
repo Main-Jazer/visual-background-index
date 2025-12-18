@@ -3,10 +3,18 @@
   "title": "Synthwave Grid",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "gridSize": 40,
+    "gridDepth": 60,
+    "mountainScale": 150,
+    "trailAlpha": 0.12,
+    "gridColor": "#ff00ff",
+    "skyInner": "#0f0018",
+    "skyOuter": "#ff006e",
+    "sunColor": "#ffbe0b"
   },
   "hud": {
-    "title": "Synthwave Grid \u2014 Controls",
+    "title": "Synthwave Grid - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -55,25 +63,26 @@
       "bind": "params.mouseEnabled"
     },
     {
-      "type": "color",
-      "label": "Skycolors 1",
-      "bind": "effect.skyColors[0]"
+      "type": "slider",
+      "label": "Grid Depth",
+      "bind": "params.gridDepth",
+      "min": 5,
+      "max": 200,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Trail Alpha",
+      "bind": "params.trailAlpha",
+      "min": 0,
+      "max": 0.3,
+      "step": 0.01
     },
     {
       "type": "color",
-      "label": "Skycolors 2",
-      "bind": "effect.skyColors[1]"
-    },
-    {
-      "type": "color",
-      "label": "Mountaincolors 1",
-      "bind": "effect.mountainColors[0]"
-    },
-    {
-      "type": "color",
-      "label": "Mountaincolors 2",
-      "bind": "effect.mountainColors[1]"
+      "label": "Grid Color",
+      "bind": "params.gridColor"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

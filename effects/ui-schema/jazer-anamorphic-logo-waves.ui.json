@@ -3,10 +3,27 @@
   "title": "Anamorphic Logo Waves",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "cameraSway": 1,
+    "waveFreq": 1,
+    "waveAmp": 1,
+    "noiseScale": 1,
+    "noiseAmp": 1,
+    "anamorphDepth": 0.9,
+    "gridDensityX": 40,
+    "gridDensityY": 18,
+    "glowFalloff": 1.5,
+    "crestBob": 1,
+    "crestSize": 30,
+    "crestOpacity": 1,
+    "crestColor": "#9fe7ff",
+    "fogDensity": 0.05,
+    "fogColor": "#02020a",
+    "bgColor": "#02020a"
   },
   "hud": {
-    "title": "Anamorphic Logo Waves \u2014 Controls",
+    "title": "Anamorphic Logo Waves — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +55,42 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Wave Amp",
+      "bind": "params.waveAmp",
+      "step": 0.1,
+      "min": 0,
+      "max": 2,
+      "format": "fixed1"
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Noise Amp",
+      "bind": "params.noiseAmp",
+      "step": 0.1,
+      "min": 0,
+      "max": 2,
+      "format": "fixed1"
+    },
+    {
+      "keys": [
+        "7",
+        "8"
+      ],
+      "label": "Anamorph",
+      "bind": "params.anamorphDepth",
+      "step": 0.1,
+      "min": 0,
+      "max": 2,
+      "format": "fixed1"
     }
   ],
   "controls": [
@@ -53,7 +106,134 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Sway",
+      "bind": "params.cameraSway",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Wave Frequency",
+      "bind": "params.waveFreq",
+      "min": 0.2,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Wave Amplitude",
+      "bind": "params.waveAmp",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Noise Scale",
+      "bind": "params.noiseScale",
+      "min": 0.2,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Noise Amplitude",
+      "bind": "params.noiseAmp",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Anamorphic Depth",
+      "bind": "params.anamorphDepth",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Grid Density X",
+      "bind": "params.gridDensityX",
+      "min": 10,
+      "max": 80,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Grid Density Y",
+      "bind": "params.gridDensityY",
+      "min": 5,
+      "max": 40,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Glow Falloff",
+      "bind": "params.glowFalloff",
+      "min": 0.2,
+      "max": 4,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Crest Bob",
+      "bind": "params.crestBob",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Crest Size",
+      "bind": "params.crestSize",
+      "min": 5,
+      "max": 80,
+      "step": 0.5
+    },
+    {
+      "type": "slider",
+      "label": "Crest Opacity",
+      "bind": "params.crestOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Crest Color",
+      "bind": "params.crestColor"
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Background Color",
+      "bind": "params.bgColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. Controls bind to params; effect must read window.JAZER_UI.params (or expose objects) for changes to apply."
 }

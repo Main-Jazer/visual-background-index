@@ -3,10 +3,23 @@
   "title": "Infinite City Grid",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "gridSize": 100,
+    "depthRows": 16,
+    "laneCount": 11,
+    "scrollSpeed": 120,
+    "buildingDensity": 0.65,
+    "windowFlicker": 0.15,
+    "signChance": 0.2,
+    "fogStrength": 0.6,
+    "trailAlpha": 0.08,
+    "neonA": "#00f5ff",
+    "neonB": "#ff2aff",
+    "neonC": "#ffd25b"
   },
   "hud": {
-    "title": "Infinite City Grid \u2014 Controls",
+    "title": "Infinite City Grid - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +51,18 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "[",
+        "]"
+      ],
+      "label": "Speed",
+      "bind": "params.scrollSpeed",
+      "step": 10,
+      "min": 0,
+      "max": 300,
+      "format": "int"
     }
   ],
   "controls": [
@@ -53,7 +78,59 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Grid Size",
+      "bind": "params.gridSize",
+      "min": 10,
+      "max": 300,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Scroll Speed",
+      "bind": "params.scrollSpeed",
+      "min": 0,
+      "max": 300,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Building Density",
+      "bind": "params.buildingDensity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Window Flicker",
+      "bind": "params.windowFlicker",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Neon A",
+      "bind": "params.neonA"
+    },
+    {
+      "type": "color",
+      "label": "Neon B",
+      "bind": "params.neonB"
+    },
+    {
+      "type": "color",
+      "label": "Neon C",
+      "bind": "params.neonC"
+    },
+    {
+      "type": "color",
+      "label": "Background",
+      "bind": "params.bgColor"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

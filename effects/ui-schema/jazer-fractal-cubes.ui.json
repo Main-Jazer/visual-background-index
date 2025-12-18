@@ -3,10 +3,26 @@
   "title": "Fractal Cubes",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000005",
+    "fogEnabled": false,
+    "cameraMinZ": 2,
+    "cameraMaxZ": 8,
+    "zoomSpeed": 0.3,
+    "cubeBaseSize": 2,
+    "cubeMaxDepth": 3,
+    "childScale": 0.4,
+    "wireOpacity": 0.9,
+    "particleCount": 300,
+    "particleSize": 0.05,
+    "particleOpacity": 0.8,
+    "lightIntensity": 1,
+    "colorA": "#ff2aff",
+    "colorB": "#00f5ff",
+    "colorC": "#ffd25b"
   },
   "hud": {
-    "title": "Fractal Cubes \u2014 Controls",
+    "title": "Fractal Cubes - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +54,18 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "[",
+        "]"
+      ],
+      "label": "Zoom",
+      "bind": "params.zoomSpeed",
+      "step": 0.05,
+      "min": 0,
+      "max": 1,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -53,7 +81,83 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Zoom Speed",
+      "bind": "params.zoomSpeed",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Min Z",
+      "bind": "params.cameraMinZ",
+      "min": 0.5,
+      "max": 10,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Camera Max Z",
+      "bind": "params.cameraMaxZ",
+      "min": 1,
+      "max": 20,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Particle Count",
+      "bind": "params.particleCount",
+      "min": 0,
+      "max": 2000,
+      "step": 10
+    },
+    {
+      "type": "slider",
+      "label": "Particle Size",
+      "bind": "params.particleSize",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Particle Opacity",
+      "bind": "params.particleOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Wire Opacity",
+      "bind": "params.wireOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Background",
+      "bind": "params.bgColor"
+    },
+    {
+      "type": "color",
+      "label": "Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Color B",
+      "bind": "params.colorB"
+    },
+    {
+      "type": "color",
+      "label": "Color C",
+      "bind": "params.colorC"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

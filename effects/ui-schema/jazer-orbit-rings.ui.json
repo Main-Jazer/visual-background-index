@@ -3,10 +3,19 @@
   "title": "Orbit Rings",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "orbitCount": 12,
+    "textPerRing": 16,
+    "tiltStrength": 100,
+    "depthOscSpeed": 0.8,
+    "depthOscAmp": 0.15,
+    "waveAmp": 8,
+    "waveSpeed": 0.3,
+    "trailAlpha": 0.12
   },
   "hud": {
-    "title": "Orbit Rings \u2014 Controls",
+    "title": "Orbit Rings - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +62,23 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Orbit Count",
+      "bind": "params.orbitCount",
+      "min": 0,
+      "max": 60,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Text Per Ring",
+      "bind": "params.textPerRing",
+      "min": 0,
+      "max": 60,
+      "step": 1
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

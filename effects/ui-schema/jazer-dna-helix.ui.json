@@ -1,12 +1,32 @@
 {
   "version": 1,
-  "title": "Dna Helix",
+  "title": "DNA Helix",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "helixRadius": 120,
+    "nodeCount": 80,
+    "connectionInterval": 4,
+    "scrollSpeed": 200,
+    "phaseSpeed": 2,
+    "wobbleAmp": 10,
+    "mouseInfluence": 0.3,
+    "bgFade": 0.1,
+    "strandLineAlpha": 0.3,
+    "strandLineWidth": 3,
+    "nodeSizeScale": 8,
+    "vignetteAlpha": 0.6,
+    "palette1Color1": "#00f5ff",
+    "palette1Color2": "#00d4ff",
+    "palette1Color3": "#00b3ff",
+    "palette1Color4": "#0099ff",
+    "palette2Color1": "#ff2aff",
+    "palette2Color2": "#ff00d4",
+    "palette2Color3": "#ff00aa",
+    "palette2Color4": "#ff0080"
   },
   "hud": {
-    "title": "Dna Helix \u2014 Controls",
+    "title": "DNA Helix — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +73,103 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Helix Radius",
+      "bind": "params.helixRadius",
+      "min": 10,
+      "max": 400,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Node Count",
+      "bind": "params.nodeCount",
+      "min": 10,
+      "max": 300,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Connection Interval",
+      "bind": "params.connectionInterval",
+      "min": 1,
+      "max": 20,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Wobble Amp",
+      "bind": "params.wobbleAmp",
+      "min": 0,
+      "max": 80,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Influence",
+      "bind": "params.mouseInfluence",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Background Fade",
+      "bind": "params.bgFade",
+      "min": 0,
+      "max": 0.5,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Vignette Alpha",
+      "bind": "params.vignetteAlpha",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Palette 1 — Color 1",
+      "bind": "params.palette1Color1"
+    },
+    {
+      "type": "color",
+      "label": "Palette 1 — Color 2",
+      "bind": "params.palette1Color2"
+    },
+    {
+      "type": "color",
+      "label": "Palette 1 — Color 3",
+      "bind": "params.palette1Color3"
+    },
+    {
+      "type": "color",
+      "label": "Palette 1 — Color 4",
+      "bind": "params.palette1Color4"
+    },
+    {
+      "type": "color",
+      "label": "Palette 2 — Color 1",
+      "bind": "params.palette2Color1"
+    },
+    {
+      "type": "color",
+      "label": "Palette 2 — Color 2",
+      "bind": "params.palette2Color2"
+    },
+    {
+      "type": "color",
+      "label": "Palette 2 — Color 3",
+      "bind": "params.palette2Color3"
+    },
+    {
+      "type": "color",
+      "label": "Palette 2 — Color 4",
+      "bind": "params.palette2Color4"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. Only timeScale is currently read by the effect; the rest are schema stubs pending effect-side wiring."
 }

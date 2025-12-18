@@ -3,10 +3,22 @@
   "title": "Sonic Pulse Lines",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#010007",
+    "fogColor": "#020012",
+    "fogDensity": 0.08,
+    "pulseCount": 32,
+    "pulseOpacity": 0.6,
+    "pulseColor": "#00f5ff",
+    "ringCount": 6,
+    "ringOpacity": 0.4,
+    "ringColor": "#ff2aff",
+    "particleCount": 1500,
+    "particleOpacity": 0.3,
+    "particleSize": 0.05
   },
   "hud": {
-    "title": "Sonic Pulse Lines \u2014 Controls",
+    "title": "Sonic Pulse Lines - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -31,13 +43,6 @@
       "min": 0.1,
       "max": 3,
       "format": "fixed1"
-    },
-    {
-      "key": "M",
-      "label": "Mouse",
-      "bind": "params.mouseEnabled",
-      "type": "toggle",
-      "format": "onoff"
     }
   ],
   "controls": [
@@ -50,10 +55,21 @@
       "step": 0.01
     },
     {
-      "type": "checkbox",
-      "label": "Mouse Enabled",
-      "bind": "params.mouseEnabled"
+      "type": "slider",
+      "label": "Pulse Count",
+      "bind": "params.pulseCount",
+      "min": 0,
+      "max": 256,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Particles",
+      "bind": "params.particleCount",
+      "min": 0,
+      "max": 50000,
+      "step": 250
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

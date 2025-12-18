@@ -3,10 +3,17 @@
   "title": "Sri Yantra",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "layerCount": 8,
+    "baseRadius": 150,
+    "parallaxStrength": 60,
+    "rotationSpeed": 0.05,
+    "trailAlpha": 0.12,
+    "bgInner": "#140414",
+    "bgOuter": "#000006"
   },
   "hud": {
-    "title": "Sri Yantra \u2014 Controls",
+    "title": "Sri Yantra - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +60,15 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Layer Count",
+      "bind": "params.layerCount",
+      "min": 1,
+      "max": 24,
+      "step": 1
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

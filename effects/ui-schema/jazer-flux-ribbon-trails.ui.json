@@ -3,10 +3,28 @@
   "title": "Flux Ribbon Trails",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "bgColor": "#010008",
+    "fogColor": "#05001b",
+    "fogDensity": 0.06,
+    "ribbonCount": 8,
+    "ribbonOpacity": 0.6,
+    "ribbonWaveAmp": 0.1,
+    "ribbonWaveSpeed1": 1,
+    "ribbonWaveSpeed2": 0.8,
+    "ribbonRotateSpeed": 0.3,
+    "ribbonRotateAmp": 0.2,
+    "colorA": "#ff2aff",
+    "colorB": "#00f5ff",
+    "sparkCount": 1000,
+    "sparkOpacity": 0.5,
+    "sparkSize": 0.04,
+    "sparkSpeedMin": 5,
+    "sparkSpeedVar": 10
   },
   "hud": {
-    "title": "Flux Ribbon Trails \u2014 Controls",
+    "title": "Flux Ribbon Trails — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +71,54 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ribbon Opacity",
+      "bind": "params.ribbonOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Spark Opacity",
+      "bind": "params.sparkOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Color B",
+      "bind": "params.colorB"
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

@@ -3,10 +3,35 @@
   "title": "Cyber Glyph Rain",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgFade": 0.15,
+    "columnWidth": 20,
+    "fontSize": 16,
+    "charSpacing": 20,
+    "columnSpeedMin": 100,
+    "columnSpeedVar": 200,
+    "columnLengthMin": 10,
+    "columnLengthVar": 30,
+    "jazerColumnChance": 0.2,
+    "randomGlyphChangeChance": 0.1,
+    "scanlineAlpha": 0.05,
+    "scanlineStep": 2,
+    "flickerChance": 0.02,
+    "flickerAlphaMax": 0.05,
+    "centerGlowAlpha": 0.1,
+    "vignetteAlpha": 0.7,
+    "floatingCount": 5,
+    "floatingFontSize": 40,
+    "floatingYamp": 100,
+    "floatingAlphaAmp": 0.3,
+    "floatingShadowBlur": 25,
+    "palette1": "#00ff00",
+    "palette2": "#00ffff",
+    "palette3": "#00ff88",
+    "palette4": "#88ff00"
   },
   "hud": {
-    "title": "Cyber Glyph Rain \u2014 Controls",
+    "title": "Cyber Glyph Rain — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +63,18 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Fade",
+      "bind": "params.bgFade",
+      "step": 0.02,
+      "min": 0,
+      "max": 0.5,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -53,7 +90,99 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Background Fade",
+      "bind": "params.bgFade",
+      "min": 0,
+      "max": 0.5,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Column Width",
+      "bind": "params.columnWidth",
+      "min": 8,
+      "max": 60,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Font Size",
+      "bind": "params.fontSize",
+      "min": 8,
+      "max": 40,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Char Spacing",
+      "bind": "params.charSpacing",
+      "min": 8,
+      "max": 60,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "JaZeR Column Chance",
+      "bind": "params.jazerColumnChance",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Scanline Alpha",
+      "bind": "params.scanlineAlpha",
+      "min": 0,
+      "max": 0.3,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Flicker Chance",
+      "bind": "params.flickerChance",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Center Glow Alpha",
+      "bind": "params.centerGlowAlpha",
+      "min": 0,
+      "max": 0.5,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Vignette Alpha",
+      "bind": "params.vignetteAlpha",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Palette 1",
+      "bind": "params.palette1"
+    },
+    {
+      "type": "color",
+      "label": "Palette 2",
+      "bind": "params.palette2"
+    },
+    {
+      "type": "color",
+      "label": "Palette 3",
+      "bind": "params.palette3"
+    },
+    {
+      "type": "color",
+      "label": "Palette 4",
+      "bind": "params.palette4"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. Only timeScale is currently read by the effect; the rest are schema stubs pending effect-side wiring."
 }

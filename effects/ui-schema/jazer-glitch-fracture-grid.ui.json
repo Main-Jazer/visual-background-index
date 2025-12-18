@@ -3,10 +3,26 @@
   "title": "Glitch Fracture Grid",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#010007",
+    "fogColor": "#05001a",
+    "fogDensity": 0.06,
+    "cameraZ": 5,
+    "cameraY": 0.3,
+    "colorA": "#ff2aff",
+    "colorB": "#00f5ff",
+    "gridWaveAmp": 0.2,
+    "gridWaveSpeed": 2,
+    "gridLineScaleX": 25,
+    "gridLineScaleY": 12,
+    "glitchThreshold": 0.98,
+    "gridOpacity": 0.9,
+    "shardCount": 600,
+    "shardSize": 18,
+    "shardDriftAmp": 0.4
   },
   "hud": {
-    "title": "Glitch Fracture Grid \u2014 Controls",
+    "title": "Glitch Fracture Grid - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +54,18 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "[",
+        "]"
+      ],
+      "label": "Fog",
+      "bind": "params.fogDensity",
+      "step": 0.01,
+      "min": 0,
+      "max": 0.2,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -53,7 +81,67 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Grid Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Grid Color B",
+      "bind": "params.colorB"
+    },
+    {
+      "type": "slider",
+      "label": "Grid Wave Amp",
+      "bind": "params.gridWaveAmp",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Grid Wave Speed",
+      "bind": "params.gridWaveSpeed",
+      "min": 0,
+      "max": 10,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Shard Count",
+      "bind": "params.shardCount",
+      "min": 0,
+      "max": 5000,
+      "step": 50
+    },
+    {
+      "type": "slider",
+      "label": "Shard Size",
+      "bind": "params.shardSize",
+      "min": 1,
+      "max": 40,
+      "step": 1
+    },
+    {
+      "type": "color",
+      "label": "Background",
+      "bind": "params.bgColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

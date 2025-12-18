@@ -3,10 +3,19 @@
   "title": "Neon Vine Growth",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "vineCount": 8,
+    "vineSegments": 160,
+    "vineRadius": 0.05,
+    "budCount": 600,
+    "budOpacity": 0.6,
+    "budSize": 0.08,
+    "neonA": "#00f5ff",
+    "neonB": "#ff2aff"
   },
   "hud": {
-    "title": "Neon Vine Growth \u2014 Controls",
+    "title": "Neon Vine Growth - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +62,33 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Vine Count",
+      "bind": "params.vineCount",
+      "min": 0,
+      "max": 64,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Bud Count",
+      "bind": "params.budCount",
+      "min": 0,
+      "max": 20000,
+      "step": 100
+    },
+    {
+      "type": "color",
+      "label": "Neon A",
+      "bind": "params.neonA"
+    },
+    {
+      "type": "color",
+      "label": "Neon B",
+      "bind": "params.neonB"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

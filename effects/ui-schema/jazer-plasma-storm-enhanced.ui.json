@@ -3,10 +3,20 @@
   "title": "Plasma Storm Enhanced",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000005",
+    "orbCount": 8,
+    "trailAlpha": 0.14,
+    "sparkCount": 1600,
+    "sparkOpacity": 0.55,
+    "linkDistance": 420,
+    "linkChance": 0.12,
+    "colorA": "#ff0055",
+    "colorB": "#00f5ff",
+    "accent": "#ffd700"
   },
   "hud": {
-    "title": "Plasma Storm Enhanced \u2014 Controls",
+    "title": "Plasma Storm Enhanced - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -55,5 +65,5 @@
       "bind": "params.mouseEnabled"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

@@ -2,10 +2,28 @@
   "version": 1,
   "title": "Instancing Galaxy",
   "defaults": {
-    "timeScale": 1
+    "timeScale": 1,
+    "mouseEnabled": true,
+    "bgColor": "#000005",
+    "fogColor": "#000005",
+    "fogDensity": 0.004,
+    "starCount": 100000,
+    "coreCount": 5000,
+    "dustCount": 10000,
+    "galaxyRadius": 80,
+    "armCount": 4,
+    "twist": 6,
+    "orbitBaseSpeed": 0.2,
+    "camRadius": 150,
+    "camHeight": 35,
+    "starSize": 0.04,
+    "starOpacity": 0.85,
+    "coreColor": "#ffffff",
+    "colorA": "#ff2aff",
+    "colorB": "#00f5ff"
   },
   "hud": {
-    "title": "Instancing Galaxy \u2014 Controls",
+    "title": "Instancing Galaxy - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -30,6 +48,25 @@
       "min": 0.1,
       "max": 3,
       "format": "fixed1"
+    },
+    {
+      "key": "M",
+      "label": "Mouse",
+      "bind": "params.mouseEnabled",
+      "type": "toggle",
+      "format": "onoff"
+    },
+    {
+      "keys": [
+        "[",
+        "]"
+      ],
+      "label": "Stars",
+      "bind": "params.starCount",
+      "step": 5000,
+      "min": 0,
+      "max": 250000,
+      "format": "int"
     }
   ],
   "controls": [
@@ -40,7 +77,67 @@
       "min": 0,
       "max": 3,
       "step": 0.01
+    },
+    {
+      "type": "checkbox",
+      "label": "Mouse Enabled",
+      "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Star Count",
+      "bind": "params.starCount",
+      "min": 0,
+      "max": 250000,
+      "step": 1000
+    },
+    {
+      "type": "slider",
+      "label": "Core Count",
+      "bind": "params.coreCount",
+      "min": 0,
+      "max": 50000,
+      "step": 250
+    },
+    {
+      "type": "slider",
+      "label": "Dust Count",
+      "bind": "params.dustCount",
+      "min": 0,
+      "max": 100000,
+      "step": 500
+    },
+    {
+      "type": "slider",
+      "label": "Camera Radius",
+      "bind": "params.camRadius",
+      "min": 10,
+      "max": 400,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.03,
+      "step": 0.0001
+    },
+    {
+      "type": "color",
+      "label": "Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Color B",
+      "bind": "params.colorB"
+    },
+    {
+      "type": "color",
+      "label": "Core Color",
+      "bind": "params.coreColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

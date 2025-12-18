@@ -3,10 +3,24 @@
   "title": "Plasma Vortex",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "ringCount": 15,
+    "pointsPerRing": 120,
+    "radiusBase": 2,
+    "radiusStep": 0.5,
+    "ringHeightStep": 0.8,
+    "particleSizeBase": 0.05,
+    "particleSizeVar": 0.03,
+    "rotationBase": 0.5,
+    "pulseSpeed": 2,
+    "pulseAmp": 0.1,
+    "mouseRepelRadius": 2,
+    "mouseRepelStrength": 0.5,
+    "glowStrength": 1
   },
   "hud": {
-    "title": "Plasma Vortex \u2014 Controls",
+    "title": "Plasma Vortex - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -31,13 +45,6 @@
       "min": 0.1,
       "max": 3,
       "format": "fixed1"
-    },
-    {
-      "key": "M",
-      "label": "Mouse",
-      "bind": "params.mouseEnabled",
-      "type": "toggle",
-      "format": "onoff"
     }
   ],
   "controls": [
@@ -50,10 +57,21 @@
       "step": 0.01
     },
     {
-      "type": "checkbox",
-      "label": "Mouse Enabled",
-      "bind": "params.mouseEnabled"
+      "type": "slider",
+      "label": "Ring Count",
+      "bind": "params.ringCount",
+      "min": 1,
+      "max": 60,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Points Per Ring",
+      "bind": "params.pointsPerRing",
+      "min": 12,
+      "max": 400,
+      "step": 1
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

@@ -3,10 +3,20 @@
   "title": "Sacred Tesseract",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000006",
+    "fogColor": "#030012",
+    "fogDensity": 0.06,
+    "wireOpacity": 0.6,
+    "glowStrength": 1,
+    "nodeCount": 1200,
+    "nodeOpacity": 0.55,
+    "nodeSize": 0.05,
+    "colorA": "#00f5ff",
+    "colorB": "#ff2aff"
   },
   "hud": {
-    "title": "Sacred Tesseract \u2014 Controls",
+    "title": "Sacred Tesseract - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -55,5 +65,5 @@
       "bind": "params.mouseEnabled"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

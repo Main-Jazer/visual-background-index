@@ -1,12 +1,30 @@
 {
   "version": 1,
-  "title": "Gpu Particle Tornado",
+  "title": "GPU Particle Tornado",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "particleCount": 500000,
+    "curlNoiseStrength": 0.3,
+    "curlNoiseScale": 8,
+    "gravityX": 0,
+    "gravityY": -3,
+    "gravityZ": 0,
+    "damping": 0.02,
+    "maxSpeed": 15,
+    "fogColor": "#000000",
+    "fogDensity": 0.002,
+    "cameraRadius": 60,
+    "cameraHeight": 20,
+    "attractorRadius": 15,
+    "attractorStrength": 12,
+    "attractorSpeed": 0.3,
+    "groundOpacity": 0.3,
+    "gridOpacity": 1,
+    "accentColor": "#ff0055"
   },
   "hud": {
-    "title": "Gpu Particle Tornado \u2014 Controls",
+    "title": "GPU Particle Tornado - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +56,18 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "[",
+        "]"
+      ],
+      "label": "Fog",
+      "bind": "params.fogDensity",
+      "step": 0.0005,
+      "min": 0,
+      "max": 0.02,
+      "format": "fixed4"
     }
   ],
   "controls": [
@@ -53,7 +83,68 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Particle Count",
+      "bind": "params.particleCount",
+      "min": 10000,
+      "max": 1000000,
+      "step": 10000
+    },
+    {
+      "type": "slider",
+      "label": "Curl Noise Strength",
+      "bind": "params.curlNoiseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Curl Noise Scale",
+      "bind": "params.curlNoiseScale",
+      "min": 0,
+      "max": 32,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Gravity Y",
+      "bind": "params.gravityY",
+      "min": -20,
+      "max": 20,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Damping",
+      "bind": "params.damping",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Max Speed",
+      "bind": "params.maxSpeed",
+      "min": 0,
+      "max": 50,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.02,
+      "step": 0.0001
+    },
+    {
+      "type": "color",
+      "label": "Accent Color",
+      "bind": "params.accentColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

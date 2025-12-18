@@ -2,10 +2,21 @@
   "version": 1,
   "title": "Volumetric Cathedral",
   "defaults": {
-    "timeScale": 1
+    "timeScale": 1,
+    "mouseEnabled": true,
+    "bgColor": "#000008",
+    "spotlightCount": 5,
+    "pillarCount": 8,
+    "particleCount": 50000,
+    "godRaysStrength": 1,
+    "fogDensity": 0.06,
+    "camRadius": 40,
+    "camHeight": 15,
+    "neonA": "#00f5ff",
+    "neonB": "#ff2aff"
   },
   "hud": {
-    "title": "Volumetric Cathedral \u2014 Controls",
+    "title": "Volumetric Cathedral - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -40,7 +51,15 @@
       "min": 0,
       "max": 3,
       "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Particles",
+      "bind": "params.particleCount",
+      "min": 0,
+      "max": 500000,
+      "step": 5000
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

@@ -3,10 +3,24 @@
   "title": "Infinite Mirror Corridor",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#010007",
+    "fogColor": "#050118",
+    "fogDensity": 0.06,
+    "starCount": 800,
+    "starSize": 0.04,
+    "starOpacity": 0.6,
+    "mirrorCount": 12,
+    "mirrorOpacity": 0.35,
+    "corridorSpeed": 18,
+    "pulseSpeed": 1,
+    "glowStrength": 1.1,
+    "colorA": "#00f5ff",
+    "colorB": "#ff2aff",
+    "accent": "#ffffff"
   },
   "hud": {
-    "title": "Infinite Mirror Corridor \u2014 Controls",
+    "title": "Infinite Mirror Corridor - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +67,62 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Star Count",
+      "bind": "params.starCount",
+      "min": 0,
+      "max": 20000,
+      "step": 100
+    },
+    {
+      "type": "slider",
+      "label": "Corridor Speed",
+      "bind": "params.corridorSpeed",
+      "min": 0,
+      "max": 60,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Mirror Count",
+      "bind": "params.mirrorCount",
+      "min": 0,
+      "max": 64,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Mirror Opacity",
+      "bind": "params.mirrorOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Color B",
+      "bind": "params.colorB"
+    },
+    {
+      "type": "color",
+      "label": "Accent",
+      "bind": "params.accent"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

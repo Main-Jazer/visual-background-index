@@ -3,10 +3,24 @@
   "title": "Liquid Neon Ripple",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "maxRipples": 20,
+    "rippleMaxAge": 4,
+    "rippleRadius": 500,
+    "ringCount": 6,
+    "ringSpacing": 12,
+    "waveStrength": 1,
+    "waveFreq": 0.1,
+    "waveFalloff": 50,
+    "textEnabled": true,
+    "textRepeat": 6,
+    "textSizeBase": 16,
+    "textSizeGrow": 10,
+    "trailAlpha": 0.12,
+    "bgColor": "#000000"
   },
   "hud": {
-    "title": "Liquid Neon Ripple \u2014 Controls",
+    "title": "Liquid Neon Ripple - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +67,23 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Max Ripples",
+      "bind": "params.maxRipples",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Trail Alpha",
+      "bind": "params.trailAlpha",
+      "min": 0,
+      "max": 0.3,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

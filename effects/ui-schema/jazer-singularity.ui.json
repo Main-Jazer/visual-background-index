@@ -3,10 +3,21 @@
   "title": "Singularity",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000006",
+    "fogColor": "#020012",
+    "fogDensity": 0.07,
+    "ringOpacity": 0.35,
+    "particleCount": 3000,
+    "particleOpacity": 0.6,
+    "particleSize": 0.05,
+    "accretionOpacity": 0.8,
+    "coreOpacity": 0.7,
+    "colorA": "#ff2aff",
+    "colorB": "#00f5ff"
   },
   "hud": {
-    "title": "Singularity \u2014 Controls",
+    "title": "Singularity - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -31,13 +42,6 @@
       "min": 0.1,
       "max": 3,
       "format": "fixed1"
-    },
-    {
-      "key": "M",
-      "label": "Mouse",
-      "bind": "params.mouseEnabled",
-      "type": "toggle",
-      "format": "onoff"
     }
   ],
   "controls": [
@@ -55,5 +59,5 @@
       "bind": "params.mouseEnabled"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

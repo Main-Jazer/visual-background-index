@@ -2,10 +2,17 @@
   "version": 1,
   "title": "Neon Smoke Vortex",
   "defaults": {
-    "timeScale": 1
+    "timeScale": 1,
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "smokeDensity": 0.6,
+    "vortexStrength": 1,
+    "glowStrength": 1,
+    "colorA": "#00f5ff",
+    "colorB": "#ff2aff"
   },
   "hud": {
-    "title": "Neon Smoke Vortex \u2014 Controls",
+    "title": "Neon Smoke Vortex - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -40,7 +47,33 @@
       "min": 0,
       "max": 3,
       "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Smoke Density",
+      "bind": "params.smokeDensity",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Vortex Strength",
+      "bind": "params.vortexStrength",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Color B",
+      "bind": "params.colorB"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect HTML is currently a placeholder; schema is a stub."
 }

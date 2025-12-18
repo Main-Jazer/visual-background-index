@@ -3,10 +3,18 @@
   "title": "Plasma Storm Corridor",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000005",
+    "corridorDepth": 1200,
+    "plasmaDensity": 0.6,
+    "sparkCount": 1200,
+    "sparkOpacity": 0.6,
+    "fogStrength": 0.8,
+    "colorA": "#ff2aff",
+    "colorB": "#00f5ff"
   },
   "hud": {
-    "title": "Plasma Storm Corridor \u2014 Controls",
+    "title": "Plasma Storm Corridor - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -55,5 +63,5 @@
       "bind": "params.mouseEnabled"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

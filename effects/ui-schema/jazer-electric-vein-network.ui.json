@@ -3,10 +3,27 @@
   "title": "Electric Vein Network",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "bgColor": "#010008",
+    "fogColor": "#040020",
+    "fogDensity": 0.08,
+    "nodeCount": 200,
+    "nodeOpacity": 0.8,
+    "nodeColor": "#55dfff",
+    "nodeVelocityMax": 0.2,
+    "connectionDistance": 1.5,
+    "connectionOpacity": 0.45,
+    "connectionColor": "#00f5ff",
+    "lightningOpacity": 0.6,
+    "lightningJitter": 0.2,
+    "lightningColor": "#ff2aff",
+    "glowColor": "#00f5ff",
+    "glowScale": 8,
+    "cameraMouse": 0.8
   },
   "hud": {
-    "title": "Electric Vein Network \u2014 Controls",
+    "title": "Electric Vein Network — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +70,72 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Node Opacity",
+      "bind": "params.nodeOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Node Color",
+      "bind": "params.nodeColor"
+    },
+    {
+      "type": "slider",
+      "label": "Connection Opacity",
+      "bind": "params.connectionOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Connection Color",
+      "bind": "params.connectionColor"
+    },
+    {
+      "type": "slider",
+      "label": "Lightning Opacity",
+      "bind": "params.lightningOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Lightning Color",
+      "bind": "params.lightningColor"
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Background Color",
+      "bind": "params.bgColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

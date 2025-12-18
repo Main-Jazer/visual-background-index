@@ -3,10 +3,36 @@
   "title": "Cyber Glitch",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#050008",
+    "trailAlpha": 0.3,
+    "streamAlpha": 0.3,
+    "ringCount": 40,
+    "streamCount": 50,
+    "ringSpeedBase": 3,
+    "ringSpeedAmp": 0.5,
+    "glitchBase": 0.3,
+    "glitchAmp": 0.2,
+    "glitchSpeed": 0.5,
+    "glitchSpikeChance": 0.01,
+    "glitchSpikeValue": 2,
+    "blockChance": 0.05,
+    "blockAlpha": 0.3,
+    "scanChance": 0.03,
+    "scanOffsetMax": 30,
+    "textSize": 80,
+    "textAlphaBase": 0.03,
+    "textAlphaNoise": 0.02,
+    "textRgbSplit": 2,
+    "vignetteAlpha": 0.7,
+    "neonColor1": "#ff0055",
+    "neonColor2": "#00f5ff",
+    "neonColor3": "#39ff14",
+    "neonColor4": "#ff2aff",
+    "neonColor5": "#ffd700"
   },
   "hud": {
-    "title": "Cyber Glitch \u2014 Controls",
+    "title": "Cyber Glitch — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +64,30 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Glitch",
+      "bind": "params.glitchBase",
+      "step": 0.1,
+      "min": 0,
+      "max": 3,
+      "format": "fixed1"
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Trail",
+      "bind": "params.trailAlpha",
+      "step": 0.05,
+      "min": 0,
+      "max": 1,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -55,15 +105,102 @@
       "bind": "params.mouseEnabled"
     },
     {
-      "type": "color",
-      "label": "Neoncolors 1",
-      "bind": "effect.neonColors[0]"
+      "type": "slider",
+      "label": "Glitch Base",
+      "bind": "params.glitchBase",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Glitch Amp",
+      "bind": "params.glitchAmp",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Glitch Spike Chance",
+      "bind": "params.glitchSpikeChance",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Block Chance",
+      "bind": "params.blockChance",
+      "min": 0,
+      "max": 0.5,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Scanline Chance",
+      "bind": "params.scanChance",
+      "min": 0,
+      "max": 0.5,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Trail Alpha",
+      "bind": "params.trailAlpha",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Stream Alpha",
+      "bind": "params.streamAlpha",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Text Size",
+      "bind": "params.textSize",
+      "min": 10,
+      "max": 240,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Vignette Alpha",
+      "bind": "params.vignetteAlpha",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
     },
     {
       "type": "color",
-      "label": "Neoncolors 2",
-      "bind": "effect.neonColors[1]"
+      "label": "Neon Color 1",
+      "bind": "params.neonColor1"
+    },
+    {
+      "type": "color",
+      "label": "Neon Color 2",
+      "bind": "params.neonColor2"
+    },
+    {
+      "type": "color",
+      "label": "Neon Color 3",
+      "bind": "params.neonColor3"
+    },
+    {
+      "type": "color",
+      "label": "Neon Color 4",
+      "bind": "params.neonColor4"
+    },
+    {
+      "type": "color",
+      "label": "Neon Color 5",
+      "bind": "params.neonColor5"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. Only timeScale is currently read by the effect; the rest are schema stubs pending effect-side wiring."
 }

@@ -3,10 +3,31 @@
   "title": "Parallax Starfield Drift",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "layerCount": 5,
+    "starCounts": [
+      150,
+      200,
+      250,
+      300,
+      350
+    ],
+    "parallaxFactors": [
+      0.2,
+      0.4,
+      0.6,
+      0.8,
+      1
+    ],
+    "starOpacity": 0.8,
+    "starSize": 0.05,
+    "logoCount": 12,
+    "logoOpacity": 0.8,
+    "connectionOpacity": 0.2
   },
   "hud": {
-    "title": "Parallax Starfield Drift \u2014 Controls",
+    "title": "Parallax Starfield Drift - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +74,23 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Layer Count",
+      "bind": "params.layerCount",
+      "min": 1,
+      "max": 10,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Connection Opacity",
+      "bind": "params.connectionOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

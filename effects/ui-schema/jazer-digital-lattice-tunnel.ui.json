@@ -3,10 +3,24 @@
   "title": "Digital Lattice Tunnel",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgFade": 0.25,
+    "glowAlpha1": 0.15,
+    "glowAlpha2": 0.1,
+    "glowPulseSpeed": 0.8,
+    "glowRadiusBase": 0.3,
+    "glowRadiusAmp": 0.2,
+    "baseSpeed": 10,
+    "mouseSpeed": 20,
+    "ringCount": 50,
+    "particleCount": 200,
+    "palette1": "#00f5ff",
+    "palette2": "#ff2aff",
+    "palette3": "#b37cff",
+    "palette4": "#ffd86b"
   },
   "hud": {
-    "title": "Digital Lattice Tunnel \u2014 Controls",
+    "title": "Digital Lattice Tunnel — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +52,18 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Speed",
+      "bind": "params.baseSpeed",
+      "step": 1,
+      "min": 0,
+      "max": 80,
+      "format": "int"
     }
   ],
   "controls": [
@@ -53,7 +79,67 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Background Fade",
+      "bind": "params.bgFade",
+      "min": 0,
+      "max": 0.8,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Base Speed",
+      "bind": "params.baseSpeed",
+      "min": 0,
+      "max": 80,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Speed",
+      "bind": "params.mouseSpeed",
+      "min": 0,
+      "max": 120,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Glow Alpha 1",
+      "bind": "params.glowAlpha1",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Glow Alpha 2",
+      "bind": "params.glowAlpha2",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Palette 1",
+      "bind": "params.palette1"
+    },
+    {
+      "type": "color",
+      "label": "Palette 2",
+      "bind": "params.palette2"
+    },
+    {
+      "type": "color",
+      "label": "Palette 3",
+      "bind": "params.palette3"
+    },
+    {
+      "type": "color",
+      "label": "Palette 4",
+      "bind": "params.palette4"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. Only timeScale is currently read by the effect; the rest are schema stubs pending effect-side wiring."
 }

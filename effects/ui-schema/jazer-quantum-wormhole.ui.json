@@ -3,10 +3,20 @@
   "title": "Quantum Wormhole",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "particleCount": 8000,
+    "particleOpacity": 0.8,
+    "particleSize": 0.06,
+    "ringCount": 24,
+    "ringOpacity": 0.25,
+    "ringColor": "#00f5ff",
+    "horizonRadius": 1.5,
+    "horizonGlow": 1,
+    "jetOpacity": 0.8
   },
   "hud": {
-    "title": "Quantum Wormhole \u2014 Controls",
+    "title": "Quantum Wormhole - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +63,23 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Particle Count",
+      "bind": "params.particleCount",
+      "min": 0,
+      "max": 200000,
+      "step": 1000
+    },
+    {
+      "type": "slider",
+      "label": "Particle Opacity",
+      "bind": "params.particleOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

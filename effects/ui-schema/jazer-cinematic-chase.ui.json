@@ -2,10 +2,25 @@
   "version": 1,
   "title": "Cinematic Chase",
   "defaults": {
-    "timeScale": 1
+    "timeScale": 1,
+    "fogDensity": 0.01,
+    "maxSpeed": 150,
+    "acceleration": 0.5,
+    "cameraSwayX": 2,
+    "cameraSwayY": 1,
+    "cameraRoll": 0.05,
+    "dofEnabled": true,
+    "dofFocusBase": 0.1,
+    "dofFocusAmp": 0.05,
+    "motionBlurEnabled": true,
+    "motionBlurStrength": 1,
+    "frontLightIntensity": 2,
+    "ambientLightIntensity": 0.5,
+    "ringGlowIntensity": 3,
+    "ringPulseSpeed": 2
   },
   "hud": {
-    "title": "Cinematic Chase \u2014 Controls",
+    "title": "Cinematic Chase — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -40,7 +55,121 @@
       "min": 0,
       "max": 3,
       "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.08,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Max Speed",
+      "bind": "params.maxSpeed",
+      "min": 0,
+      "max": 400,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Acceleration",
+      "bind": "params.acceleration",
+      "min": 0,
+      "max": 5,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Sway X",
+      "bind": "params.cameraSwayX",
+      "min": 0,
+      "max": 6,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Sway Y",
+      "bind": "params.cameraSwayY",
+      "min": 0,
+      "max": 6,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Roll",
+      "bind": "params.cameraRoll",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "checkbox",
+      "label": "Depth of Field Enabled",
+      "bind": "params.dofEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "DOF Focus Base",
+      "bind": "params.dofFocusBase",
+      "min": 0,
+      "max": 1,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "DOF Focus Amp",
+      "bind": "params.dofFocusAmp",
+      "min": 0,
+      "max": 0.5,
+      "step": 0.001
+    },
+    {
+      "type": "checkbox",
+      "label": "Motion Blur Enabled",
+      "bind": "params.motionBlurEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Motion Blur Strength",
+      "bind": "params.motionBlurStrength",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Front Light Intensity",
+      "bind": "params.frontLightIntensity",
+      "min": 0,
+      "max": 10,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ambient Light Intensity",
+      "bind": "params.ambientLightIntensity",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ring Glow Intensity",
+      "bind": "params.ringGlowIntensity",
+      "min": 0,
+      "max": 10,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ring Pulse Speed",
+      "bind": "params.ringPulseSpeed",
+      "min": 0,
+      "max": 10,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect currently needs effect-side wiring to map these params onto DOF/MotionBlur passes and scene values."
 }

@@ -3,10 +3,42 @@
   "title": "Digital Sandstorm",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "bgColor": "#010008",
+    "fogColor": "#040015",
+    "fogDensity": 0.04,
+    "particleCount": 4000,
+    "particlePointSize": 25,
+    "particleOpacity": 1,
+    "particleSinSpeed": 0.5,
+    "particleSinAmp": 0.2,
+    "particleMouseDrift": 0.2,
+    "velXRange": 0.5,
+    "velYBase": 0.1,
+    "velYVar": 0.3,
+    "velZBase": 6,
+    "velZVar": 6,
+    "respawnZ": -20,
+    "respawnZMax": 2,
+    "ribbonOpacity": 0.3,
+    "ribbonYamp": 0.4,
+    "ribbonYspeed": 2,
+    "ribbonXfreq": 6,
+    "ribbonZamp": 0.2,
+    "ribbonZspeed": 1.5,
+    "ribbonYfreq": 12,
+    "ribbonPulseSpeed": 1.5,
+    "ribbonPulseFreq": 8,
+    "ribbonColorA": "#0066cc",
+    "ribbonColorB": "#ff33cc",
+    "cameraSwayX": 0.4,
+    "cameraSwayY": 0.2,
+    "cameraMouseX": 0.8,
+    "cameraMouseY": 0.3
   },
   "hud": {
-    "title": "Digital Sandstorm \u2014 Controls",
+    "title": "Digital Sandstorm — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +70,18 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Fog",
+      "bind": "params.fogDensity",
+      "step": 0.01,
+      "min": 0,
+      "max": 0.2,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -53,7 +97,83 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Background Color",
+      "bind": "params.bgColor"
+    },
+    {
+      "type": "slider",
+      "label": "Particle Point Size",
+      "bind": "params.particlePointSize",
+      "min": 1,
+      "max": 80,
+      "step": 0.5
+    },
+    {
+      "type": "slider",
+      "label": "Particle Sin Amp",
+      "bind": "params.particleSinAmp",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ribbon Opacity",
+      "bind": "params.ribbonOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Ribbon Color A",
+      "bind": "params.ribbonColorA"
+    },
+    {
+      "type": "color",
+      "label": "Ribbon Color B",
+      "bind": "params.ribbonColorB"
+    },
+    {
+      "type": "slider",
+      "label": "Camera Mouse X",
+      "bind": "params.cameraMouseX",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Mouse Y",
+      "bind": "params.cameraMouseY",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

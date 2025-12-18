@@ -3,10 +3,24 @@
   "title": "Magnetic Particle Swirl",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "particleCount": 2000,
+    "particleSize": 0.05,
+    "particleOpacity": 0.5,
+    "fieldLineCount": 16,
+    "fieldLineOpacity": 0.2,
+    "fieldLinePoints": 50,
+    "magnetOpacity": 0.8,
+    "magnetColor": "#ff2aff",
+    "fieldColor": "#00f5ff",
+    "swirlSpeedMin": 0.5,
+    "swirlSpeedVar": 0.8,
+    "swirlRadiusMin": 0.5,
+    "swirlRadiusVar": 2.5
   },
   "hud": {
-    "title": "Magnetic Particle Swirl \u2014 Controls",
+    "title": "Magnetic Particle Swirl - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +67,33 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Particle Count",
+      "bind": "params.particleCount",
+      "min": 0,
+      "max": 50000,
+      "step": 250
+    },
+    {
+      "type": "slider",
+      "label": "Particle Opacity",
+      "bind": "params.particleOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Field Color",
+      "bind": "params.fieldColor"
+    },
+    {
+      "type": "color",
+      "label": "Magnet Color",
+      "bind": "params.magnetColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

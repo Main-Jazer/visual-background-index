@@ -3,10 +3,27 @@
   "title": "Hex Tunnel Cascade",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#010007",
+    "fogColor": "#030012",
+    "fogDensity": 0.08,
+    "cameraZ": 4,
+    "layerCount": 30,
+    "layerSpacing": 3,
+    "layerOpacity": 0.15,
+    "layerColor": "#00f5ff",
+    "prismCount": 700,
+    "prismOpacity": 0.6,
+    "prismColor": "#ff2aff",
+    "trailCount": 1000,
+    "trailOpacity": 0.4,
+    "trailSize": 0.05,
+    "trailSpeedMin": 12,
+    "trailSpeedVar": 18,
+    "hueShiftPerLayer": 0.02
   },
   "hud": {
-    "title": "Hex Tunnel Cascade \u2014 Controls",
+    "title": "Hex Tunnel Cascade - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +55,18 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "[",
+        "]"
+      ],
+      "label": "Fog",
+      "bind": "params.fogDensity",
+      "step": 0.01,
+      "min": 0,
+      "max": 0.2,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -53,7 +82,86 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "slider",
+      "label": "Layer Count",
+      "bind": "params.layerCount",
+      "min": 1,
+      "max": 200,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Layer Opacity",
+      "bind": "params.layerOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Layer Color",
+      "bind": "params.layerColor"
+    },
+    {
+      "type": "slider",
+      "label": "Prism Count",
+      "bind": "params.prismCount",
+      "min": 0,
+      "max": 20000,
+      "step": 100
+    },
+    {
+      "type": "slider",
+      "label": "Prism Opacity",
+      "bind": "params.prismOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Prism Color",
+      "bind": "params.prismColor"
+    },
+    {
+      "type": "slider",
+      "label": "Trail Count",
+      "bind": "params.trailCount",
+      "min": 0,
+      "max": 20000,
+      "step": 100
+    },
+    {
+      "type": "slider",
+      "label": "Trail Opacity",
+      "bind": "params.trailOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Trail Size",
+      "bind": "params.trailSize",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

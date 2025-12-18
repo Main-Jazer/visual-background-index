@@ -3,10 +3,20 @@
   "title": "Plasma Storm",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgInner": "#100010",
+    "bgOuter": "#000005",
+    "trailAlpha": 0.15,
+    "orbCount": 6,
+    "maxLinkDistance": 400,
+    "linkChance": 0.1,
+    "tendrilCount": 6,
+    "glowStrength": 1,
+    "colorA": "#ff0055",
+    "colorB": "#00f5ff"
   },
   "hud": {
-    "title": "Plasma Storm \u2014 Controls",
+    "title": "Plasma Storm - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -55,15 +65,21 @@
       "bind": "params.mouseEnabled"
     },
     {
-      "type": "color",
-      "label": "Plasmacolors 1",
-      "bind": "effect.plasmaColors[0]"
+      "type": "slider",
+      "label": "Trail Alpha",
+      "bind": "params.trailAlpha",
+      "min": 0,
+      "max": 0.3,
+      "step": 0.01
     },
     {
-      "type": "color",
-      "label": "Plasmacolors 2",
-      "bind": "effect.plasmaColors[1]"
+      "type": "slider",
+      "label": "Orb Count",
+      "bind": "params.orbCount",
+      "min": 0,
+      "max": 40,
+      "step": 1
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

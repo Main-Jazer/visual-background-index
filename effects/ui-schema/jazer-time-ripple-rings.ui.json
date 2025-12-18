@@ -3,10 +3,17 @@
   "title": "Time Ripple Rings",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "resolution": 40,
+    "textCount": 12,
+    "spirals": 8,
+    "maxRadius": 100,
+    "trailAlpha": 0.12,
+    "bgInner": "#070018",
+    "bgOuter": "#000006"
   },
   "hud": {
-    "title": "Time Ripple Rings \u2014 Controls",
+    "title": "Time Ripple Rings - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +60,15 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Resolution",
+      "bind": "params.resolution",
+      "min": 10,
+      "max": 120,
+      "step": 1
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

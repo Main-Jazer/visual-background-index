@@ -3,7 +3,23 @@
   "title": "Cosmic Stardust",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "particleCount": 800,
+    "particleSpeedMult": 1,
+    "particleZSpeed": 100,
+    "particleSizeMult": 1,
+    "orbitSpeedMult": 1,
+    "orbitRadiusMult": 1,
+    "noiseAmp": 50,
+    "mouseRadius": 200,
+    "mouseStrength": 1,
+    "mouseAttract": 15,
+    "mouseRepel": 30,
+    "trailAlpha": 0.08,
+    "cursorGlowAlpha": 0.1,
+    "vignette": 0.5,
+    "nebula1Alpha": 0.02,
+    "nebula2Alpha": 0.02
   },
   "hud": {
     "title": "Cosmic Stardust \u2014 Controls",
@@ -38,6 +54,30 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Particles",
+      "bind": "params.particleSpeedMult",
+      "step": 0.1,
+      "min": 0,
+      "max": 3,
+      "format": "fixed1"
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Trail",
+      "bind": "params.trailAlpha",
+      "step": 0.01,
+      "min": 0,
+      "max": 0.3,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -53,7 +93,135 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Particle Count",
+      "bind": "params.particleCount",
+      "min": 0,
+      "max": 4000,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Particle Speed Mult",
+      "bind": "params.particleSpeedMult",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Particle Z Speed",
+      "bind": "params.particleZSpeed",
+      "min": 0,
+      "max": 400,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Particle Size Mult",
+      "bind": "params.particleSizeMult",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Orbit Speed Mult",
+      "bind": "params.orbitSpeedMult",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Orbit Radius Mult",
+      "bind": "params.orbitRadiusMult",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Noise Amp",
+      "bind": "params.noiseAmp",
+      "min": 0,
+      "max": 200,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Radius",
+      "bind": "params.mouseRadius",
+      "min": 0,
+      "max": 800,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Attract",
+      "bind": "params.mouseAttract",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Repel",
+      "bind": "params.mouseRepel",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Trail Alpha",
+      "bind": "params.trailAlpha",
+      "min": 0,
+      "max": 0.3,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Cursor Glow",
+      "bind": "params.cursorGlowAlpha",
+      "min": 0,
+      "max": 0.5,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Nebula 1 Alpha",
+      "bind": "params.nebula1Alpha",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Nebula 2 Alpha",
+      "bind": "params.nebula2Alpha",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Vignette",
+      "bind": "params.vignette",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. Only timeScale is currently read by the effect; the rest are schema stubs pending effect-side wiring."
 }

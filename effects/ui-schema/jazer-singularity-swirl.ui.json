@@ -3,10 +3,22 @@
   "title": "Singularity Swirl",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#010006",
+    "fogColor": "#030014",
+    "fogDensity": 0.05,
+    "particleCount": 2500,
+    "particleOpacity": 0.6,
+    "particleSize": 0.05,
+    "swirlSpeedMin": 0.3,
+    "swirlSpeedVar": 0.8,
+    "accretionOpacity": 0.8,
+    "accretionSpin": 0.5,
+    "singularityColor": "#ff2aff",
+    "singularityOpacity": 0.7
   },
   "hud": {
-    "title": "Singularity Swirl \u2014 Controls",
+    "title": "Singularity Swirl - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -31,13 +43,6 @@
       "min": 0.1,
       "max": 3,
       "format": "fixed1"
-    },
-    {
-      "key": "M",
-      "label": "Mouse",
-      "bind": "params.mouseEnabled",
-      "type": "toggle",
-      "format": "onoff"
     }
   ],
   "controls": [
@@ -50,10 +55,21 @@
       "step": 0.01
     },
     {
-      "type": "checkbox",
-      "label": "Mouse Enabled",
-      "bind": "params.mouseEnabled"
+      "type": "slider",
+      "label": "Particle Count",
+      "bind": "params.particleCount",
+      "min": 0,
+      "max": 50000,
+      "step": 250
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

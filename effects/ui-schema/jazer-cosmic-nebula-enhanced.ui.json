@@ -3,7 +3,20 @@
   "title": "Cosmic Nebula Enhanced",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "cameraDrift": 0.03,
+    "cameraMouseStrength": 3,
+    "cameraLookStrength": 0.05,
+    "cloudOpacity": 0.25,
+    "cloudRotationMult": 1,
+    "cloudNoiseScale": 0.02,
+    "cloudNoiseSpeed": 0.03,
+    "cloudWiggleAmp": 0.005,
+    "fogDensity": 0.003,
+    "starTwinkleSpeed": 0.5,
+    "starTwinkleAmp": 0.1,
+    "ribbonSpeedMult": 1,
+    "plasmaSpeedMult": 1
   },
   "hud": {
     "title": "Cosmic Nebula Enhanced \u2014 Controls",
@@ -38,6 +51,30 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "3",
+        "4"
+      ],
+      "label": "Camera Drift",
+      "bind": "params.cameraDrift",
+      "step": 0.01,
+      "min": 0,
+      "max": 0.2,
+      "format": "fixed2"
+    },
+    {
+      "keys": [
+        "5",
+        "6"
+      ],
+      "label": "Fog",
+      "bind": "params.fogDensity",
+      "step": 0.001,
+      "min": 0,
+      "max": 0.02,
+      "format": "fixed4"
     }
   ],
   "controls": [
@@ -53,7 +90,111 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Camera Drift",
+      "bind": "params.cameraDrift",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Camera Mouse Strength",
+      "bind": "params.cameraMouseStrength",
+      "min": 0,
+      "max": 12,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Camera Look Strength",
+      "bind": "params.cameraLookStrength",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Cloud Opacity",
+      "bind": "params.cloudOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Cloud Rotation Mult",
+      "bind": "params.cloudRotationMult",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Cloud Noise Scale",
+      "bind": "params.cloudNoiseScale",
+      "min": 0.001,
+      "max": 0.1,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Cloud Noise Speed",
+      "bind": "params.cloudNoiseSpeed",
+      "min": 0,
+      "max": 0.3,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Cloud Wiggle Amp",
+      "bind": "params.cloudWiggleAmp",
+      "min": 0,
+      "max": 0.05,
+      "step": 0.0005
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.02,
+      "step": 0.0001
+    },
+    {
+      "type": "slider",
+      "label": "Star Twinkle Speed",
+      "bind": "params.starTwinkleSpeed",
+      "min": 0,
+      "max": 5,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Star Twinkle Amp",
+      "bind": "params.starTwinkleAmp",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ribbon Speed Mult",
+      "bind": "params.ribbonSpeedMult",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Plasma Speed Mult",
+      "bind": "params.plasmaSpeedMult",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. Most controls are schema stubs pending effect-side wiring; currently this effect does not read params (except UI persistence)."
 }

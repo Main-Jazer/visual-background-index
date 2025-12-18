@@ -3,10 +3,25 @@
   "title": "Laser Grid Sphere",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "fogColor": "#000000",
+    "fogDensity": 0.02,
+    "sphereRadius": 5,
+    "beamCount": 60,
+    "beamOpacity": 0.7,
+    "beamWidth": 0.02,
+    "beamPulseSpeed": 1.2,
+    "particleCount": 2000,
+    "particleOpacity": 0.6,
+    "particleSize": 0.05,
+    "rotationSpeed": 0.35,
+    "colorA": "#ff2aff",
+    "colorB": "#00f5ff",
+    "sparkColor": "#ffffff"
   },
   "hud": {
-    "title": "Laser Grid Sphere \u2014 Controls",
+    "title": "Laser Grid Sphere - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +68,41 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Beam Count",
+      "bind": "params.beamCount",
+      "min": 0,
+      "max": 500,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Particle Count",
+      "bind": "params.particleCount",
+      "min": 0,
+      "max": 20000,
+      "step": 200
+    },
+    {
+      "type": "slider",
+      "label": "Rotation Speed",
+      "bind": "params.rotationSpeed",
+      "min": 0,
+      "max": 3,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Color B",
+      "bind": "params.colorB"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

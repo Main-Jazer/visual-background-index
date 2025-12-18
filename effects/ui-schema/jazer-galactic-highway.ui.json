@@ -3,10 +3,24 @@
   "title": "Galactic Highway",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "starCount": 500,
+    "perspective": 300,
+    "speedBase": 50,
+    "speedWaveAmp": 10,
+    "trailEnabled": true,
+    "trailAlpha": 0.35,
+    "starSize": 2,
+    "signsEnabled": true,
+    "signCount": 16,
+    "signGlow": 0.8,
+    "colorA": "#00ffff",
+    "colorB": "#ff2aff",
+    "colorC": "#ffd25b"
   },
   "hud": {
-    "title": "Galactic Highway \u2014 Controls",
+    "title": "Galactic Highway - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -38,6 +52,18 @@
       "bind": "params.mouseEnabled",
       "type": "toggle",
       "format": "onoff"
+    },
+    {
+      "keys": [
+        "[",
+        "]"
+      ],
+      "label": "Speed",
+      "bind": "params.speedBase",
+      "step": 5,
+      "min": 0,
+      "max": 200,
+      "format": "int"
     }
   ],
   "controls": [
@@ -53,7 +79,93 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Star Count",
+      "bind": "params.starCount",
+      "min": 0,
+      "max": 4000,
+      "step": 50
+    },
+    {
+      "type": "slider",
+      "label": "Speed Base",
+      "bind": "params.speedBase",
+      "min": 0,
+      "max": 200,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Speed Wave Amp",
+      "bind": "params.speedWaveAmp",
+      "min": 0,
+      "max": 50,
+      "step": 0.1
+    },
+    {
+      "type": "slider",
+      "label": "Perspective",
+      "bind": "params.perspective",
+      "min": 100,
+      "max": 800,
+      "step": 1
+    },
+    {
+      "type": "checkbox",
+      "label": "Trails Enabled",
+      "bind": "params.trailEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Trail Alpha",
+      "bind": "params.trailAlpha",
+      "min": 0,
+      "max": 0.8,
+      "step": 0.01
+    },
+    {
+      "type": "checkbox",
+      "label": "Signs Enabled",
+      "bind": "params.signsEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Sign Count",
+      "bind": "params.signCount",
+      "min": 0,
+      "max": 64,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Sign Glow",
+      "bind": "params.signGlow",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Background",
+      "bind": "params.bgColor"
+    },
+    {
+      "type": "color",
+      "label": "Color A",
+      "bind": "params.colorA"
+    },
+    {
+      "type": "color",
+      "label": "Color B",
+      "bind": "params.colorB"
+    },
+    {
+      "type": "color",
+      "label": "Color C",
+      "bind": "params.colorC"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

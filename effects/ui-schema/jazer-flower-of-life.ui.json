@@ -1,12 +1,22 @@
 {
   "version": 1,
-  "title": "Flower Of Life",
+  "title": "Flower of Life",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "trailAlpha": 0.12,
+    "layerCount": 12,
+    "baseRadius": 60,
+    "parallaxStrength": 100,
+    "particleMax": 150,
+    "bgInner": "#0a0515",
+    "bgOuter": "#000005",
+    "glowA": "#7d39ff",
+    "glowB": "#33d1ff"
   },
   "hud": {
-    "title": "Flower Of Life \u2014 Controls",
+    "title": "Flower of Life - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +63,75 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Trail Alpha",
+      "bind": "params.trailAlpha",
+      "min": 0,
+      "max": 0.3,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Layer Count",
+      "bind": "params.layerCount",
+      "min": 1,
+      "max": 24,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Base Radius",
+      "bind": "params.baseRadius",
+      "min": 20,
+      "max": 140,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Parallax Strength",
+      "bind": "params.parallaxStrength",
+      "min": 0,
+      "max": 200,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Particle Max",
+      "bind": "params.particleMax",
+      "min": 0,
+      "max": 300,
+      "step": 1
+    },
+    {
+      "type": "color",
+      "label": "BG Inner",
+      "bind": "params.bgInner"
+    },
+    {
+      "type": "color",
+      "label": "BG Outer",
+      "bind": "params.bgOuter"
+    },
+    {
+      "type": "color",
+      "label": "Glow A",
+      "bind": "params.glowA"
+    },
+    {
+      "type": "color",
+      "label": "Glow B",
+      "bind": "params.glowB"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect currently reads params.timeScale only; other controls are schema stubs pending effect-side wiring."
 }

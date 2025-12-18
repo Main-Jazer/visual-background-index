@@ -3,15 +3,15 @@
   "title": "Cosmic Laser Beams",
   "defaults": {
     "timeScale": 1,
+    "mouseEnabled": true,
     "rotationSpeed": 0.1,
     "spawnInterval": 0.3,
     "particleSpeed": 300,
     "beamWidth": 1,
-    "trailAlpha": 0.15,
-    "mouseEnabled": true
+    "trailAlpha": 0.15
   },
   "hud": {
-    "title": "Cosmic Laser Beams \u2014 Controls",
+    "title": "Cosmic Laser Beams — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -26,6 +26,11 @@
       "action": "reset"
     },
     {
+      "key": "B",
+      "label": "Rebuild",
+      "action": "rebuild"
+    },
+    {
       "keys": [
         "1",
         "2"
@@ -38,59 +43,52 @@
       "format": "fixed1"
     },
     {
-      "key": "M",
-      "label": "Mouse",
-      "bind": "params.mouseEnabled",
-      "type": "toggle",
-      "format": "onoff"
-    },
-    {
       "keys": [
         "3",
         "4"
       ],
-      "label": "Beamwidth",
+      "label": "Width",
       "bind": "params.beamWidth",
       "step": 0.1,
-      "format": "fixed1",
-      "min": 0,
-      "max": 2
+      "min": 0.2,
+      "max": 4,
+      "format": "fixed1"
     },
     {
       "keys": [
         "5",
         "6"
       ],
-      "label": "Particlespeed",
+      "label": "Speed",
       "bind": "params.particleSpeed",
-      "step": 0.1,
-      "format": "fixed1",
-      "min": 0.1,
-      "max": 3
+      "step": 20,
+      "min": 20,
+      "max": 1200,
+      "format": "int"
     },
     {
       "keys": [
         "7",
         "8"
       ],
-      "label": "Rotationspeed",
+      "label": "Rotate",
       "bind": "params.rotationSpeed",
-      "step": 0.1,
-      "format": "fixed1",
-      "min": 0.1,
-      "max": 3
+      "step": 0.05,
+      "min": 0,
+      "max": 2,
+      "format": "fixed2"
     },
     {
       "keys": [
         "9",
-        "10"
+        "0"
       ],
-      "label": "Spawninterval",
+      "label": "Spawn",
       "bind": "params.spawnInterval",
-      "step": 0.1,
-      "format": "fixed1",
-      "min": 0,
-      "max": 2
+      "step": 0.05,
+      "min": 0.05,
+      "max": 1.5,
+      "format": "fixed2"
     }
   ],
   "controls": [
@@ -109,44 +107,49 @@
     },
     {
       "type": "slider",
-      "label": "Beamwidth",
-      "bind": "params.beamWidth",
-      "step": 0.01,
-      "min": 0,
-      "max": 2
-    },
-    {
-      "type": "slider",
-      "label": "Particlespeed",
-      "bind": "params.particleSpeed",
-      "step": 0.01,
-      "min": 0.1,
-      "max": 3
-    },
-    {
-      "type": "slider",
-      "label": "Rotationspeed",
+      "label": "Rotation Speed",
       "bind": "params.rotationSpeed",
-      "step": 0.01,
-      "min": 0.1,
-      "max": 3
+      "min": 0,
+      "max": 2,
+      "step": 0.001
     },
     {
       "type": "slider",
-      "label": "Spawninterval",
+      "label": "Spawn Interval",
       "bind": "params.spawnInterval",
-      "step": 0.01,
-      "min": 0,
-      "max": 2
+      "min": 0.05,
+      "max": 1.5,
+      "step": 0.01
     },
     {
       "type": "slider",
-      "label": "Trailalpha",
+      "label": "Particle Speed",
+      "bind": "params.particleSpeed",
+      "min": 20,
+      "max": 1200,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "label": "Beam Width",
+      "bind": "params.beamWidth",
+      "min": 0.2,
+      "max": 4,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Trail Alpha",
       "bind": "params.trailAlpha",
-      "step": 0.01,
       "min": 0,
-      "max": 1
+      "max": 0.5,
+      "step": 0.01
+    },
+    {
+      "type": "button",
+      "label": "Rebuild",
+      "action": "rebuild"
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect reads these params live; press B to rebuild beams/stars."
 }

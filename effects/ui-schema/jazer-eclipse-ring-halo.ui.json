@@ -3,10 +3,29 @@
   "title": "Eclipse Ring Halo",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "mouseStrength": 1,
+    "bgColor": "#010007",
+    "fogColor": "#040017",
+    "fogDensity": 0.05,
+    "sunRadius": 1.5,
+    "sunStripeFreq": 80,
+    "sunStripeSpeed": 2,
+    "haloColor": "#ff2aff",
+    "haloOpacity": 0.3,
+    "ringCount": 4,
+    "ringOpacityBase": 0.25,
+    "ringOpacityStep": 0.05,
+    "sparkCount": 500,
+    "sparkOpacity": 0.6,
+    "sparkSize": 0.06,
+    "sparkSpeedMin": 0.5,
+    "sparkSpeedVar": 0.7,
+    "glyphColor": "#00f5ff",
+    "glyphScale": 4
   },
   "hud": {
-    "title": "Eclipse Ring Halo \u2014 Controls",
+    "title": "Eclipse Ring Halo — Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +72,67 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Mouse Strength",
+      "bind": "params.mouseStrength",
+      "min": 0,
+      "max": 2,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Halo Opacity",
+      "bind": "params.haloOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Halo Color",
+      "bind": "params.haloColor"
+    },
+    {
+      "type": "slider",
+      "label": "Spark Opacity",
+      "bind": "params.sparkOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Spark Size",
+      "bind": "params.sparkSize",
+      "min": 0.01,
+      "max": 0.3,
+      "step": 0.001
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
+    },
+    {
+      "type": "color",
+      "label": "Fog Color",
+      "bind": "params.fogColor"
+    },
+    {
+      "type": "color",
+      "label": "Background Color",
+      "bind": "params.bgColor"
+    },
+    {
+      "type": "color",
+      "label": "Glyph Color",
+      "bind": "params.glyphColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

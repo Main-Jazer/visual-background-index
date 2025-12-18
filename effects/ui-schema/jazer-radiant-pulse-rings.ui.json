@@ -2,10 +2,18 @@
   "version": 1,
   "title": "Radiant Pulse Rings",
   "defaults": {
-    "timeScale": 1
+    "timeScale": 1,
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "ringCount": 24,
+    "pulseSpeed": 1,
+    "pulseAmp": 0.4,
+    "glowStrength": 1,
+    "colorA": "#00f5ff",
+    "colorB": "#ff2aff"
   },
   "hud": {
-    "title": "Radiant Pulse Rings \u2014 Controls",
+    "title": "Radiant Pulse Rings - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -40,7 +48,15 @@
       "min": 0,
       "max": 3,
       "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Ring Count",
+      "bind": "params.ringCount",
+      "min": 0,
+      "max": 200,
+      "step": 1
     }
   ],
-  "hint": "Press H for help. Canvas 2D effect."
+  "hint": "Press H for help. This effect HTML is currently a placeholder; schema is a stub."
 }

@@ -3,10 +3,25 @@
   "title": "Laser Lattice Cage",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#000000",
+    "cageSize": 4,
+    "latticeOpacity": 0.3,
+    "latticeColor": "#00f5ff",
+    "orbRadius": 0.7,
+    "orbOpacity": 0.5,
+    "orbColor": "#ff2aff",
+    "orbRotSpeed": 0.5,
+    "orbBobSpeed": 1.5,
+    "orbBobAmp": 0.3,
+    "beamCount": 800,
+    "beamOpacity": 0.4,
+    "beamSize": 0.05,
+    "beamSpeedMin": 2,
+    "beamSpeedVar": 6
   },
   "hud": {
-    "title": "Laser Lattice Cage \u2014 Controls",
+    "title": "Laser Lattice Cage - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +68,41 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Beam Count",
+      "bind": "params.beamCount",
+      "min": 0,
+      "max": 20000,
+      "step": 100
+    },
+    {
+      "type": "slider",
+      "label": "Lattice Opacity",
+      "bind": "params.latticeOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "slider",
+      "label": "Orb Opacity",
+      "bind": "params.orbOpacity",
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+    },
+    {
+      "type": "color",
+      "label": "Lattice Color",
+      "bind": "params.latticeColor"
+    },
+    {
+      "type": "color",
+      "label": "Orb Color",
+      "bind": "params.orbColor"
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }

@@ -3,10 +3,25 @@
   "title": "Warp Grid Twister",
   "defaults": {
     "timeScale": 1,
-    "mouseEnabled": true
+    "mouseEnabled": true,
+    "bgColor": "#010007",
+    "fogColor": "#030012",
+    "fogDensity": 0.08,
+    "tunnelRadius": 4,
+    "tunnelLength": 80,
+    "radialSegments": 64,
+    "heightSegments": 200,
+    "frameCount": 12,
+    "frameOpacity": 0.1,
+    "ribbonOpacity": 0.4,
+    "sparkCount": 1200,
+    "sparkOpacity": 0.6,
+    "sparkSize": 0.05,
+    "twistSpeed": 0.6,
+    "warpSpeed": 1
   },
   "hud": {
-    "title": "Warp Grid Twister \u2014 Controls",
+    "title": "Warp Grid Twister - Controls",
     "toggleKey": "h",
     "visible": false
   },
@@ -53,7 +68,23 @@
       "type": "checkbox",
       "label": "Mouse Enabled",
       "bind": "params.mouseEnabled"
+    },
+    {
+      "type": "slider",
+      "label": "Spark Count",
+      "bind": "params.sparkCount",
+      "min": 0,
+      "max": 200000,
+      "step": 1000
+    },
+    {
+      "type": "slider",
+      "label": "Fog Density",
+      "bind": "params.fogDensity",
+      "min": 0,
+      "max": 0.2,
+      "step": 0.001
     }
   ],
-  "hint": "Press H for help. Use JAZER_EXPOSE to expose materials and uniforms."
+  "hint": "Press H for help. This effect does not currently read params; controls are schema stubs pending effect-side wiring."
 }
