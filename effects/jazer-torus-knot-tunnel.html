@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Torus Knot Tunnel - JaZeR Pro</title>
+    <title>Torus Knot Tunnel - JaZeR</title>
     <style>
         * {
             box-sizing: border-box;
@@ -18,7 +18,6 @@
             height: 100%;
             overflow: hidden;
             background: #000;
-            font-family: 'Segoe UI', system-ui, sans-serif;
         }
 
         canvas {
@@ -28,882 +27,201 @@
             width: 100vw;
             height: 100vh;
         }
-
-        /* Settings Panel */
-        #settings-panel {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.85);
-            border: 2px solid rgba(0, 245, 255, 0.5);
-            border-radius: 12px;
-            padding: 20px;
-            min-width: 320px;
-            max-height: 90vh;
-            overflow-y: auto;
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 30px rgba(0, 245, 255, 0.3);
-        }
-
-        #settings-panel.hidden {
-            transform: translateX(-400px);
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .panel-header {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #00f5ff;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            border-bottom: 2px solid rgba(0, 245, 255, 0.3);
-            padding-bottom: 10px;
-        }
-
-        .panel-section {
-            margin-bottom: 20px;
-        }
-
-        .section-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #ff2aff;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .control-group {
-            margin-bottom: 15px;
-        }
-
-        .control-label {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.8);
-            margin-bottom: 5px;
-        }
-
-        .control-value {
-            color: #00f5ff;
-            font-weight: 600;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            outline: none;
-            -webkit-appearance: none;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            background: #00f5ff;
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
-        }
-
-        input[type="range"]::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            background: #00f5ff;
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-        }
-
-        .button-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .btn {
-            padding: 8px 12px;
-            background: rgba(0, 245, 255, 0.1);
-            border: 1px solid rgba(0, 245, 255, 0.3);
-            border-radius: 6px;
-            color: #00f5ff;
-            cursor: pointer;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            transition: all 0.2s ease;
-        }
-
-        .btn:hover {
-            background: rgba(0, 245, 255, 0.2);
-            border-color: #00f5ff;
-            box-shadow: 0 0 15px rgba(0, 245, 255, 0.3);
-        }
-
-        .btn.active {
-            background: rgba(0, 245, 255, 0.3);
-            border-color: #00f5ff;
-        }
-
-        /* FPS Counter */
-        #fps-counter {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid rgba(0, 245, 255, 0.5);
-            border-radius: 8px;
-            padding: 10px 15px;
-            color: #00f5ff;
-            font-family: monospace;
-            font-size: 1.2rem;
-            font-weight: 700;
-            z-index: 1000;
-        }
-
-        /* Audio Controls */
-        #audio-controls {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.85);
-            border: 2px solid rgba(255, 42, 255, 0.5);
-            border-radius: 12px;
-            padding: 15px;
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-        }
-
-        #audio-controls.hidden {
-            display: none;
-        }
-
-        .audio-btn {
-            padding: 10px 20px;
-            background: rgba(255, 42, 255, 0.2);
-            border: 1px solid rgba(255, 42, 255, 0.5);
-            border-radius: 6px;
-            color: #ff2aff;
-            cursor: pointer;
-            font-size: 0.9rem;
-            margin: 5px;
-            transition: all 0.2s ease;
-        }
-
-        .audio-btn:hover {
-            background: rgba(255, 42, 255, 0.3);
-            box-shadow: 0 0 15px rgba(255, 42, 255, 0.3);
-        }
-
-        .audio-btn.active {
-            background: rgba(255, 42, 255, 0.4);
-            border-color: #ff2aff;
-        }
-
-        /* Help Overlay */
-        #help-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        #help-overlay.visible {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        .help-content {
-            background: rgba(10, 10, 30, 0.95);
-            border: 2px solid #00f5ff;
-            border-radius: 16px;
-            padding: 30px;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .help-title {
-            font-size: 2rem;
-            color: #00f5ff;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .help-section {
-            margin-bottom: 20px;
-        }
-
-        .help-section h3 {
-            color: #ff2aff;
-            margin-bottom: 10px;
-        }
-
-        .help-section p {
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1.6;
-            margin-bottom: 5px;
-        }
-
-        .key {
-            display: inline-block;
-            background: rgba(0, 245, 255, 0.2);
-            border: 1px solid #00f5ff;
-            border-radius: 4px;
-            padding: 2px 8px;
-            font-family: monospace;
-            font-weight: 700;
-            color: #00f5ff;
-        }
-
-        /* Camera Mode Indicator */
-        #camera-mode {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid rgba(255, 215, 0, 0.5);
-            border-radius: 8px;
-            padding: 10px 15px;
-            color: #ffd700;
-            font-size: 0.9rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            z-index: 1000;
-        }
-
-        /* Scrollbar styling */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(0, 245, 255, 0.5);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 245, 255, 0.7);
-        }
     </style>
 </head>
 
 <body>
     <canvas id="c"></canvas>
-
-    <!-- Settings Panel -->
-    <div id="settings-panel">
-        <div class="panel-header">⚙️ Settings</div>
-
-        <div class="panel-section">
-            <div class="section-title">Performance</div>
-            <div class="control-group">
-                <div class="control-label">
-                    <span>Speed</span>
-                    <span class="control-value" id="speed-value">1.0x</span>
-                </div>
-                <input type="range" id="speed-slider" min="0.1" max="3" step="0.1" value="1">
-            </div>
-            <div class="control-group">
-                <div class="control-label">
-                    <span>Particles</span>
-                    <span class="control-value" id="particles-value">2000</span>
-                </div>
-                <input type="range" id="particles-slider" min="500" max="5000" step="100" value="2000">
-            </div>
-        </div>
-
-        <div class="panel-section">
-            <div class="section-title">Post Effects</div>
-            <div class="control-group">
-                <div class="control-label">
-                    <span>Bloom</span>
-                    <span class="control-value" id="bloom-value">0.6</span>
-                </div>
-                <input type="range" id="bloom-slider" min="0" max="2" step="0.1" value="0.6">
-            </div>
-            <div class="control-group">
-                <div class="control-label">
-                    <span>Chromatic Aberration</span>
-                    <span class="control-value" id="aberration-value">0.002</span>
-                </div>
-                <input type="range" id="aberration-slider" min="0" max="0.01" step="0.001" value="0.002">
-            </div>
-            <div class="control-group">
-                <div class="control-label">
-                    <span>Vignette</span>
-                    <span class="control-value" id="vignette-value">0.5</span>
-                </div>
-                <input type="range" id="vignette-slider" min="0" max="2" step="0.1" value="0.5">
-            </div>
-        </div>
-
-        <div class="panel-section">
-            <div class="section-title">Camera Mode</div>
-            <div class="button-group">
-                <button class="btn active" data-camera="autopilot">🚀 Autopilot</button>
-                <button class="btn" data-camera="firstperson">👤 First Person</button>
-                <button class="btn" data-camera="orbital">🔄 Orbital</button>
-                <button class="btn" data-camera="cinematic">🎬 Cinematic</button>
-            </div>
-        </div>
-
-        <div class="panel-section">
-            <div class="section-title">Presets</div>
-            <div class="button-group">
-                <button class="btn" data-preset="chill">😌 Chill</button>
-                <button class="btn" data-preset="intense">🔥 Intense</button>
-                <button class="btn" data-preset="psychedelic">🌈 Psychedelic</button>
-                <button class="btn" data-preset="cinematic">🎭 Cinematic</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- FPS Counter -->
-    <div id="fps-counter">60 FPS</div>
-
-    <!-- Camera Mode Indicator -->
-    <div id="camera-mode">Autopilot Mode</div>
-
-    <!-- Audio Controls -->
-    <div id="audio-controls">
-        <button class="audio-btn" id="mic-btn">🎤 Use Microphone</button>
-        <input type="file" id="audio-file" accept="audio/*" style="display: none;">
-        <button class="audio-btn" id="file-btn">🎵 Upload Music</button>
-    </div>
-
-    <!-- Help Overlay -->
-    <div id="help-overlay">
-        <div class="help-content">
-            <div class="help-title">🎮 Controls</div>
-
-            <div class="help-section">
-                <h3>General</h3>
-                <p><span class="key">Tab</span> or <span class="key">~</span> - Toggle Settings Panel</p>
-                <p><span class="key">H</span> - Toggle this Help Menu</p>
-                <p><span class="key">F11</span> - Fullscreen</p>
-            </div>
-
-            <div class="help-section">
-                <h3>Camera Modes</h3>
-                <p><span class="key">1</span> - Autopilot Mode</p>
-                <p><span class="key">2</span> - First Person Mode</p>
-                <p><span class="key">3</span> - Orbital Mode</p>
-                <p><span class="key">4</span> - Cinematic Mode</p>
-            </div>
-
-            <div class="help-section">
-                <h3>First Person Controls</h3>
-                <p><span class="key">W</span> - Move Forward</p>
-                <p><span class="key">A</span> - Move Left</p>
-                <p><span class="key">S</span> - Move Backward</p>
-                <p><span class="key">D</span> - Move Right</p>
-                <p><span class="key">Space</span> - Move Up</p>
-                <p><span class="key">Shift</span> - Move Down</p>
-                <p><span class="key">Mouse</span> - Look Around</p>
-            </div>
-
-            <div class="help-section">
-                <h3>Audio</h3>
-                <p>Enable microphone or upload music for audio-reactive visuals!</p>
-            </div>
-
-            <p style="text-align: center; margin-top: 20px; color: #00f5ff;">
-                Press <span class="key">H</span> to close
-            </p>
-        </div>
-    </div>
-
     <script type="module">
+        /**
+         * ============================================================================
+         * TORUS KNOT TUNNEL - HIGH-END VISUAL ART
+         * ============================================================================
+         * CHANGELOG v2.0 - Artistic Upgrade
+         * - Constrained palette: Deep space black + single accent color (cyan-magenta gradient)
+         * - Removed heavy UI settings panel and all overlays
+         * - Slow forward drift - form readable before motion
+         * - One knot at a time as focal point, tunnel as context
+         * - Forward motion only - stable cinematic camera
+         * - Strong depth fog for tunnel focus
+         * - Reduced knot count for clean composition
+         * 
+         * THESIS: "Infinite traversal through structured space"
+         * ============================================================================
+         */
+
         import * as THREE from '../lib/Three.js';
-        import { noise3D, mouse, ColorPalettes, smoothstep } from '../lib/engine/jazer-background-engine.js';
+        import { mouse, smoothstep } from '../lib/engine/jazer-background-engine.js';
         import '../lib/engine/jazer-navigation.js';
 
         window.THREE = THREE;
         const canvas = document.getElementById('c');
 
-        // === SETTINGS & STATE ===
-        const settings = {
-            speed: 1.0,
-            particleCount: 2000,
-            bloom: 0.6,
-            aberration: 0.002,
-            vignette: 0.5,
-            cameraMode: 'autopilot'
+        // === COLOR PALETTE (Restrained - Single Gradient) ===
+        const COLORS = {
+            deepSpace: new THREE.Color(0x020208),
+            primary: new THREE.Color(0x00ccff),    // Cyan
+            secondary: new THREE.Color(0x6622aa),  // Deep violet
+            accent: new THREE.Color(0x9944ff),     // Purple accent
+            subtle: new THREE.Color(0x222244)      // Muted structure
         };
 
-        const state = {
-            panelVisible: false,
-            helpVisible: false,
-            audioEnabled: false,
-            keys: {}
-        };
-
-        // === AUDIO SYSTEM ===
-        let audioContext, analyser, audioSource, dataArray, bufferLength;
-        let audioData = { bass: 0, mid: 0, high: 0, avg: 0, beat: false };
-
-        function initAudio(stream) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
-            bufferLength = analyser.frequencyBinCount;
-            dataArray = new Uint8Array(bufferLength);
-
-            if (stream) {
-                audioSource = audioContext.createMediaStreamSource(stream);
-            }
-            audioSource.connect(analyser);
-            state.audioEnabled = true;
-        }
-
-        function analyzeAudio() {
-            if (!state.audioEnabled || !analyser) return;
-
-            analyser.getByteFrequencyData(dataArray);
-
-            const bass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10 / 255;
-            const mid = dataArray.slice(10, 30).reduce((a, b) => a + b, 0) / 20 / 255;
-            const high = dataArray.slice(30, 60).reduce((a, b) => a + b, 0) / 30 / 255;
-            const avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength / 255;
-
-            audioData.bass = bass;
-            audioData.mid = mid;
-            audioData.high = high;
-            audioData.avg = avg;
-            audioData.beat = bass > 0.7;
+        // Get color from gradient based on position
+        function getGradientColor(t) {
+            // Slow gradient from cyan to violet
+            return COLORS.primary.clone().lerp(COLORS.secondary, t);
         }
 
         // === SCENE SETUP ===
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x000000);
-        scene.fog = new THREE.FogExp2(0x000000, 0.012);
+        scene.background = COLORS.deepSpace;
+        scene.fog = new THREE.FogExp2(0x020208, 0.02); // Strong depth fog
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 500);
         camera.position.set(0, 0, 15);
 
-        const renderer = new THREE.WebGLRenderer({
-            canvas,
-            antialias: true,
-            powerPreference: "high-performance"
-        });
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
+        renderer.toneMappingExposure = 0.85;
 
-        const palette = ColorPalettes.cyberpunk;
+        // === TUNNEL PARAMETERS ===
+        const tunnelRadius = 10;
+        const tunnelLength = 300;
 
-        // === TUNNEL WALLS ===
-        const tunnelSegments = 30;
-        const tunnelRadius = 12;
-        const tunnelLength = 400;
+        // === TUNNEL RINGS (Subtle Structure) ===
+        const ringCount = 20;
         const tunnelRings = [];
 
-        for (let i = 0; i < tunnelSegments; i++) {
-            const ringGeometry = new THREE.RingGeometry(tunnelRadius - 0.2, tunnelRadius, 32);
-            const color = new THREE.Color(palette[i % palette.length]);
+        for (let i = 0; i < ringCount; i++) {
+            const ringGeometry = new THREE.RingGeometry(tunnelRadius - 0.15, tunnelRadius, 24);
+            const t = i / ringCount;
 
             const ringMaterial = new THREE.MeshBasicMaterial({
-                color: color,
+                color: COLORS.subtle,
                 side: THREE.DoubleSide,
                 transparent: true,
-                opacity: 0.3,
+                opacity: 0.15,
                 wireframe: true
             });
 
             const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-            ring.position.z = -i * (tunnelLength / tunnelSegments);
+            ring.position.z = -i * (tunnelLength / ringCount);
             ring.userData = {
-                baseZ: -i * (tunnelLength / tunnelSegments),
-                colorIndex: i % palette.length,
-                pulsePhase: (i / tunnelSegments) * Math.PI * 2
+                baseZ: -i * (tunnelLength / ringCount)
             };
 
             scene.add(ring);
             tunnelRings.push(ring);
         }
 
-        // Grid walls
-        const gridSegments = 20;
-        const gridSpacing = tunnelLength / gridSegments;
-        const grids = [];
-
-        for (let i = 0; i < gridSegments; i++) {
-            const gridGeometry = new THREE.CylinderGeometry(tunnelRadius, tunnelRadius, gridSpacing, 16, 1, true);
-            const color = new THREE.Color(palette[i % palette.length]);
-
-            const gridMaterial = new THREE.MeshBasicMaterial({
-                color: color,
-                wireframe: true,
-                transparent: true,
-                opacity: 0.15,
-                side: THREE.DoubleSide
-            });
-
-            const grid = new THREE.Mesh(gridGeometry, gridMaterial);
-            grid.position.z = -i * gridSpacing - gridSpacing / 2;
-            grid.rotation.x = Math.PI / 2;
-            grid.userData = { baseZ: -i * gridSpacing - gridSpacing / 2 };
-
-            scene.add(grid);
-            grids.push(grid);
-        }
-
-        // Energy conduits
-        const conduitCount = 8;
+        // === ENERGY CONDUITS (Minimal) ===
+        const conduitCount = 6;
         const conduits = [];
 
         for (let i = 0; i < conduitCount; i++) {
             const angle = (i / conduitCount) * Math.PI * 2;
             const points = [];
 
-            for (let j = 0; j < 100; j++) {
+            for (let j = 0; j < 80; j++) {
                 const z = -j * 4;
-                const x = Math.cos(angle) * tunnelRadius * 0.95;
-                const y = Math.sin(angle) * tunnelRadius * 0.95;
+                const x = Math.cos(angle) * (tunnelRadius * 0.9);
+                const y = Math.sin(angle) * (tunnelRadius * 0.9);
                 points.push(new THREE.Vector3(x, y, z));
             }
 
             const conduitGeometry = new THREE.BufferGeometry().setFromPoints(points);
-            const color = new THREE.Color(palette[i % palette.length]);
+            const t = i / conduitCount;
+            const color = getGradientColor(t);
 
             const conduitMaterial = new THREE.LineBasicMaterial({
                 color: color,
                 transparent: true,
-                opacity: 0.6
+                opacity: 0.25
             });
 
             const conduit = new THREE.Line(conduitGeometry, conduitMaterial);
-            conduit.userData = {
-                pulsePhase: (i / conduitCount) * Math.PI * 2,
-                colorIndex: i % palette.length
-            };
-
             scene.add(conduit);
             conduits.push(conduit);
         }
 
-        // === TORUS KNOTS ===
-        const knotVariations = [
-            { p: 2, q: 3 },
-            { p: 3, q: 2 },
-            { p: 3, q: 4 },
-            { p: 5, q: 3 },
-            { p: 2, q: 5 },
-            { p: 7, q: 3 }
-        ];
-
-        const knotCount = 15;
+        // === TORUS KNOTS (Reduced count, single variation focus) ===
+        const knotCount = 8; // Reduced from 15
         const knots = [];
-        const spacing = 15;
+        const spacing = 30; // More space between knots
 
         for (let i = 0; i < knotCount; i++) {
-            const variation = knotVariations[i % knotVariations.length];
-            const geometry = new THREE.TorusKnotGeometry(2, 0.5, 100, 16, variation.p, variation.q);
-            const color = new THREE.Color(palette[i % palette.length]);
+            // Single knot variation for consistency
+            const geometry = new THREE.TorusKnotGeometry(2.5, 0.4, 80, 12, 2, 3);
+            const t = i / knotCount;
+            const color = getGradientColor(t);
 
-            const material = new THREE.MeshStandardMaterial({
+            const material = new THREE.MeshBasicMaterial({
                 color: color,
-                emissive: color,
-                emissiveIntensity: 0.8,
                 wireframe: true,
                 transparent: true,
-                opacity: 0.9,
-                metalness: 0.9,
-                roughness: 0.1
+                opacity: 0.9
             });
 
             const knot = new THREE.Mesh(geometry, material);
-            knot.position.z = -i * spacing;
+            knot.position.z = -i * spacing - 30;
 
             knot.userData = {
-                baseZ: -i * spacing,
-                rotationSpeed: 0.2 + (i % 3) * 0.05,
-                colorIndex: i % palette.length,
-                pulseOffset: (i / knotCount) * Math.PI * 2
+                baseZ: -i * spacing - 30,
+                rotationSpeed: 0.08 + (i % 3) * 0.02, // Slower rotation
+                colorT: t
             };
 
             scene.add(knot);
             knots.push(knot);
         }
 
-        // === LIGHTING ===
-        const ambientLight = new THREE.AmbientLight(0x333333);
+        // === MINIMAL PARTICLES (Dust motes) ===
+        const particleCount = 800; // Reduced
+        const particleGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+
+        for (let i = 0; i < particleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const radius = Math.random() * (tunnelRadius - 2) + 1;
+            positions[i * 3] = Math.cos(angle) * radius;
+            positions[i * 3 + 1] = Math.sin(angle) * radius;
+            positions[i * 3 + 2] = -Math.random() * tunnelLength;
+
+            // Subtle, desaturated colors
+            const t = Math.random();
+            const color = getGradientColor(t);
+            colors[i * 3] = color.r * 0.5;
+            colors[i * 3 + 1] = color.g * 0.5;
+            colors[i * 3 + 2] = color.b * 0.5;
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.08,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.5,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const particles = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particles);
+
+        // === SUBTLE LIGHTING ===
+        const ambientLight = new THREE.AmbientLight(0x111122, 0.3);
         scene.add(ambientLight);
 
-        const pointLight1 = new THREE.PointLight(0x00f5ff, 3, 60);
-        pointLight1.position.set(5, 5, 10);
-        scene.add(pointLight1);
-
-        const pointLight2 = new THREE.PointLight(0xff2aff, 3, 60);
-        pointLight2.position.set(-5, -5, 10);
-        scene.add(pointLight2);
-
-        const pointLight3 = new THREE.PointLight(0xffff00, 2, 40);
-        pointLight3.position.set(0, 0, -20);
-        scene.add(pointLight3);
-
-        // === PARTICLES ===
-        let particleGeometry = new THREE.BufferGeometry();
-        let particleMaterial, particles;
-
-        function createParticles(count) {
-            if (particles) scene.remove(particles);
-
-            particleGeometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(count * 3);
-            const colors = new Float32Array(count * 3);
-
-            for (let i = 0; i < count; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const radius = Math.random() * (tunnelRadius - 1) + 1;
-                positions[i * 3] = Math.cos(angle) * radius;
-                positions[i * 3 + 1] = Math.sin(angle) * radius;
-                positions[i * 3 + 2] = -Math.random() * tunnelLength;
-
-                const color = new THREE.Color(palette[Math.floor(Math.random() * palette.length)]);
-                colors[i * 3] = color.r;
-                colors[i * 3 + 1] = color.g;
-                colors[i * 3 + 2] = color.b;
-            }
-
-            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-            particleMaterial = new THREE.PointsMaterial({
-                size: 0.15,
-                vertexColors: true,
-                transparent: true,
-                opacity: 0.9,
-                blending: THREE.AdditiveBlending,
-                sizeAttenuation: true
-            });
-
-            particles = new THREE.Points(particleGeometry, particleMaterial);
-            scene.add(particles);
-        }
-
-        createParticles(settings.particleCount);
-
-        // === POST-PROCESSING ===
-        const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-            minFilter: THREE.LinearFilter,
-            magFilter: THREE.LinearFilter,
-            format: THREE.RGBAFormat
-        });
-
-        const postProcessMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-                tDiffuse: { value: null },
-                time: { value: 0 },
-                resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-                bloomStrength: { value: settings.bloom },
-                vignetteStrength: { value: settings.vignette },
-                chromaticAberration: { value: settings.aberration },
-                grainAmount: { value: 0.03 }
-            },
-            vertexShader: `
-                varying vec2 vUv;
-                void main() {
-                    vUv = uv;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
-            fragmentShader: `
-                uniform sampler2D tDiffuse;
-                uniform float time;
-                uniform vec2 resolution;
-                uniform float bloomStrength;
-                uniform float vignetteStrength;
-                uniform float chromaticAberration;
-                uniform float grainAmount;
-                varying vec2 vUv;
-
-                float random(vec2 st) {
-                    return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
-                }
-
-                void main() {
-                    vec2 uv = vUv;
-
-                    // Chromatic Aberration
-                    float offset = chromaticAberration;
-                    vec2 direction = uv - 0.5;
-                    float dist = length(direction);
-                    direction = normalize(direction);
-
-                    float r = texture2D(tDiffuse, uv + direction * offset * dist).r;
-                    float g = texture2D(tDiffuse, uv).g;
-                    float b = texture2D(tDiffuse, uv - direction * offset * dist).b;
-                    vec3 color = vec3(r, g, b);
-
-                    // Bloom
-                    vec3 bloom = vec3(0.0);
-                    float bloomSamples = 8.0;
-                    for(float i = 0.0; i < bloomSamples; i++) {
-                        float angle = (i / bloomSamples) * 6.28318;
-                        vec2 offset = vec2(cos(angle), sin(angle)) * 0.003;
-                        bloom += texture2D(tDiffuse, uv + offset).rgb;
-                    }
-                    bloom /= bloomSamples;
-                    color += bloom * bloomStrength;
-
-                    // Vignette
-                    vec2 position = uv - 0.5;
-                    float vignette = 1.0 - dot(position, position) * vignetteStrength;
-                    color *= vignette;
-
-                    // Grain
-                    float grain = random(uv * time) * grainAmount;
-                    color += grain;
-
-                    gl_FragColor = vec4(color, 1.0);
-                }
-            `
-        });
-
-        const postScene = new THREE.Scene();
-        const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-        const postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postProcessMaterial);
-        postScene.add(postQuad);
-
-        // === CAMERA SYSTEM ===
-        const cameraStates = {
-            autopilot: { pos: new THREE.Vector3(0, 0, 15), target: new THREE.Vector3(0, 0, -50) },
-            firstperson: { pos: new THREE.Vector3(0, 0, 15), rot: new THREE.Euler(0, 0, 0), velocity: new THREE.Vector3() },
-            orbital: { angle: 0, radius: 20, height: 5 },
-            cinematic: { waypoint: 0, paths: [] }
-        };
-
-        // Generate cinematic waypoints
-        for (let i = 0; i < 10; i++) {
-            cameraStates.cinematic.paths.push({
-                pos: new THREE.Vector3(
-                    Math.sin(i * 0.5) * 8,
-                    Math.cos(i * 0.7) * 5,
-                    15 - i * 10
-                ),
-                lookAt: new THREE.Vector3(0, 0, -50 - i * 10)
-            });
-        }
-
-        function updateCamera(deltaTime) {
-            const mode = settings.cameraMode;
-
-            if (mode === 'autopilot') {
-                const camSpeed = time * 0.3;
-                camera.position.x = Math.sin(camSpeed * 0.3) * 2 + mouse.centeredX * 3;
-                camera.position.y = Math.cos(camSpeed * 0.2) * 1.5 + mouse.centeredY * 2;
-                camera.rotation.z = Math.sin(time * 0.1) * 0.05;
-
-                const lookAtOffset = new THREE.Vector3(
-                    Math.sin(time * 0.2) * 2,
-                    Math.cos(time * 0.15) * 1,
-                    -50
-                );
-                camera.lookAt(lookAtOffset);
-            } else if (mode === 'firstperson') {
-                const moveSpeed = 20 * deltaTime;
-                const velocity = cameraStates.firstperson.velocity;
-
-                // Keyboard movement
-                if (state.keys['w'] || state.keys['W']) velocity.z = -moveSpeed;
-                else if (state.keys['s'] || state.keys['S']) velocity.z = moveSpeed;
-                else velocity.z = 0;
-
-                if (state.keys['a'] || state.keys['A']) velocity.x = -moveSpeed;
-                else if (state.keys['d'] || state.keys['D']) velocity.x = moveSpeed;
-                else velocity.x = 0;
-
-                if (state.keys[' ']) velocity.y = moveSpeed;
-                else if (state.keys['Shift']) velocity.y = -moveSpeed;
-                else velocity.y = 0;
-
-                // Apply movement relative to camera direction
-                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-                const up = new THREE.Vector3(0, 1, 0);
-
-                camera.position.addScaledVector(forward, velocity.z);
-                camera.position.addScaledVector(right, velocity.x);
-                camera.position.addScaledVector(up, velocity.y);
-
-                // Mouse look
-                camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, mouse.centeredY * -2));
-                camera.rotation.y = mouse.centeredX * -Math.PI;
-            } else if (mode === 'orbital') {
-                const state = cameraStates.orbital;
-                state.angle += deltaTime * 0.3;
-
-                camera.position.x = Math.cos(state.angle) * state.radius;
-                camera.position.z = Math.sin(state.angle) * state.radius;
-                camera.position.y = state.height + Math.sin(time * 0.5) * 2;
-
-                // Look at nearest knot
-                if (knots.length > 0) {
-                    camera.lookAt(knots[0].position);
-                }
-            } else if (mode === 'cinematic') {
-                const state = cameraStates.cinematic;
-                const progress = (time * 0.1) % state.paths.length;
-                const currentIdx = Math.floor(progress);
-                const nextIdx = (currentIdx + 1) % state.paths.length;
-                const t = progress - currentIdx;
-
-                const current = state.paths[currentIdx];
-                const next = state.paths[nextIdx];
-
-                camera.position.lerpVectors(current.pos, next.pos, t);
-
-                const lookAt = new THREE.Vector3().lerpVectors(current.lookAt, next.lookAt, t);
-                camera.lookAt(lookAt);
-            }
-        }
-
-        // === FPS COUNTER ===
-        let frameCount = 0;
-        let lastTime = performance.now();
-        let fps = 60;
-
-        function updateFPS() {
-            frameCount++;
-            const currentTime = performance.now();
-            if (currentTime >= lastTime + 1000) {
-                fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
-                document.getElementById('fps-counter').textContent = `${fps} FPS`;
-                frameCount = 0;
-                lastTime = currentTime;
-            }
-        }
-
-        // === ANIMATION LOOP ===
+        // === ANIMATION STATE ===
         let time = 0;
         let lastFrameTime = performance.now();
-        const tunnelSpeed = 6;
-        const maxZ = spacing * knotCount;
+        const tunnelSpeed = 2.5; // Slower base speed
+        const maxZ = spacing * knotCount + 30;
 
         function animate() {
             requestAnimationFrame(animate);
@@ -912,319 +230,79 @@
             const deltaTime = (currentTime - lastFrameTime) / 1000;
             lastFrameTime = currentTime;
 
-            time += deltaTime * settings.speed;
+            time += deltaTime;
             mouse.update();
-            analyzeAudio();
-            updateFPS();
-            updateCamera(deltaTime);
 
-            // Audio reactivity
-            const beatScale = state.audioEnabled ? (1 + audioData.beat * 0.3) : 1;
-            const bassIntensity = state.audioEnabled ? audioData.bass : 0;
-            const speedMultiplier = state.audioEnabled ? (1 + audioData.avg * 0.5) : 1;
+            // Move tunnel rings forward
+            tunnelRings.forEach(ring => {
+                ring.position.z += tunnelSpeed * deltaTime;
 
-            // Update lights
-            pointLight1.intensity = (3 + Math.sin(time * 2) * 0.8) * (1 + bassIntensity);
-            pointLight2.intensity = (3 + Math.cos(time * 2.5) * 0.8) * (1 + bassIntensity);
-            pointLight3.intensity = (2 + Math.sin(time * 3) * 0.5) * (1 + audioData.mid);
-            pointLight1.position.x = Math.sin(time * 0.5) * 10;
-            pointLight2.position.x = Math.cos(time * 0.7) * 10;
-            pointLight3.position.z = -20 + Math.sin(time * 0.4) * 10;
-
-            // Update tunnel rings
-            tunnelRings.forEach((ring, i) => {
-                ring.position.z += tunnelSpeed * deltaTime * speedMultiplier * settings.speed;
-
-                if (ring.position.z > 20) {
+                if (ring.position.z > 15) {
                     ring.position.z -= tunnelLength;
                 }
-
-                const pulse = Math.sin(time * 3 + ring.userData.pulsePhase) * 0.3 + 0.7;
-                ring.material.opacity = pulse * 0.3 * (1 + bassIntensity * 0.5);
-                ring.scale.setScalar((1 + Math.sin(time * 2 + ring.userData.pulsePhase) * 0.05) * beatScale);
             });
 
-            // Update grids
-            grids.forEach(grid => {
-                grid.position.z += tunnelSpeed * deltaTime * speedMultiplier * settings.speed;
-                if (grid.position.z > 20) {
-                    grid.position.z -= tunnelLength;
-                }
-                grid.rotation.z += 0.001 * settings.speed;
-            });
-
-            // Update conduits
-            conduits.forEach(conduit => {
-                const pulse = Math.sin(time * 2 + conduit.userData.pulsePhase) * 0.4 + 0.6;
-                conduit.material.opacity = pulse * (1 + audioData.high * 0.5);
-            });
-
-            // Update knots
+            // Update knots - slow, readable motion
             knots.forEach((knot, i) => {
-                knot.position.z += tunnelSpeed * deltaTime * speedMultiplier * settings.speed;
+                knot.position.z += tunnelSpeed * deltaTime;
 
-                if (knot.position.z > 20) {
+                if (knot.position.z > 15) {
                     knot.position.z -= maxZ;
-                    knot.userData.colorIndex = (knot.userData.colorIndex + 1) % palette.length;
-                    const newColor = new THREE.Color(palette[knot.userData.colorIndex]);
-                    knot.material.color = newColor;
-                    knot.material.emissive = newColor;
+                    // Subtle color evolution
+                    knot.userData.colorT = (knot.userData.colorT + 0.1) % 1;
+                    knot.material.color = getGradientColor(knot.userData.colorT);
                 }
 
-                const rotSpeed = knot.userData.rotationSpeed * settings.speed;
-                knot.rotation.x = time * rotSpeed;
-                knot.rotation.y = time * rotSpeed * 0.7;
-                knot.rotation.z = time * rotSpeed * 0.3;
+                // Very slow rotation - form first
+                knot.rotation.x = time * knot.userData.rotationSpeed * 0.5;
+                knot.rotation.y = time * knot.userData.rotationSpeed * 0.3;
 
-                const pulse = Math.sin(time * 2 + knot.userData.pulseOffset) * 0.2 + 1;
-                knot.scale.setScalar(pulse * beatScale);
-
+                // Distance-based opacity - focal point effect
                 const dist = Math.abs(knot.position.z - camera.position.z);
-                const opacity = smoothstep(100, 20, dist) * smoothstep(0, 5, dist);
+                const opacity = smoothstep(80, 15, dist) * smoothstep(0, 8, dist);
                 knot.material.opacity = opacity * 0.9;
-                knot.material.emissiveIntensity = (opacity * 0.8 + 0.4) * (1 + bassIntensity);
 
-                knot.position.x = Math.sin(time * 0.5 + i) * 0.5;
-                knot.position.y = Math.cos(time * 0.3 + i) * 0.5;
+                // Subtle breathing
+                const breath = Math.sin(time * 0.3 + i) * 0.05 + 1;
+                knot.scale.setScalar(breath);
             });
 
-            // Update particles
-            if (particles) {
-                const pos = particles.geometry.attributes.position.array;
-                const count = Math.min(settings.particleCount, pos.length / 3);
+            // Update particles - slow drift
+            const pos = particles.geometry.attributes.position.array;
+            for (let i = 0; i < particleCount; i++) {
+                pos[i * 3 + 2] += tunnelSpeed * deltaTime * 0.8;
 
-                for (let i = 0; i < count; i++) {
-                    pos[i * 3 + 2] += tunnelSpeed * deltaTime * 0.9 * speedMultiplier * settings.speed;
-
-                    const angle = time * 0.5 + i * 0.01;
-                    const wobble = Math.sin(time * 2 + i * 0.5) * 0.2;
-                    pos[i * 3] += Math.cos(angle) * wobble * 0.01;
-                    pos[i * 3 + 1] += Math.sin(angle) * wobble * 0.01;
-
-                    if (pos[i * 3 + 2] > 20) {
-                        pos[i * 3 + 2] -= tunnelLength;
-                        const newAngle = Math.random() * Math.PI * 2;
-                        const newRadius = Math.random() * (tunnelRadius - 1) + 1;
-                        pos[i * 3] = Math.cos(newAngle) * newRadius;
-                        pos[i * 3 + 1] = Math.sin(newAngle) * newRadius;
-                    }
+                if (pos[i * 3 + 2] > 15) {
+                    pos[i * 3 + 2] -= tunnelLength;
+                    const newAngle = Math.random() * Math.PI * 2;
+                    const newRadius = Math.random() * (tunnelRadius - 2) + 1;
+                    pos[i * 3] = Math.cos(newAngle) * newRadius;
+                    pos[i * 3 + 1] = Math.sin(newAngle) * newRadius;
                 }
-                particles.geometry.attributes.position.needsUpdate = true;
             }
+            particles.geometry.attributes.position.needsUpdate = true;
 
-            // Render with post-processing
-            renderer.setRenderTarget(renderTarget);
+            // === CAMERA: Stable forward motion with minimal drift ===
+            // Very subtle movement - let the tunnel be the motion
+            camera.position.x = Math.sin(time * 0.1) * 0.5 + mouse.centeredX * 1.5;
+            camera.position.y = Math.cos(time * 0.08) * 0.3 + mouse.centeredY * 1;
+            camera.rotation.z = Math.sin(time * 0.05) * 0.02; // Minimal roll
+
+            // Look ahead into the tunnel
+            camera.lookAt(camera.position.x * 0.2, camera.position.y * 0.2, -50);
+
             renderer.render(scene, camera);
-
-            postProcessMaterial.uniforms.tDiffuse.value = renderTarget.texture;
-            postProcessMaterial.uniforms.time.value = time;
-            postProcessMaterial.uniforms.bloomStrength.value = settings.bloom;
-            postProcessMaterial.uniforms.vignetteStrength.value = settings.vignette;
-            postProcessMaterial.uniforms.chromaticAberration.value = settings.aberration;
-
-            renderer.setRenderTarget(null);
-            renderer.render(postScene, postCamera);
         }
 
-        // === UI CONTROLS ===
-        const settingsPanel = document.getElementById('settings-panel');
-        const helpOverlay = document.getElementById('help-overlay');
-        const cameraModeDisplay = document.getElementById('camera-mode');
-
-        // Speed slider
-        document.getElementById('speed-slider').addEventListener('input', (e) => {
-            settings.speed = parseFloat(e.target.value);
-            document.getElementById('speed-value').textContent = settings.speed.toFixed(1) + 'x';
-        });
-
-        // Particle slider
-        document.getElementById('particles-slider').addEventListener('input', (e) => {
-            settings.particleCount = parseInt(e.target.value);
-            document.getElementById('particles-value').textContent = settings.particleCount;
-            createParticles(settings.particleCount);
-        });
-
-        // Post-effect sliders
-        document.getElementById('bloom-slider').addEventListener('input', (e) => {
-            settings.bloom = parseFloat(e.target.value);
-            document.getElementById('bloom-value').textContent = settings.bloom.toFixed(1);
-        });
-
-        document.getElementById('aberration-slider').addEventListener('input', (e) => {
-            settings.aberration = parseFloat(e.target.value);
-            document.getElementById('aberration-value').textContent = settings.aberration.toFixed(3);
-        });
-
-        document.getElementById('vignette-slider').addEventListener('input', (e) => {
-            settings.vignette = parseFloat(e.target.value);
-            document.getElementById('vignette-value').textContent = settings.vignette.toFixed(1);
-        });
-
-        // Camera mode buttons
-        document.querySelectorAll('[data-camera]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('[data-camera]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                settings.cameraMode = btn.dataset.camera;
-                cameraModeDisplay.textContent = btn.textContent + ' Mode';
-            });
-        });
-
-        // Preset buttons
-        document.querySelectorAll('[data-preset]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const preset = btn.dataset.preset;
-
-                if (preset === 'chill') {
-                    settings.speed = 0.5;
-                    settings.bloom = 0.8;
-                    settings.aberration = 0.001;
-                    settings.vignette = 0.3;
-                } else if (preset === 'intense') {
-                    settings.speed = 2.0;
-                    settings.bloom = 1.5;
-                    settings.aberration = 0.005;
-                    settings.vignette = 0.8;
-                } else if (preset === 'psychedelic') {
-                    settings.speed = 1.5;
-                    settings.bloom = 2.0;
-                    settings.aberration = 0.008;
-                    settings.vignette = 0.5;
-                } else if (preset === 'cinematic') {
-                    settings.speed = 0.8;
-                    settings.bloom = 1.0;
-                    settings.aberration = 0.003;
-                    settings.vignette = 0.6;
-                    settings.cameraMode = 'cinematic';
-                }
-
-                // Update UI
-                document.getElementById('speed-slider').value = settings.speed;
-                document.getElementById('speed-value').textContent = settings.speed.toFixed(1) + 'x';
-                document.getElementById('bloom-slider').value = settings.bloom;
-                document.getElementById('bloom-value').textContent = settings.bloom.toFixed(1);
-                document.getElementById('aberration-slider').value = settings.aberration;
-                document.getElementById('aberration-value').textContent = settings.aberration.toFixed(3);
-                document.getElementById('vignette-slider').value = settings.vignette;
-                document.getElementById('vignette-value').textContent = settings.vignette.toFixed(1);
-            });
-        });
-
-        // Audio controls
-        document.getElementById('mic-btn').addEventListener('click', async () => {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                initAudio(stream);
-                document.getElementById('mic-btn').classList.add('active');
-                document.getElementById('audio-controls').classList.add('hidden');
-            } catch (err) {
-                alert('Microphone access denied!');
-            }
-        });
-
-        document.getElementById('file-btn').addEventListener('click', () => {
-            document.getElementById('audio-file').click();
-        });
-
-        document.getElementById('audio-file').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    audioContext.decodeAudioData(event.target.result, (buffer) => {
-                        analyser = audioContext.createAnalyser();
-                        analyser.fftSize = 256;
-                        bufferLength = analyser.frequencyBinCount;
-                        dataArray = new Uint8Array(bufferLength);
-
-                        audioSource = audioContext.createBufferSource();
-                        audioSource.buffer = buffer;
-                        audioSource.connect(analyser);
-                        analyser.connect(audioContext.destination);
-                        audioSource.loop = true;
-                        audioSource.start(0);
-
-                        state.audioEnabled = true;
-                        document.getElementById('file-btn').classList.add('active');
-                        document.getElementById('audio-controls').classList.add('hidden');
-                    });
-                };
-                reader.readAsArrayBuffer(file);
-            }
-        });
-
-        // Keyboard controls
-        window.addEventListener('keydown', (e) => {
-            state.keys[e.key] = true;
-
-            // Toggle settings panel
-            if (e.key === 'Tab' || e.key === '`' || e.key === '~') {
-                e.preventDefault();
-                state.panelVisible = !state.panelVisible;
-                settingsPanel.classList.toggle('hidden', !state.panelVisible);
-            }
-
-            // Toggle help
-            if (e.key === 'h' || e.key === 'H') {
-                e.preventDefault();
-                state.helpVisible = !state.helpVisible;
-                helpOverlay.classList.toggle('visible', state.helpVisible);
-            }
-
-            // Camera mode shortcuts
-            if (e.key === '1') {
-                settings.cameraMode = 'autopilot';
-                cameraModeDisplay.textContent = '🚀 Autopilot Mode';
-                document.querySelectorAll('[data-camera]').forEach(b => b.classList.remove('active'));
-                document.querySelector('[data-camera="autopilot"]').classList.add('active');
-            }
-            if (e.key === '2') {
-                settings.cameraMode = 'firstperson';
-                cameraModeDisplay.textContent = '👤 First Person Mode';
-                document.querySelectorAll('[data-camera]').forEach(b => b.classList.remove('active'));
-                document.querySelector('[data-camera="firstperson"]').classList.add('active');
-            }
-            if (e.key === '3') {
-                settings.cameraMode = 'orbital';
-                cameraModeDisplay.textContent = '🔄 Orbital Mode';
-                document.querySelectorAll('[data-camera]').forEach(b => b.classList.remove('active'));
-                document.querySelector('[data-camera="orbital"]').classList.add('active');
-            }
-            if (e.key === '4') {
-                settings.cameraMode = 'cinematic';
-                cameraModeDisplay.textContent = '🎬 Cinematic Mode';
-                document.querySelectorAll('[data-camera]').forEach(b => b.classList.remove('active'));
-                document.querySelector('[data-camera="cinematic"]').classList.add('active');
-            }
-        });
-
-        window.addEventListener('keyup', (e) => {
-            state.keys[e.key] = false;
-        });
-
-        // Window resize
+        // === RESIZE HANDLER ===
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderTarget.setSize(window.innerWidth, window.innerHeight);
-            postProcessMaterial.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
         });
 
-        // Start animation
+        // === START ANIMATION ===
         animate();
-
-        // Show help on first load
-        setTimeout(() => {
-            state.helpVisible = true;
-            helpOverlay.classList.add('visible');
-        }, 1000);
-
-        setTimeout(() => {
-            state.helpVisible = false;
-            helpOverlay.classList.remove('visible');
-        }, 5000);
     </script>
 </body>
 

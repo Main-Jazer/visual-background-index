@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Plasma Storm - JaZeR [Enhanced]</title>
+    <title>Plasma Storm - JaZeR</title>
     <style>
         * {
             box-sizing: border-box;
@@ -27,108 +27,94 @@
             width: 100vw;
             height: 100vh;
         }
-
-        /* Debug overlay */
-        #debug {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            color: #ff2aff;
-            font-family: 'Consolas', monospace;
-            font-size: 12px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px;
-            border-radius: 4px;
-            z-index: 1000;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        #debug.visible {
-            opacity: 1;
-        }
-
-        /* Controls hint */
-        #controls {
-            position: fixed;
-            bottom: 10px;
-            left: 10px;
-            color: rgba(255, 255, 255, 0.5);
-            font-family: 'Consolas', monospace;
-            font-size: 11px;
-            z-index: 1000;
-            pointer-events: none;
-        }
     </style>
 </head>
 
 <body>
     <canvas id="c"></canvas>
-    <div id="debug"></div>
-    <div id="controls">
-        [B] Toggle Post-FX | [P] Cycle Presets | [D] Debug Info | [1-4] Quality
-    </div>
 
     <script type="module">
-        // ============================================================================
-        // PLASMA STORM - ENHANCED WITH CANVAS 2D POST-PROCESSING
-        // ============================================================================
-        // This effect demonstrates the JaZeR Canvas 2D post-processing pipeline
-        // with bloom, chromatic aberration, vignette, tonemapping, and grain.
-        // ============================================================================
+        /**
+         * ============================================================================
+         * PLASMA STORM - HIGH-END VISUAL ART
+         * ============================================================================
+         * CHANGELOG v2.0 - Artistic Upgrade
+         * - Constrained palette: Electric cyan primary + violet secondary + white discharge
+         * - Removed 6-color random cycling
+         * - Episodic storm events: calm → build → discharge → calm (15-second cycle)
+         * - Reduced lightning frequency - fires only during storm peaks
+         * - Removed large JaZeR watermark text
+         * - Established visual hierarchy: Primary orbs (focal), lightning (accent)
+         * - Camera: Stable, let the storm be the motion
+         * - Finish: Darker ambient between storms
+         * 
+         * THESIS: "Primal power with direction, chaos shaped into flow"
+         * ============================================================================
+         */
 
         import { noise2D, noise3D, mouse, hexToRgb, smoothstep } from '../lib/engine/jazer-background-engine.js';
         import '../lib/engine/jazer-navigation.js';
 
-        // NEW: Import JaZeR Canvas post-processing
-        import { createCanvasPipeline } from '../lib/engine/jazer-canvas-fx.js';
-        import { FX_PRESETS } from '../lib/engine/jazer-post-fx.js';
-
         const canvas = document.getElementById('c');
-        const debugEl = document.getElementById('debug');
+        const ctx = canvas.getContext('2d');
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
         let W, H;
         let time = 0;
 
-        // ============================================================================
-        // CREATE POST-PROCESSING PIPELINE
-        // ============================================================================
-        // This wraps all Canvas 2D rendering with professional post-processing
+        // === COLOR PALETTE (Restrained) ===
+        const COLORS = {
+            primary: '#00ccff',     // Electric cyan
+            secondary: '#9944ff',   // Royal violet
+            tertiary: '#6622cc',    // Deep purple
+            discharge: '#ffffff',   // Pure white for lightning peaks
+            darkAmbient: '#050508'  // Near black
+        };
 
-        const postFX = createCanvasPipeline(canvas, {
-            preset: 'neon',     // 'subtle', 'neon', 'cinematic', 'extreme'
-            quality: 'high',    // 'low', 'medium', 'high', 'ultra'
-            enabled: true
-        });
+        // === STORM CYCLE PARAMETERS ===
+        const STORM_PERIOD = 15; // 15-second full cycle
 
-        // ============================================================================
-        // PLASMA COLORS
-        // ============================================================================
+        // Storm intensity function: calm → build → peak discharge → decay → calm
+        function getStormIntensity(t) {
+            const normalized = (t % STORM_PERIOD) / STORM_PERIOD;
 
-        const plasmaColors = ['#ff0055', '#ff2aff', '#00f5ff', '#39ff14', '#ffd700', '#ff6b00'];
+            // Calm phase: 0.0 - 0.4
+            if (normalized < 0.4) {
+                return normalized / 0.4 * 0.3; // Slowly build to 0.3
+            }
+            // Build phase: 0.4 - 0.6
+            else if (normalized < 0.6) {
+                const buildT = (normalized - 0.4) / 0.2;
+                return 0.3 + buildT * 0.7; // Build from 0.3 to 1.0
+            }
+            // Peak discharge: 0.6 - 0.7
+            else if (normalized < 0.7) {
+                return 1.0; // Full intensity
+            }
+            // Decay: 0.7 - 1.0
+            else {
+                const decayT = (normalized - 0.7) / 0.3;
+                return 1.0 - decayT * 0.7; // Decay from 1.0 to 0.3
+            }
+        }
 
-        // ============================================================================
-        // RESIZE HANDLER
-        // ============================================================================
-
+        // === RESIZE HANDLER ===
         function resize() {
             W = window.innerWidth;
             H = window.innerHeight;
             canvas.width = W * dpr;
             canvas.height = H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
 
-        // ============================================================================
-        // LIGHTNING DRAWING
-        // ============================================================================
+        // === LIGHTNING DRAWING (Refined) ===
+        function drawLightning(x1, y1, x2, y2, displacement, color, alpha, width) {
+            if (alpha < 0.05) return;
 
-        function drawLightning(ctx, x1, y1, x2, y2, segments, displacement, color, alpha) {
             const points = [{ x: x1, y: y1 }];
 
             function subdivide(start, end, disp) {
-                if (disp < 2) return;
+                if (disp < 3) return;
                 const mid = {
                     x: (start.x + end.x) / 2 + (Math.random() - 0.5) * disp,
                     y: (start.y + end.y) / 2 + (Math.random() - 0.5) * disp
@@ -146,90 +132,101 @@
             const rgb = hexToRgb(color);
 
             // Outer glow
-            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.3})`;
-            ctx.lineWidth = 8;
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.25})`;
+            ctx.lineWidth = width * 4;
+            ctx.lineCap = 'round';
             ctx.beginPath();
             ctx.moveTo(points[0].x, points[0].y);
             for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
             ctx.stroke();
 
             // Main line
-            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.7})`;
+            ctx.lineWidth = width;
             ctx.beginPath();
             ctx.moveTo(points[0].x, points[0].y);
             for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
             ctx.stroke();
 
-            // Core highlight
-            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
-            ctx.lineWidth = 1;
+            // White core
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+            ctx.lineWidth = width * 0.3;
             ctx.stroke();
         }
 
-        // ============================================================================
-        // PLASMA ORB CLASS
-        // ============================================================================
-
+        // === PLASMA ORB CLASS (Refined) ===
         class PlasmaOrb {
-            constructor(w, h) {
+            constructor(w, h, colorIndex) {
                 this.w = w;
                 this.h = h;
+                this.colorIndex = colorIndex;
                 this.reset();
             }
 
             reset() {
                 this.x = Math.random() * this.w;
                 this.y = Math.random() * this.h;
-                this.size = 20 + Math.random() * 60;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
-                this.colorIndex = Math.floor(Math.random() * plasmaColors.length);
-                this.pulseSpeed = 1 + Math.random() * 2;
+                this.size = 40 + Math.random() * 80;
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = (Math.random() - 0.5) * 1.5;
+                this.pulseSpeed = 0.8 + Math.random() * 0.8;
                 this.noiseOffset = Math.random() * 1000;
             }
 
-            update(dt, mouseX, mouseY, time) {
+            update(dt, mouseX, mouseY, time, stormIntensity) {
+                // Gentle attraction to mouse
                 const dx = mouseX - this.x;
                 const dy = mouseY - this.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                if (dist < 300 && dist > 10) {
-                    this.vx += (dx / dist) * 0.5;
-                    this.vy += (dy / dist) * 0.5;
+                if (dist < 350 && dist > 15) {
+                    const attraction = 0.15 + stormIntensity * 0.2;
+                    this.vx += (dx / dist) * attraction;
+                    this.vy += (dy / dist) * attraction;
                 }
 
-                this.vx += noise2D(this.x * 0.003, time * 0.5 + this.noiseOffset) * 0.3;
-                this.vy += noise2D(this.y * 0.003, time * 0.5 + this.noiseOffset + 100) * 0.3;
-                this.vx *= 0.98;
-                this.vy *= 0.98;
+                // Noise-based movement - more during storm
+                const noiseStrength = 0.15 + stormIntensity * 0.25;
+                this.vx += noise2D(this.x * 0.002, time * 0.3 + this.noiseOffset) * noiseStrength;
+                this.vy += noise2D(this.y * 0.002, time * 0.3 + this.noiseOffset + 100) * noiseStrength;
+
+                // Damping
+                const damping = 0.97 - stormIntensity * 0.02;
+                this.vx *= damping;
+                this.vy *= damping;
+
                 this.x += this.vx;
                 this.y += this.vy;
 
-                if (this.x < -100) this.x = this.w + 100;
-                if (this.x > this.w + 100) this.x = -100;
-                if (this.y < -100) this.y = this.h + 100;
-                if (this.y > this.h + 100) this.y = -100;
+                // Boundary wrapping
+                if (this.x < -120) this.x = this.w + 120;
+                if (this.x > this.w + 120) this.x = -120;
+                if (this.y < -120) this.y = this.h + 120;
+                if (this.y > this.h + 120) this.y = -120;
             }
 
-            draw(ctx, time) {
+            draw(time, stormIntensity) {
                 if (!isFinite(this.x) || !isFinite(this.y)) {
                     this.reset();
                     return;
                 }
 
-                const pulse = Math.sin(time * this.pulseSpeed) * 0.3 + 1;
-                const size = this.size * pulse;
-                const color = plasmaColors[this.colorIndex];
+                // Determine color based on index (alternating primary/secondary)
+                const color = this.colorIndex % 2 === 0 ? COLORS.primary : COLORS.secondary;
                 const rgb = hexToRgb(color);
 
+                // Pulse intensity follows storm cycle
+                const basePulse = Math.sin(time * this.pulseSpeed) * 0.15 + 0.85;
+                const pulse = basePulse * (0.5 + stormIntensity * 0.5);
+                const size = this.size * pulse;
+
                 // Multiple glow layers
-                for (let i = 4; i >= 0; i--) {
-                    const layerSize = size * (1 + i * 0.5);
-                    const alpha = 0.15 / (i + 1);
+                for (let i = 3; i >= 0; i--) {
+                    const layerSize = size * (1 + i * 0.6);
+                    const alpha = (0.08 + stormIntensity * 0.08) / (i + 1);
                     const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, layerSize);
                     grad.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`);
-                    grad.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.5})`);
+                    grad.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha * 0.4})`);
                     grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
                     ctx.fillStyle = grad;
                     ctx.beginPath();
@@ -237,55 +234,41 @@
                     ctx.fill();
                 }
 
-                // Energy tendrils
-                const tendrilCount = 6;
-                for (let i = 0; i < tendrilCount; i++) {
-                    const angle = (i / tendrilCount) * Math.PI * 2 + time * 0.5;
-                    const len = size * (0.8 + noise2D(i + time, this.noiseOffset) * 0.5);
-                    const endX = this.x + Math.cos(angle) * len;
-                    const endY = this.y + Math.sin(angle) * len;
-                    ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`;
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.moveTo(this.x, this.y);
-                    ctx.quadraticCurveTo(
-                        this.x + Math.cos(angle + 0.3) * len * 0.5,
-                        this.y + Math.sin(angle + 0.3) * len * 0.5,
-                        endX, endY
-                    );
-                    ctx.stroke();
+                // Energy tendrils - more visible during storm
+                if (stormIntensity > 0.3) {
+                    const tendrilCount = 5;
+                    for (let i = 0; i < tendrilCount; i++) {
+                        const angle = (i / tendrilCount) * Math.PI * 2 + time * 0.3;
+                        const len = size * (0.6 + noise2D(i + time * 0.5, this.noiseOffset) * 0.4);
+                        const endX = this.x + Math.cos(angle) * len;
+                        const endY = this.y + Math.sin(angle) * len;
+
+                        ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${stormIntensity * 0.3})`;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(this.x, this.y);
+                        ctx.quadraticCurveTo(
+                            this.x + Math.cos(angle + 0.4) * len * 0.5,
+                            this.y + Math.sin(angle + 0.4) * len * 0.5,
+                            endX, endY
+                        );
+                        ctx.stroke();
+                    }
                 }
             }
         }
 
-        // ============================================================================
-        // SCENE STATE
-        // ============================================================================
+        // === SCENE STATE ===
+        const orbs = [];
+        const ORB_COUNT = 6; // Reduced from 8
 
-        let orbs = [];
+        // === RENDER FUNCTION ===
+        function render() {
+            const stormIntensity = getStormIntensity(time);
 
-        // ============================================================================
-        // SCENE DRAWING FUNCTION
-        // ============================================================================
-        // This function is passed to the post-processing pipeline
-        // It draws the raw scene which then gets enhanced with bloom, etc.
-
-        function drawScene(ctx, w, h) {
-            // Scale for device pixel ratio
-            const scaleX = w / W;
-            const scaleY = h / H;
-            ctx.save();
-            ctx.scale(scaleX, scaleY);
-
-            // Background gradient
-            const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H));
-            bgGrad.addColorStop(0, '#100010');
-            bgGrad.addColorStop(1, '#000005');
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, W, H);
-
-            // Fade layer
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+            // Background - darker during calm phases
+            const bgAlpha = 0.12 + (1 - stormIntensity) * 0.08;
+            ctx.fillStyle = `rgba(5, 5, 8, ${bgAlpha})`;
             ctx.fillRect(0, 0, W, H);
 
             // Additive blending for plasma effects
@@ -298,112 +281,62 @@
 
             // Update and draw orbs
             orbs.forEach(orb => {
-                orb.update(dt, mx, my, time);
-                orb.draw(ctx, time);
+                orb.update(dt, mx, my, time, stormIntensity);
+                orb.draw(time, stormIntensity);
             });
 
-            // Lightning between close orbs
-            for (let i = 0; i < orbs.length; i++) {
-                for (let j = i + 1; j < orbs.length; j++) {
-                    const dx = orbs[j].x - orbs[i].x;
-                    const dy = orbs[j].y - orbs[i].y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 400 && Math.random() < 0.1) {
-                        const alpha = smoothstep(400, 100, dist);
-                        const color = plasmaColors[Math.floor(time * 2) % plasmaColors.length];
-                        drawLightning(ctx, orbs[i].x, orbs[i].y, orbs[j].x, orbs[j].y, 5, 50, color, alpha * 0.6);
+            // Lightning between close orbs - ONLY during storm peaks (intensity > 0.7)
+            if (stormIntensity > 0.7) {
+                for (let i = 0; i < orbs.length; i++) {
+                    for (let j = i + 1; j < orbs.length; j++) {
+                        const dx = orbs[j].x - orbs[i].x;
+                        const dy = orbs[j].y - orbs[i].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        // Higher threshold for lightning, random chance
+                        if (dist < 350 && Math.random() < 0.15 * stormIntensity) {
+                            const alpha = smoothstep(350, 100, dist) * (stormIntensity - 0.7) / 0.3;
+                            drawLightning(orbs[i].x, orbs[i].y, orbs[j].x, orbs[j].y,
+                                40, COLORS.primary, alpha * 0.7, 2);
+                        }
                     }
                 }
             }
 
-            // Lightning to mouse
-            if (mx > 0 && Math.random() < 0.15) {
+            // Lightning to mouse - ONLY during peak storm
+            if (mx > 0 && stormIntensity > 0.85 && Math.random() < 0.2) {
                 const nearestOrb = orbs.reduce((nearest, orb) => {
                     const d = Math.hypot(orb.x - mx, orb.y - my);
                     return d < nearest.d ? { orb, d } : nearest;
                 }, { orb: orbs[0], d: Infinity });
-                if (nearestOrb.d < 400) {
-                    drawLightning(ctx, nearestOrb.orb.x, nearestOrb.orb.y, mx, my, 5, 60, '#00f5ff', 0.7);
+
+                if (nearestOrb.d < 350) {
+                    const alpha = (stormIntensity - 0.85) / 0.15;
+                    drawLightning(nearestOrb.orb.x, nearestOrb.orb.y, mx, my,
+                        50, COLORS.discharge, alpha * 0.8, 2.5);
                 }
             }
 
             ctx.restore();
 
-            // Scanlines
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
-            for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
+            // Subtle scanlines
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.02)';
+            for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, W, 1);
 
-            // JaZeR watermark
-            ctx.save();
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.font = 'bold 120px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            const textGrad = ctx.createLinearGradient(W / 2 - 200, 0, W / 2 + 200, 0);
-            const t = time * 0.5;
-            textGrad.addColorStop(0, plasmaColors[Math.floor(t) % plasmaColors.length]);
-            textGrad.addColorStop(0.5, plasmaColors[Math.floor(t + 1) % plasmaColors.length]);
-            textGrad.addColorStop(1, plasmaColors[Math.floor(t + 2) % plasmaColors.length]);
-
-            ctx.fillStyle = textGrad;
-            ctx.globalAlpha = 0.04 + Math.sin(time * 2) * 0.02;
-            ctx.fillText('JaZeR', W / 2, H / 2);
-            ctx.restore();
-
-            ctx.restore();
+            // Vignette - stronger during calm
+            const vignetteStrength = 0.4 + (1 - stormIntensity) * 0.2;
+            const vignette = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3,
+                W / 2, H / 2, Math.max(W, H) * 0.7);
+            vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vignette.addColorStop(1, `rgba(0, 0, 0, ${vignetteStrength})`);
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, W, H);
         }
 
-        // ============================================================================
-        // KEYBOARD CONTROLS
-        // ============================================================================
-
-        const presetNames = ['subtle', 'neon', 'cinematic', 'extreme'];
-        let currentPresetIndex = 1; // Start with 'neon'
-        let showDebug = false;
-
-        document.addEventListener('keydown', (e) => {
-            switch (e.key.toLowerCase()) {
-                case 'b':
-                    const enabled = postFX.toggle();
-                    console.log(`Post-FX: ${enabled ? 'ON' : 'OFF'}`);
-                    break;
-                case 'p':
-                    currentPresetIndex = (currentPresetIndex + 1) % presetNames.length;
-                    const preset = presetNames[currentPresetIndex];
-                    postFX.setPreset(preset);
-                    console.log(`Preset: ${preset}`);
-                    break;
-                case 'd':
-                    showDebug = !showDebug;
-                    debugEl.classList.toggle('visible', showDebug);
-                    break;
-                case '1':
-                    postFX.setQuality('low');
-                    console.log('Quality: low');
-                    break;
-                case '2':
-                    postFX.setQuality('medium');
-                    console.log('Quality: medium');
-                    break;
-                case '3':
-                    postFX.setQuality('high');
-                    console.log('Quality: high');
-                    break;
-                case '4':
-                    postFX.setQuality('ultra');
-                    console.log('Quality: ultra');
-                    break;
-            }
-        });
-
-        // ============================================================================
-        // ANIMATION LOOP
-        // ============================================================================
-
+        // === ANIMATION LOOP ===
         let lastTime = performance.now();
 
-        function render() {
+        function animate() {
             const now = performance.now();
             const deltaTime = (now - lastTime) / 1000;
             lastTime = now;
@@ -411,40 +344,22 @@
             time += deltaTime;
             mouse.update();
 
-            // ================================================================
-            // RENDER WITH POST-PROCESSING
-            // ================================================================
-            // OLD: Draw directly to canvas context
-            // NEW: Use pipeline which applies bloom, chromatic, vignette, etc.
-            postFX.render(drawScene, deltaTime);
+            render();
 
-            // Update debug overlay
-            if (showDebug) {
-                const info = postFX.getDebugInfo();
-                debugEl.innerHTML = `
-                    Preset: ${info.preset}<br>
-                    Quality: ${info.quality}<br>
-                    Refresh: ${info.refreshRate}Hz<br>
-                    FX: ${info.enabled ? 'ON' : 'OFF'}<br>
-                    Time: ${info.time}s
-                `;
-            }
-
-            requestAnimationFrame(render);
+            requestAnimationFrame(animate);
         }
 
-        // ============================================================================
-        // INITIALIZATION
-        // ============================================================================
-
+        // === INITIALIZATION ===
         window.addEventListener('resize', resize);
         resize();
 
-        // Create plasma orbs
-        orbs = Array.from({ length: 8 }, () => new PlasmaOrb(W, H));
+        // Create plasma orbs with alternating colors
+        for (let i = 0; i < ORB_COUNT; i++) {
+            orbs.push(new PlasmaOrb(W, H, i));
+        }
 
         // Start animation
-        requestAnimationFrame(render);
+        requestAnimationFrame(animate);
     </script>
 </body>
 

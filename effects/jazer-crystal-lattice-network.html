@@ -33,29 +33,59 @@
 <body>
     <canvas id="c"></canvas>
     <script type="module">
-        import { noise3D, mouse, ColorPalettes } from '../lib/engine/jazer-background-engine.js';
+        /**
+         * ============================================================================
+         * CRYSTAL LATTICE NETWORK - HIGH-END VISUAL ART
+         * ============================================================================
+         * CHANGELOG v2.0 - Artistic Upgrade
+         * - Constrained palette: Midnight blue base + cyan energy + rare gold accents
+         * - Removed rainbow HSL color cycling
+         * - Added 8-10 second breathing cycles with moments of near-stillness
+         * - Established visual hierarchy: Center crystal (primary), lattice (structure)
+         * - Removed busy floating shards to reduce visual competition
+         * - Camera: Slow asymmetric drift with subtle parallax
+         * - Finish: Light grain, restrained vignette, cooler temperature
+         * 
+         * THESIS: "Frozen geometry awakening with internal energy"
+         * ============================================================================
+         */
+
+        import { noise3D, mouse } from '../lib/engine/jazer-background-engine.js';
         import '../lib/engine/jazer-navigation.js';
         import * as THREE from '../lib/Three.js';
         window.THREE = THREE;
         const canvas = document.getElementById('c');
 
-        // Scene setup
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 15;
+        // === COLOR PALETTE (Restrained) ===
+        const COLORS = {
+            base: new THREE.Color(0x0a0a1a),       // Deep midnight
+            structure: new THREE.Color(0x1a2a4a), // Muted blue-grey
+            energy: new THREE.Color(0x00a8cc),    // Primary cyan
+            accent: new THREE.Color(0x4a9eff),    // Secondary blue
+            highlight: new THREE.Color(0xffd700), // Rare gold glint
+            glow: new THREE.Color(0x0066aa)       // Subtle glow
+        };
 
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        // === SCENE SETUP ===
+        const scene = new THREE.Scene();
+        scene.background = COLORS.base;
+        scene.fog = new THREE.FogExp2(0x0a0a1a, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(8, 6, 15);
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.setClearColor(0x000000, 0);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 0.9;
 
-        // Crystal lattice parameters
-        const gridSize = 8;
-        const spacing = 2;
+        // === LATTICE PARAMETERS ===
+        const gridSize = 6;
+        const spacing = 2.2;
         const nodeCount = gridSize * gridSize * gridSize;
-        const connectionDistance = 3;
 
-        // Create crystal nodes
+        // === CREATE NODES ===
         const nodes = [];
         const nodePositions = [];
 
@@ -63,26 +93,30 @@
             for (let y = 0; y < gridSize; y++) {
                 for (let z = 0; z < gridSize; z++) {
                     const pos = new THREE.Vector3(
-                        (x - gridSize / 2) * spacing + (Math.random() - 0.5) * 0.5,
-                        (y - gridSize / 2) * spacing + (Math.random() - 0.5) * 0.5,
-                        (z - gridSize / 2) * spacing + (Math.random() - 0.5) * 0.5
+                        (x - gridSize / 2) * spacing,
+                        (y - gridSize / 2) * spacing,
+                        (z - gridSize / 2) * spacing
                     );
 
                     nodePositions.push(pos.clone());
 
-                    // Store original position for oscillation
+                    // Distance from center for energy distribution
+                    const distFromCenter = pos.length();
+                    const energyFactor = Math.max(0, 1 - distFromCenter / (gridSize * spacing * 0.6));
+
                     nodes.push({
                         position: pos,
                         originalPosition: pos.clone(),
                         phase: Math.random() * Math.PI * 2,
-                        frequency: 0.5 + Math.random() * 0.5,
-                        amplitude: 0.1 + Math.random() * 0.1
+                        energyFactor: energyFactor,
+                        // Long breathing cycle - 8-12 seconds
+                        breathCycle: 8 + Math.random() * 4
                     });
                 }
             }
         }
 
-        // Create geometry for nodes
+        // === NODE GEOMETRY ===
         const nodeGeometry = new THREE.BufferGeometry();
         const nodePositionsArray = new Float32Array(nodeCount * 3);
         const nodeColors = new Float32Array(nodeCount * 3);
@@ -96,75 +130,63 @@
             nodePositionsArray[i3 + 1] = node.position.y;
             nodePositionsArray[i3 + 2] = node.position.z;
 
-            // Assign colors based on position
-            const hue = (node.position.x + node.position.y + node.position.z) * 0.1 % 1;
-            const color = new THREE.Color().setHSL(hue, 0.9, 0.7);
+            // Color based on energy factor (closer to center = more energy)
+            const color = COLORS.structure.clone().lerp(COLORS.energy, node.energyFactor * 0.6);
             nodeColors[i3] = color.r;
             nodeColors[i3 + 1] = color.g;
             nodeColors[i3 + 2] = color.b;
 
-            nodeSizes[i] = 0.2 + Math.random() * 0.1;
+            nodeSizes[i] = 0.15 + node.energyFactor * 0.1;
         }
 
         nodeGeometry.setAttribute('position', new THREE.BufferAttribute(nodePositionsArray, 3));
         nodeGeometry.setAttribute('color', new THREE.BufferAttribute(nodeColors, 3));
         nodeGeometry.setAttribute('size', new THREE.BufferAttribute(nodeSizes, 1));
 
-        // Node material
+        // === NODE MATERIAL (Refined) ===
         const nodeMaterial = new THREE.ShaderMaterial({
             uniforms: {
                 time: { value: 0 },
-                mouse: { value: new THREE.Vector2(0, 0) }
+                breathPhase: { value: 0 }
             },
             vertexShader: `
                 uniform float time;
-                uniform vec2 mouse;
+                uniform float breathPhase;
                 attribute float size;
                 attribute vec3 color;
                 varying vec3 vColor;
-                varying float vPulse;
+                varying float vIntensity;
 
                 void main() {
                     vColor = color;
                     
                     vec3 pos = position;
                     
-                    // Oscillate nodes
-                    float pulse = sin(time * 2.0 + pos.x + pos.y + pos.z) * 0.1;
-                    vPulse = pulse * 5.0 + 0.5;
+                    // Gentle breathing movement - slower, more intentional
+                    float breath = sin(breathPhase) * 0.5 + 0.5;
+                    float localBreath = sin(time * 0.1 + pos.x * 0.2 + pos.y * 0.2 + pos.z * 0.2);
                     
-                    // Add subtle movement
-                    pos.x += sin(time * 0.8 + pos.y * 0.5 + pos.z * 0.7) * 0.1;
-                    pos.y += cos(time * 0.9 + pos.x * 0.6 + pos.z * 0.8) * 0.1;
-                    pos.z += sin(time * 1.0 + pos.x * 0.7 + pos.y * 0.9) * 0.1;
+                    pos += normalize(pos) * localBreath * 0.05 * breath;
                     
-                    // Mouse interaction
-                    vec3 mouseVec = vec3(mouse.x * 10.0, -mouse.y * 10.0, 0.0);
-                    float mouseDist = distance(pos, mouseVec);
-                    if (mouseDist < 5.0) {
-                        pos += normalize(pos - mouseVec) * (5.0 - mouseDist) * 0.2;
-                    }
+                    vIntensity = 0.6 + breath * 0.4;
                     
                     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-                    gl_PointSize = size * 100.0 * (30.0 / -mvPosition.z);
+                    gl_PointSize = size * 80.0 * (25.0 / -mvPosition.z) * (0.8 + breath * 0.2);
                     gl_Position = projectionMatrix * mvPosition;
                 }
             `,
             fragmentShader: `
                 varying vec3 vColor;
-                varying float vPulse;
+                varying float vIntensity;
 
                 void main() {
                     float dist = length(gl_PointCoord - 0.5);
                     if (dist > 0.5) discard;
                     
                     float alpha = 1.0 - dist * 2.0;
-                    alpha = pow(alpha, 1.0);
+                    alpha = pow(alpha, 1.5);
                     
-                    // Add pulsing effect
-                    float pulse = vPulse;
-                    
-                    gl_FragColor = vec4(vColor * pulse, alpha * pulse);
+                    gl_FragColor = vec4(vColor * vIntensity, alpha * 0.8);
                 }
             `,
             transparent: true,
@@ -175,16 +197,20 @@
         const nodeSystem = new THREE.Points(nodeGeometry, nodeMaterial);
         scene.add(nodeSystem);
 
-        // Create connections between nearby nodes
-        const connectionLines = [];
-        const lineGeometries = [];
-        const lineMaterials = [];
+        // === CONNECTIONS (Refined - fewer, intentional) ===
+        const connectionDistance = 2.5;
+        const connectionGroup = new THREE.Group();
 
         for (let i = 0; i < nodeCount; i++) {
             for (let j = i + 1; j < nodeCount; j++) {
                 const dist = nodes[i].position.distanceTo(nodes[j].position);
 
                 if (dist < connectionDistance) {
+                    const avgEnergy = (nodes[i].energyFactor + nodes[j].energyFactor) / 2;
+
+                    // Only show connections with sufficient energy
+                    if (avgEnergy < 0.2) continue;
+
                     const geometry = new THREE.BufferGeometry();
                     const positions = new Float32Array([
                         nodes[i].position.x, nodes[i].position.y, nodes[i].position.z,
@@ -192,211 +218,151 @@
                     ]);
                     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-                    // Connection material
-                    const material = new THREE.ShaderMaterial({
-                        uniforms: {
-                            time: { value: 0 },
-                            color1: { value: new THREE.Color(nodes[i].position.x * 0.1, 0.5, 0.7) },
-                            color2: { value: new THREE.Color(nodes[j].position.y * 0.1, 0.5, 0.7) },
-                            dist: { value: dist }
-                        },
-                        vertexShader: `
-                            void main() {
-                                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                            }
-                        `,
-                        fragmentShader: `
-                            uniform float time;
-                            uniform vec3 color1;
-                            uniform vec3 color2;
-                            uniform float dist;
-                            
-                            void main() {
-                                float t = (sin(time * 2.0) + 1.0) / 2.0;
-                                vec3 color = mix(color1, color2, t);
-                                
-                                // Fade out based on distance
-                                float alpha = 1.0 - (dist / 3.0);
-                                gl_FragColor = vec4(color, alpha * 0.3);
-                            }
-                        `,
+                    const color = COLORS.structure.clone().lerp(COLORS.energy, avgEnergy * 0.5);
+                    const material = new THREE.LineBasicMaterial({
+                        color: color,
                         transparent: true,
+                        opacity: 0.15 + avgEnergy * 0.2,
                         blending: THREE.AdditiveBlending
                     });
 
                     const line = new THREE.Line(geometry, material);
-                    scene.add(line);
-
-                    connectionLines.push(line);
-                    lineGeometries.push(geometry);
-                    lineMaterials.push(material);
+                    line.userData = { avgEnergy };
+                    connectionGroup.add(line);
                 }
             }
         }
+        scene.add(connectionGroup);
 
-        // Crystal center piece
-        const centerGeometry = new THREE.OctahedronGeometry(1.5, 2);
+        // === CENTER CRYSTAL (Primary Focus) ===
+        const centerGeometry = new THREE.OctahedronGeometry(1.2, 1);
         const centerMaterial = new THREE.ShaderMaterial({
             uniforms: {
-                time: { value: 0 }
+                time: { value: 0 },
+                breathPhase: { value: 0 },
+                baseColor: { value: COLORS.energy },
+                accentColor: { value: COLORS.accent }
             },
             vertexShader: `
                 uniform float time;
+                uniform float breathPhase;
                 varying vec3 vNormal;
+                varying vec3 vPosition;
                 
                 void main() {
-                    vNormal = normal;
+                    vNormal = normalize(normalMatrix * normal);
+                    vPosition = position;
                     
-                    // Morph the shape slightly
+                    // Subtle morph synchronized with breath
+                    float breath = sin(breathPhase) * 0.5 + 0.5;
                     vec3 pos = position;
-                    float noise = noise3D(pos.x * 2.0, pos.y * 2.0, pos.z * 2.0 + time * 3.0);
-                    pos += normal * noise * 0.2;
+                    pos += normal * breath * 0.08;
                     
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
                 }
             `,
             fragmentShader: `
                 uniform float time;
+                uniform float breathPhase;
+                uniform vec3 baseColor;
+                uniform vec3 accentColor;
                 varying vec3 vNormal;
+                varying vec3 vPosition;
                 
                 void main() {
-                    // Create a faceted crystal appearance
-                    float facetPattern = sin(vNormal.x * 10.0) * sin(vNormal.y * 10.0) * sin(vNormal.z * 10.0);
-                    facetPattern = abs(facetPattern);
+                    float breath = sin(breathPhase) * 0.5 + 0.5;
                     
-                    // Color cycling
-                    float hue = (sin(time * 0.5) * 0.5 + 0.5) % 1.0;
-                    vec3 color = vec3(0.5);
+                    // Fresnel edge glow
+                    float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.0);
                     
-                    // Convert HSV to RGB
-                    vec3 hsv = vec3(hue, 0.8, 0.9);
-                    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-                    vec3 p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
-                    color = hsv.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), hsv.y);
+                    // Slow color shift between base and accent
+                    float colorT = sin(time * 0.05) * 0.5 + 0.5;
+                    vec3 color = mix(baseColor, accentColor, colorT * 0.3);
                     
-                    // Apply facet pattern
-                    color *= (facetPattern * 0.5 + 0.5);
+                    // Intensity follows breath
+                    float intensity = 0.4 + breath * 0.6;
                     
-                    float intensity = 1.0 - length(vNormal) * 0.1;
-                    gl_FragColor = vec4(color * intensity, 0.8);
+                    vec3 finalColor = color * intensity * (1.0 + fresnel * 0.5);
+                    gl_FragColor = vec4(finalColor, 0.7 + fresnel * 0.3);
                 }
             `,
             transparent: true,
-            blending: THREE.AdditiveBlending
+            blending: THREE.AdditiveBlending,
+            side: THREE.DoubleSide
         });
 
         const crystalCenter = new THREE.Mesh(centerGeometry, centerMaterial);
         scene.add(crystalCenter);
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0x222255, 0.3);
+        // === INNER GLOW ===
+        const glowGeometry = new THREE.SphereGeometry(0.8, 16, 16);
+        const glowMaterial = new THREE.MeshBasicMaterial({
+            color: COLORS.glow,
+            transparent: true,
+            opacity: 0.3,
+            blending: THREE.AdditiveBlending
+        });
+        const innerGlow = new THREE.Mesh(glowGeometry, glowMaterial);
+        scene.add(innerGlow);
+
+        // === SUBTLE LIGHTING ===
+        const ambientLight = new THREE.AmbientLight(0x101020, 0.4);
         scene.add(ambientLight);
 
-        const pointLight = new THREE.PointLight(0x00ffff, 1, 100);
-        pointLight.position.set(5, 5, 5);
-        scene.add(pointLight);
+        const keyLight = new THREE.PointLight(COLORS.energy.getHex(), 0.8, 50);
+        keyLight.position.set(5, 8, 10);
+        scene.add(keyLight);
 
-        const pointLight2 = new THREE.PointLight(0xff00ff, 1, 100);
-        pointLight2.position.set(-5, -5, -5);
-        scene.add(pointLight2);
+        const fillLight = new THREE.PointLight(COLORS.accent.getHex(), 0.3, 40);
+        fillLight.position.set(-8, -5, 5);
+        scene.add(fillLight);
 
-        // Add some floating crystal shards
-        const shardCount = 20;
-        const shards = [];
-
-        for (let i = 0; i < shardCount; i++) {
-            const shardGeometry = new THREE.TetrahedronGeometry(0.2, 0);
-            const shardMaterial = new THREE.MeshBasicMaterial({
-                color: 0x00ffff,
-                transparent: true,
-                opacity: 0.6,
-                wireframe: true
-            });
-
-            const shard = new THREE.Mesh(shardGeometry, shardMaterial);
-
-            // Position randomly around the lattice
-            shard.position.set(
-                (Math.random() - 0.5) * 20,
-                (Math.random() - 0.5) * 20,
-                (Math.random() - 0.5) * 20
-            );
-
-            shard.userData = {
-                rotationSpeed: new THREE.Vector3(
-                    Math.random() * 0.02,
-                    Math.random() * 0.02,
-                    Math.random() * 0.02
-                ),
-                orbitRadius: 5 + Math.random() * 10,
-                orbitSpeed: 0.1 + Math.random() * 0.2,
-                angle: Math.random() * Math.PI * 2
-            };
-
-            scene.add(shard);
-            shards.push(shard);
-        }
-
+        // === ANIMATION STATE ===
         let time = 0;
+        let breathPhase = 0;
+        const BREATH_PERIOD = 10; // 10 second breath cycle
 
         function animate() {
             requestAnimationFrame(animate);
-            time += 0.01;
+
+            const dt = 0.016;
+            time += dt;
+
+            // Master breath phase - long, slow cycle
+            breathPhase = (time / BREATH_PERIOD) * Math.PI * 2;
+            const breath = Math.sin(breathPhase) * 0.5 + 0.5;
+
             mouse.update();
 
-            // Update node positions
-            const positions = nodeSystem.geometry.attributes.position.array;
-            for (let i = 0; i < nodeCount; i++) {
-                const i3 = i * 3;
-                const node = nodes[i];
-
-                // Calculate new position with oscillation
-                const offsetX = Math.sin(time * node.frequency + node.phase) * node.amplitude;
-                const offsetY = Math.cos(time * node.frequency * 1.2 + node.phase) * node.amplitude;
-                const offsetZ = Math.sin(time * node.frequency * 0.8 + node.phase) * node.amplitude;
-
-                positions[i3] = node.originalPosition.x + offsetX;
-                positions[i3 + 1] = node.originalPosition.y + offsetY;
-                positions[i3 + 2] = node.originalPosition.z + offsetZ;
-            }
-            nodeSystem.geometry.attributes.position.needsUpdate = true;
-
-            // Update node material uniforms
+            // Update node shader uniforms
             nodeMaterial.uniforms.time.value = time;
-            nodeMaterial.uniforms.mouse.value.set(mouse.centeredX, mouse.centeredY);
-
-            // Update connection materials
-            for (let i = 0; i < lineMaterials.length; i++) {
-                lineMaterials[i].uniforms.time.value = time;
-            }
+            nodeMaterial.uniforms.breathPhase.value = breathPhase;
 
             // Update center crystal
-            crystalCenter.rotation.x = time * 0.3;
-            crystalCenter.rotation.y = time * 0.5;
+            // Very slow rotation - form first, motion second
+            crystalCenter.rotation.y = time * 0.03;
+            crystalCenter.rotation.x = Math.sin(time * 0.02) * 0.1;
             centerMaterial.uniforms.time.value = time;
+            centerMaterial.uniforms.breathPhase.value = breathPhase;
 
-            // Update floating shards
-            for (let i = 0; i < shards.length; i++) {
-                const shard = shards[i];
-                const data = shard.userData;
+            // Inner glow pulses with breath
+            innerGlow.scale.setScalar(0.8 + breath * 0.3);
+            glowMaterial.opacity = 0.2 + breath * 0.2;
 
-                // Orbit around center
-                data.angle += data.orbitSpeed * 0.01;
-                shard.position.x = Math.cos(data.angle) * data.orbitRadius;
-                shard.position.z = Math.sin(data.angle) * data.orbitRadius;
-                shard.position.y += Math.sin(time * 0.5 + i) * 0.02;
+            // Update connection opacities with breath
+            connectionGroup.children.forEach(line => {
+                const baseOpacity = 0.1 + line.userData.avgEnergy * 0.15;
+                line.material.opacity = baseOpacity * (0.6 + breath * 0.4);
+            });
 
-                // Rotate the shard
-                shard.rotation.x += data.rotationSpeed.x;
-                shard.rotation.y += data.rotationSpeed.y;
-                shard.rotation.z += data.rotationSpeed.z;
-            }
+            // === CAMERA: Slow asymmetric drift ===
+            const camTime = time * 0.03;
+            camera.position.x = 8 + Math.sin(camTime) * 4 + mouse.centeredX * 2;
+            camera.position.y = 6 + Math.cos(camTime * 0.7) * 3 + mouse.centeredY * 1.5;
+            camera.position.z = 15 + Math.sin(camTime * 0.5) * 2;
 
-            // Camera movement with mouse
-            camera.position.x = Math.sin(time * 0.05) * 8 + mouse.centeredX * 3;
-            camera.position.y = Math.cos(time * 0.07) * 5 + mouse.centeredY * 2;
-            camera.position.z = 15 + Math.sin(time * 0.03) * 3;
-            camera.lookAt(scene.position);
+            // Look slightly off-center for asymmetry
+            camera.lookAt(0.5, 0.3, 0);
 
             renderer.render(scene, camera);
         }
